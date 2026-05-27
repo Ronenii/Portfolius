@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Shadows</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 28px 24px; gap: 28px; justify-content: center; flex-direction: row; align-items: flex-start; background: var(--paper-100); }
+  .stack { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .box { width: 100px; height: 64px; background: var(--paper-50); border: 1px solid var(--rule); border-radius: 6px; }
+  .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); text-align: center; line-height: 1.4; }
+  .lbl b { color: var(--fg-paper); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="stack"><div class="box" style="box-shadow: none;"></div><div class="lbl"><b>shadow-0</b><br>default · none</div></div>
+  <div class="stack"><div class="box" style="box-shadow: 0 1px 2px rgba(20,18,12,0.06);"></div><div class="lbl"><b>shadow-1</b><br>quiet lift</div></div>
+  <div class="stack"><div class="box" style="box-shadow: 0 4px 16px -4px rgba(20,18,12,0.10), 0 1px 2px rgba(20,18,12,0.06);"></div><div class="lbl"><b>shadow-2</b><br>popovers</div></div>
+  <div class="stack"><div class="box" style="box-shadow: 0 16px 40px -12px rgba(20,18,12,0.20), 0 2px 6px rgba(20,18,12,0.08);"></div><div class="lbl"><b>shadow-3</b><br>modals only</div></div>
+</div>
+</body></html>

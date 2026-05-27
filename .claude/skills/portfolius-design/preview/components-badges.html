@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Badges &amp; chips</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 18px 24px; gap: 14px; justify-content: center; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .label { font-family: var(--font-mono); font-size: 9px; color: var(--ink-500); width: 70px; flex: none; }
+  .badge { font-family: var(--font-sans); font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 2px; }
+  .b-gain { background: var(--gain-100); color: var(--gain-700); }
+  .b-loss { background: var(--loss-100); color: var(--loss-700); }
+  .b-brass { background: var(--accent-100); color: var(--accent-900); }
+  .b-neutral { background: var(--paper-200); color: var(--ink-700); }
+  .b-info { background: var(--info-100); color: var(--info-500); }
+  .pill { font-family: var(--font-sans); font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--rule); background: var(--paper-50); color: var(--ink-700); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .pill.active { background: var(--accent-100); border-color: var(--accent-300); color: var(--accent-900); }
+  .pill .x { color: var(--ink-500); font-size: 11px; }
+  .delta { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; padding: 2px 6px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row"><span class="label">badges</span>
+    <span class="badge b-brass">ETF</span>
+    <span class="badge b-neutral">Stock</span>
+    <span class="badge b-info">Bond</span>
+    <span class="badge b-gain">Rebalanced</span>
+    <span class="badge b-loss">Overweight</span>
+    <span class="delta" style="background: var(--gain-100); color: var(--gain-700);">↑ 2.41%</span>
+    <span class="delta" style="background: var(--loss-100); color: var(--loss-700);">↓ 0.18%</span>
+  </div>
+  <div class="row"><span class="label">filter pills</span>
+    <span class="pill active">Region <span class="x">×</span></span>
+    <span class="pill">Sector</span>
+    <span class="pill">Asset class</span>
+    <span class="pill">Currency</span>
+  </div>
+</div>
+</body></html>

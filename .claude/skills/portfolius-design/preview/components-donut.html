@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Donut · region</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 16px 24px; gap: 16px; flex-direction: row; align-items: center; justify-content: center; }
+  .right { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .row { display: grid; grid-template-columns: 12px 1fr 60px; align-items: center; gap: 10px; font-family: var(--font-sans); font-size: 12px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; }
+  .pct { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--fg-paper); }
+  .name { color: var(--fg-paper); }
+  .ttl { font-family: var(--font-display); font-size: 20px; line-height: 1; }
+  .eyebrow { font-family: var(--font-sans); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-500); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <svg width="120" height="120" viewBox="0 0 42 42">
+    <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#F4F1E8" stroke-width="6"/>
+    <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#1F6B6E" stroke-width="6" stroke-dasharray="42 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+    <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#4F7A4A" stroke-width="6" stroke-dasharray="22 100" stroke-dashoffset="-17" transform="rotate(-90 21 21)"/>
+    <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#4A6E8C" stroke-width="6" stroke-dasharray="14 100" stroke-dashoffset="-39" transform="rotate(-90 21 21)"/>
+    <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#71A8AB" stroke-width="6" stroke-dasharray="12 100" stroke-dashoffset="-53" transform="rotate(-90 21 21)"/>
+    <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#6E6757" stroke-width="6" stroke-dasharray="10 100" stroke-dashoffset="-65" transform="rotate(-90 21 21)"/>
+    <text x="21" y="21" text-anchor="middle" font-family="JetBrains Mono" font-size="5" fill="#1A1815" font-weight="500">$363k</text>
+    <text x="21" y="26" text-anchor="middle" font-family="Geist, sans-serif" font-size="2.6" fill="#6E6757">5 markets</text>
+  </svg>
+  <div class="right">
+    <div class="eyebrow">Allocation</div>
+    <div class="ttl" style="margin-bottom: 6px;">By region</div>
+    <div class="row"><span class="dot" style="background: #1F6B6E;"></span><span class="name">United States</span><span class="pct">42%</span></div>
+    <div class="row"><span class="dot" style="background: #4F7A4A;"></span><span class="name">Europe</span><span class="pct">22%</span></div>
+    <div class="row"><span class="dot" style="background: #4A6E8C;"></span><span class="name">Asia Pacific</span><span class="pct">14%</span></div>
+    <div class="row"><span class="dot" style="background: #71A8AB;"></span><span class="name">Emerging mkts</span><span class="pct">12%</span></div>
+    <div class="row"><span class="dot" style="background: #6E6757;"></span><span class="name">Other</span><span class="pct">10%</span></div>
+  </div>
+</div>
+</body></html>

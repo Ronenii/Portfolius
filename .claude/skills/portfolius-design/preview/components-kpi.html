@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>KPI tile</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 16px 24px; gap: 12px; flex-direction: row; }
+  .kpi { flex: 1; padding: 14px 16px; background: var(--paper-100); border: 1px solid var(--rule); border-radius: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .kpi.primary { border-top: 2px solid var(--accent-500); }
+  .eyebrow { font-family: var(--font-sans); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-500); font-weight: 500; }
+  .big { font-family: var(--font-mono); font-size: 30px; font-weight: 500; color: var(--fg-paper); letter-spacing: -0.01em; line-height: 1.05; }
+  .big.md { font-size: 24px; }
+  .delta { font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+  .up { color: var(--gain-500); }
+  .down { color: var(--loss-500); }
+  .muted { color: var(--ink-500); font-family: var(--font-sans); font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="kpi primary">
+    <div class="eyebrow">Portfolio value</div>
+    <div class="big">$363,634.26</div>
+    <div class="delta up">↑ $2,418.40 today · 0.67%</div>
+  </div>
+  <div class="kpi">
+    <div class="eyebrow">All-time return</div>
+    <div class="big md">+$48,219</div>
+    <div class="delta up">↑ 15.3% · since Jan 2023</div>
+  </div>
+  <div class="kpi">
+    <div class="eyebrow">Next contribution</div>
+    <div class="big md">$1,500</div>
+    <div class="muted">Jun 1 · monthly</div>
+  </div>
+</div>
+</body></html>

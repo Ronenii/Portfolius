@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Holdings row</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 14px 24px; gap: 0; justify-content: center; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-family: var(--font-sans); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-500); font-weight: 500; text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  th.right, td.right { text-align: right; }
+  td { padding: 9px 8px; border-bottom: 1px solid var(--rule); font-family: var(--font-sans); font-size: 13px; color: var(--fg-paper); }
+  tr.selected td { background: var(--accent-100); }
+  tr:hover td { background: var(--paper-200); }
+  tr.selected:hover td { background: var(--accent-100); }
+  .tk { font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.04em; }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .up { color: var(--gain-500); }
+  .down { color: var(--loss-500); }
+  .badge { font-family: var(--font-sans); font-size: 10px; font-weight: 500; padding: 1px 6px; border-radius: 2px; background: var(--paper-200); color: var(--ink-700); }
+</style>
+</head>
+<body>
+<div class="card">
+  <table>
+    <thead><tr><th>Ticker</th><th>Name</th><th>Class</th><th class="right">Shares</th><th class="right">Value</th><th class="right">Δ today</th></tr></thead>
+    <tbody>
+      <tr><td class="tk">VTI</td><td>Vanguard Total Stock</td><td><span class="badge">ETF</span></td><td class="right num">8,124</td><td class="right num">$248,419.02</td><td class="right num up">↑ 2.41%</td></tr>
+      <tr class="selected"><td class="tk">VXUS</td><td>Vanguard Total Intl</td><td><span class="badge">ETF</span></td><td class="right num">1,402</td><td class="right num">$84,206.50</td><td class="right num up">↑ 0.62%</td></tr>
+      <tr><td class="tk">BND</td><td>Vanguard Total Bond</td><td><span class="badge">ETF</span></td><td class="right num">411</td><td class="right num">$31,008.74</td><td class="right num down">↓ 0.18%</td></tr>
+    </tbody>
+  </table>
+</div>
+</body></html>

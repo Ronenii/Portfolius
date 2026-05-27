@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Type scale</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 16px 24px; gap: 2px; justify-content: center; }
+  .line { display: grid; grid-template-columns: 110px 60px 1fr; column-gap: 18px; align-items: baseline; padding: 3px 0; border-bottom: 1px dashed transparent; }
+  .role { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); }
+  .size { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); text-align: right; }
+  .specimen { color: var(--fg-paper); }
+  .d1 { font-family: var(--font-display); font-size: 36px; line-height: 1.0; }
+  .h1 { font-family: var(--font-display); font-size: 28px; line-height: 1.1; }
+  .h2 { font-family: var(--font-display); font-size: 22px; line-height: 1.15; }
+  .h3 { font-family: var(--font-sans); font-size: 17px; font-weight: 600; }
+  .body { font-family: var(--font-sans); font-size: 15px; }
+  .cap { font-family: var(--font-sans); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-500); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="line"><span class="role">display</span><span class="size">60–84</span><span class="specimen d1">Patience compounds</span></div>
+  <div class="line"><span class="role">h1</span><span class="size">44</span><span class="specimen h1">Your portfolio</span></div>
+  <div class="line"><span class="role">h2</span><span class="size">32</span><span class="specimen h2">By region</span></div>
+  <div class="line"><span class="role">h3 / ui</span><span class="size">20</span><span class="specimen h3">Top holdings</span></div>
+  <div class="line"><span class="role">body</span><span class="size">15</span><span class="specimen body">Daily-close prices fetched automatically.</span></div>
+  <div class="line"><span class="role">eyebrow</span><span class="size">11 / +0.12em</span><span class="specimen cap">As of May 27, 2026</span></div>
+</div>
+</body></html>

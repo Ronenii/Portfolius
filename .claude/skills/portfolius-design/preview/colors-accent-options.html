@@ -1,0 +1,67 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Accent options</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 14px 18px; gap: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .opt { padding: 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper-100); display: flex; flex-direction: column; gap: 6px; }
+  .opt.current { border-color: var(--ink-700); border-width: 1.5px; padding: 9.5px; }
+  .swatch-row { display: flex; gap: 0; height: 24px; border-radius: 4px; overflow: hidden; }
+  .swatch-row span { flex: 1; }
+  .name { display: flex; align-items: baseline; gap: 6px; }
+  .name .ttl { font-family: var(--font-display); font-size: 18px; line-height: 1; }
+  .badge { font-size: 8px; font-family: var(--font-mono); color: white; background: var(--fg-paper); padding: 1px 5px; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .blurb { font-family: var(--font-sans); font-size: 10px; color: var(--ink-500); line-height: 1.35; }
+  .demo { display: flex; align-items: center; gap: 6px; font-family: var(--font-sans); font-size: 10px; }
+  .demo .btn { padding: 3px 7px; border-radius: 4px; color: white; font-size: 9px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid">
+    <div class="opt current">
+      <div class="name"><span class="ttl">Teal</span><span class="badge">chosen</span></div>
+      <div class="swatch-row"><span style="background: #1F6B6E;"></span><span style="background: #114448;"></span><span style="background: #71A8AB;"></span><span style="background: #D3E6E7;"></span></div>
+      <div class="blurb">Money green. Calm on red days.</div>
+      <div class="demo"><span class="btn" style="background: #1F6B6E;">Save</span></div>
+    </div>
+    <div class="opt">
+      <div class="name"><span class="ttl">Forest</span></div>
+      <div class="swatch-row"><span style="background: #2C6E4D;"></span><span style="background: #194A30;"></span><span style="background: #7BB098;"></span><span style="background: #D6E7DD;"></span></div>
+      <div class="blurb">Warmer green · evergreen</div>
+      <div class="demo"><span class="btn" style="background: #2C6E4D;">Save</span></div>
+    </div>
+    <div class="opt">
+      <div class="name"><span class="ttl">Brass</span></div>
+      <div class="swatch-row"><span style="background: #A87B2C;"></span><span style="background: #7E5A1D;"></span><span style="background: #D4B36A;"></span><span style="background: #F0E0B6;"></span></div>
+      <div class="blurb">Warm metal · classical</div>
+      <div class="demo"><span class="btn" style="background: #A87B2C;">Save</span></div>
+    </div>
+    <div class="opt">
+      <div class="name"><span class="ttl">Sky</span></div>
+      <div class="swatch-row"><span style="background: #4A8AB0;"></span><span style="background: #2E5F7D;"></span><span style="background: #A5C9DD;"></span><span style="background: #DEEBF3;"></span></div>
+      <div class="blurb">Pale aqua · open</div>
+      <div class="demo"><span class="btn" style="background: #4A8AB0;">Save</span></div>
+    </div>
+    <div class="opt">
+      <div class="name"><span class="ttl">Ink</span></div>
+      <div class="swatch-row"><span style="background: #2A4A7F;"></span><span style="background: #1A3460;"></span><span style="background: #7B95C2;"></span><span style="background: #DDE3EE;"></span></div>
+      <div class="blurb">Fountain pen blue</div>
+      <div class="demo"><span class="btn" style="background: #2A4A7F;">Save</span></div>
+    </div>
+    <div class="opt">
+      <div class="name"><span class="ttl">Claret</span></div>
+      <div class="swatch-row"><span style="background: #7A2E3A;"></span><span style="background: #5A1E29;"></span><span style="background: #BB8089;"></span><span style="background: #ECD7DA;"></span></div>
+      <div class="blurb">Oxblood · leather</div>
+      <div class="demo"><span class="btn" style="background: #7A2E3A;">Save</span></div>
+    </div>
+    <div class="opt">
+      <div class="name"><span class="ttl">Slate</span></div>
+      <div class="swatch-row"><span style="background: #3B414A;"></span><span style="background: #252A33;"></span><span style="background: #8A8F98;"></span><span style="background: #DCDEE3;"></span></div>
+      <div class="blurb">No accent · mono</div>
+      <div class="demo"><span class="btn" style="background: #3B414A;">Save</span></div>
+    </div>
+  </div>
+  <div style="font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); border-top: 1px solid var(--rule); padding-top: 8px;">Flip live in the UI kit: open <b style="color: var(--fg-paper); font-weight: 500;">ui_kits/web/index.html</b>, toggle Tweaks.</div>
+</div>
+</body></html>

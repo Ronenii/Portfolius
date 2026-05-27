@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Iconography</title>
+<link rel="stylesheet" href="_card.css">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .card { padding: 16px 24px; gap: 10px; justify-content: center; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 56px; }
+  .item svg { color: var(--fg-paper); stroke-width: 1.5; }
+  .lbl { font-family: var(--font-mono); font-size: 9px; color: var(--ink-500); }
+  .meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); border-top: 1px solid var(--rule); padding-top: 8px; }
+  .meta b { color: var(--fg-paper); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row">
+    <div class="item"><i data-lucide="layout-dashboard" width="20" height="20"></i><span class="lbl">dashboard</span></div>
+    <div class="item"><i data-lucide="landmark" width="20" height="20"></i><span class="lbl">holdings</span></div>
+    <div class="item"><i data-lucide="sparkles" width="20" height="20"></i><span class="lbl">assistant</span></div>
+    <div class="item"><i data-lucide="user-round" width="20" height="20"></i><span class="lbl">profile</span></div>
+    <div class="item"><i data-lucide="globe" width="20" height="20"></i><span class="lbl">region</span></div>
+    <div class="item"><i data-lucide="pie-chart" width="20" height="20"></i><span class="lbl">sector</span></div>
+    <div class="item"><i data-lucide="layers" width="20" height="20"></i><span class="lbl">asset class</span></div>
+    <div class="item"><i data-lucide="coins" width="20" height="20"></i><span class="lbl">currency</span></div>
+    <div class="item"><i data-lucide="trending-up" width="20" height="20" style="color: var(--gain-500);"></i><span class="lbl">gain</span></div>
+    <div class="item"><i data-lucide="trending-down" width="20" height="20" style="color: var(--loss-500);"></i><span class="lbl">loss</span></div>
+    <div class="item"><i data-lucide="plus" width="20" height="20"></i><span class="lbl">add</span></div>
+    <div class="item"><i data-lucide="sliders-horizontal" width="20" height="20"></i><span class="lbl">filter</span></div>
+    <div class="item"><i data-lucide="arrow-up-right" width="20" height="20"></i><span class="lbl">external</span></div>
+  </div>
+  <div class="meta"><b>Lucide</b> · 1.5px stroke · currentColor · sizes 14 / 16 / 20 / 24</div>
+</div>
+<script>lucide.createIcons();</script>
+</body></html>

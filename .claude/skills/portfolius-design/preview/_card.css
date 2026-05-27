@@ -1,0 +1,58 @@
+/* Shared styles for design system preview cards.
+   Cards are ~700×150px tiles displayed in the Design System tab. */
+
+@import url("../colors_and_type.css");
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--paper-50);
+  color: var(--fg-paper);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.card {
+  padding: 20px 24px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card.dark {
+  background: var(--ink-950);
+  color: var(--fg-terminal);
+}
+
+.row { display: flex; align-items: center; gap: 12px; }
+.col { display: flex; flex-direction: column; gap: 4px; }
+
+.label {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--ink-500);
+}
+.dark .label { color: var(--ink-300); }
+
+.tok {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-500);
+}
+.dark .tok { color: var(--ink-300); }
+
+.swatch {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+}
+.dark .swatch { border-color: var(--ink-800); }
+
+.swatch.lg { width: 88px; height: 76px; }
+.swatch.sm { width: 40px; height: 40px; }

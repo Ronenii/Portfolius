@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tabular mono</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 18px 24px; gap: 10px; justify-content: center; }
+  .num-table { display: grid; grid-template-columns: 100px 1fr 1fr 1fr; row-gap: 6px; column-gap: 24px; align-items: baseline; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .ticker { font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: var(--fg-paper); }
+  .amount { font-size: 17px; font-weight: 500; color: var(--fg-paper); text-align: right; }
+  .pct { font-size: 13px; text-align: right; }
+  .pct.up { color: var(--gain-500); }
+  .pct.down { color: var(--loss-500); }
+  .small { font-size: 11px; color: var(--ink-500); text-align: right; }
+  .meta { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); margin-top: 2px; }
+  .meta b { color: var(--fg-paper); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="num-table">
+    <div class="ticker">VTI</div>     <div class="amount">$248,419.02</div> <div class="pct up">↑ 2.41%</div> <div class="small">8,124 sh</div>
+    <div class="ticker">VXUS</div>    <div class="amount">$  84,206.50</div> <div class="pct up">↑ 0.62%</div> <div class="small">1,402 sh</div>
+    <div class="ticker">BND</div>     <div class="amount">$  31,008.74</div> <div class="pct down">↓ 0.18%</div> <div class="small">  411 sh</div>
+  </div>
+  <div class="meta"><b>JetBrains Mono</b> · tabular-nums · every money amount, percentage, and ticker uses this</div>
+</div>
+</body></html>

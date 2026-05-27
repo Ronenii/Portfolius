@@ -1,0 +1,94 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Accent · Teal vs Sky</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 0; gap: 0; flex-direction: row; align-items: stretch; min-height: 320px; }
+  .half { flex: 1; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .half + .half { border-left: 1px solid var(--rule); }
+  .name { display: flex; flex-direction: column; gap: 2px; }
+  .ttl { font-family: var(--font-display); font-size: 28px; line-height: 1; letter-spacing: -0.01em; }
+  .blurb { font-family: var(--font-sans); font-size: 12px; color: var(--ink-500); line-height: 1.4; }
+  .strip { display: flex; gap: 0; height: 22px; border-radius: 4px; overflow: hidden; border: 1px solid var(--rule); }
+  .strip span { flex: 1; }
+
+  .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi { border: 1px solid var(--rule); border-radius: 6px; padding: 10px; background: var(--paper-100); }
+  .kpi.primary { border-top: 2px solid var(--accent); }
+  .eye { font-family: var(--font-sans); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-500); margin-bottom: 4px; }
+  .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 500; }
+  .delta { font-family: var(--font-mono); font-size: 10px; color: var(--gain-500); }
+
+  .row { display: flex; gap: 8px; align-items: center; }
+  .btn { font-family: var(--font-sans); font-size: 11px; font-weight: 500; padding: 6px 10px; border-radius: 5px; background: var(--accent); color: var(--paper-50); white-space: nowrap; }
+  .pill { font-family: var(--font-sans); font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 999px; background: var(--accent-wash); color: var(--accent-deep); border: 1px solid var(--accent-light); }
+  .link { font-family: var(--font-sans); font-size: 12px; color: var(--accent-hover); text-decoration: underline; text-underline-offset: 3px; }
+
+  .donut { display: flex; align-items: center; gap: 12px; }
+  .legend { font-family: var(--font-sans); font-size: 11px; display: flex; flex-direction: column; gap: 3px; }
+  .legend .ln { display: flex; align-items: center; gap: 6px; }
+  .legend .dot { width: 9px; height: 9px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="half" style="--accent: #1F6B6E; --accent-hover: #114448; --accent-light: #71A8AB; --accent-wash: #D3E6E7; --accent-deep: #0A2D30;">
+    <div class="name"><span class="ttl">Teal</span><span class="blurb">forest-teal · patient · cooler than the gain green</span></div>
+    <div class="strip"><span style="background: #D3E6E7;"></span><span style="background: #71A8AB;"></span><span style="background: #1F6B6E;"></span><span style="background: #114448;"></span><span style="background: #0A2D30;"></span></div>
+    <div class="mini">
+      <div class="kpi primary">
+        <div class="eye">Portfolio value</div>
+        <div class="val">$430,570</div>
+        <div class="delta">↑ $2,884 · 0.67%</div>
+      </div>
+      <div class="kpi" style="background: var(--paper-50); border: none; box-shadow: 0 1px 2px rgba(20,18,12,0.06);">
+        <div class="eye">Allocation · region</div>
+        <div class="donut">
+          <svg width="60" height="60" viewBox="0 0 42 42">
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#F4F1E8" stroke-width="6"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#1F6B6E" stroke-width="6" stroke-dasharray="42 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#4F7A4A" stroke-width="6" stroke-dasharray="22 100" stroke-dashoffset="-17" transform="rotate(-90 21 21)"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#71A8AB" stroke-width="6" stroke-dasharray="14 100" stroke-dashoffset="-39" transform="rotate(-90 21 21)"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#6E6757" stroke-width="6" stroke-dasharray="22 100" stroke-dashoffset="-53" transform="rotate(-90 21 21)"/>
+          </svg>
+          <div class="legend">
+            <div class="ln"><span class="dot" style="background: #1F6B6E;"></span>US 42%</div>
+            <div class="ln"><span class="dot" style="background: #4F7A4A;"></span>EU 22%</div>
+            <div class="ln"><span class="dot" style="background: #71A8AB;"></span>APAC 14%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row"><span class="btn">Add holding</span><span class="pill">Region</span><span class="link">View details ↗</span></div>
+  </div>
+
+  <div class="half" style="--accent: #4A8AB0; --accent-hover: #2E5F7D; --accent-light: #A5C9DD; --accent-wash: #DEEBF3; --accent-deep: #1A3A50;">
+    <div class="name"><span class="ttl">Sky</span><span class="blurb">pale aqua · open · fresh · modern</span></div>
+    <div class="strip"><span style="background: #DEEBF3;"></span><span style="background: #A5C9DD;"></span><span style="background: #4A8AB0;"></span><span style="background: #2E5F7D;"></span><span style="background: #1A3A50;"></span></div>
+    <div class="mini">
+      <div class="kpi primary">
+        <div class="eye">Portfolio value</div>
+        <div class="val">$430,570</div>
+        <div class="delta">↑ $2,884 · 0.67%</div>
+      </div>
+      <div class="kpi" style="background: var(--paper-50); border: none; box-shadow: 0 1px 2px rgba(20,18,12,0.06);">
+        <div class="eye">Allocation · region</div>
+        <div class="donut">
+          <svg width="60" height="60" viewBox="0 0 42 42">
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#F4F1E8" stroke-width="6"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#4A8AB0" stroke-width="6" stroke-dasharray="42 100" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#4F7A4A" stroke-width="6" stroke-dasharray="22 100" stroke-dashoffset="-17" transform="rotate(-90 21 21)"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#A5C9DD" stroke-width="6" stroke-dasharray="14 100" stroke-dashoffset="-39" transform="rotate(-90 21 21)"/>
+            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#6E6757" stroke-width="6" stroke-dasharray="22 100" stroke-dashoffset="-53" transform="rotate(-90 21 21)"/>
+          </svg>
+          <div class="legend">
+            <div class="ln"><span class="dot" style="background: #4A8AB0;"></span>US 42%</div>
+            <div class="ln"><span class="dot" style="background: #4F7A4A;"></span>EU 22%</div>
+            <div class="ln"><span class="dot" style="background: #A5C9DD;"></span>APAC 14%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row"><span class="btn">Add holding</span><span class="pill">Region</span><span class="link">View details ↗</span></div>
+  </div>
+</div>
+</body></html>

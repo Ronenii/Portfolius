@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Gain / loss</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 20px 24px; gap: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .scale { display: flex; height: 56px; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); }
+  .step { flex: 1; display: flex; align-items: flex-end; padding: 6px 8px; font-family: var(--font-mono); font-size: 9px; }
+  .head { display: flex; align-items: baseline; gap: 10px; }
+  .head .ttl { font-family: var(--font-display); font-size: 22px; }
+  .head .delta { font-family: var(--font-mono); font-size: 14px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid">
+    <div class="col">
+      <div class="head"><span class="ttl">Gain</span><span class="delta" style="color: #4F7A4A;">↑ 2.4%</span></div>
+      <div class="scale">
+        <div class="step" style="background: #DBE6D3; color: #2F5A2C;">100</div>
+        <div class="step" style="background: #92B58E; color: #2F5A2C;">300</div>
+        <div class="step" style="background: #4F7A4A; color: #DBE6D3;">500</div>
+        <div class="step" style="background: #2F5A2C; color: #DBE6D3;">700</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="head"><span class="ttl">Loss</span><span class="delta" style="color: #A8442C;">↓ 1.1%</span></div>
+      <div class="scale">
+        <div class="step" style="background: #F0D5C8; color: #7A2F1B;">100</div>
+        <div class="step" style="background: #D29282; color: #7A2F1B;">300</div>
+        <div class="step" style="background: #A8442C; color: #F0D5C8;">500</div>
+        <div class="step" style="background: #7A2F1B; color: #F0D5C8;">700</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Card · terminal</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  body { background: var(--ink-950); }
+  .card { padding: 18px 24px; gap: 14px; flex-direction: row; align-items: stretch; background: var(--ink-950); color: var(--fg-terminal); }
+  .demo { background: var(--ink-900); border: 1px solid var(--ink-800); border-radius: 6px; padding: 14px 16px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .demo.kpi { border-top: 2px solid var(--accent-300); }
+  .eyebrow { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-300); font-weight: 500; }
+  .title { font-family: var(--font-display); font-size: 22px; color: var(--fg-terminal); line-height: 1.1; }
+  .big { font-family: var(--font-mono); font-size: 28px; font-weight: 500; color: var(--fg-terminal); letter-spacing: -0.01em; }
+  .delta { font-family: var(--font-mono); font-size: 12px; color: var(--gain-300); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--ink-300); margin-top: 4px; }
+</style>
+</head>
+<body class="dark">
+<div class="card dark">
+  <div class="demo">
+    <div class="eyebrow">// portfolio</div>
+    <div class="title">By region</div>
+    <div style="font-family: var(--font-mono); font-size: 12px; color: var(--ink-300);">5 markets · 14:32 utc</div>
+    <div class="lbl">ink-900 fill · ink-800 hairline · radius 6</div>
+  </div>
+  <div class="demo kpi">
+    <div class="eyebrow">// total</div>
+    <div class="big">$363,634</div>
+    <div class="delta">↑ $2,418 · 0.67%</div>
+    <div class="lbl">brass-300 top rule · no shadow</div>
+  </div>
+  <div class="demo">
+    <div class="eyebrow">// session</div>
+    <div style="font-family: var(--font-mono); font-size: 12px; color: var(--fg-terminal);">8 holdings</div>
+    <div style="font-family: var(--font-mono); font-size: 12px; color: var(--fg-terminal);">5 regions</div>
+    <div style="font-family: var(--font-mono); font-size: 12px; color: var(--fg-terminal);">3 currencies</div>
+    <div class="lbl">terminal · no shadow ever</div>
+  </div>
+</div>
+</body></html>

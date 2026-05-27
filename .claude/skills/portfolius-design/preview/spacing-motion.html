@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Motion</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 18px 24px; gap: 12px; justify-content: center; }
+  .row { display: grid; grid-template-columns: 140px 1fr 90px; align-items: center; gap: 14px; }
+  .name { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); }
+  .name b { color: var(--fg-paper); font-weight: 500; }
+  .track { height: 6px; background: var(--paper-200); border-radius: 999px; position: relative; overflow: hidden; }
+  .dot { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-500); animation-duration: 2.4s; animation-iteration-count: infinite; animation-fill-mode: both; }
+  .e-out { animation-name: e-out; animation-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+  .e-in  { animation-name: e-in;  animation-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+  .e-std { animation-name: e-std; animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1); }
+  @keyframes e-out { 0%, 5% { left: 0%; } 50%, 60% { left: calc(100% - 12px); } 95%, 100% { left: 0%; } }
+  @keyframes e-in  { 0%, 5% { left: 0%; } 50%, 60% { left: calc(100% - 12px); } 95%, 100% { left: 0%; } }
+  @keyframes e-std { 0%, 5% { left: 0%; } 50%, 60% { left: calc(100% - 12px); } 95%, 100% { left: 0%; } }
+  .dur { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row"><div class="name"><b>ease-out</b><br>most enters</div><div class="track"><div class="dot e-out"></div></div><div class="dur">200ms</div></div>
+  <div class="row"><div class="name"><b>ease-in</b><br>exits</div><div class="track"><div class="dot e-in"></div></div><div class="dur">120ms</div></div>
+  <div class="row"><div class="name"><b>ease-standard</b><br>ui transitions, count-up</div><div class="track"><div class="dot e-std"></div></div><div class="dur">320ms</div></div>
+</div>
+</body></html>

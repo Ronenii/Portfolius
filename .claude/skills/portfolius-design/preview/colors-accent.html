@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Accent scale (Teal)</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 20px 24px; gap: 10px; }
+  .row { display: flex; gap: 0; height: 84px; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); }
+  .step { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; }
+  .name { font-family: var(--font-mono); font-size: 10px; font-weight: 500; }
+  .hex { font-family: var(--font-mono); font-size: 9px; opacity: 0.7; }
+  .legend { font-family: var(--font-sans); font-size: 11px; color: var(--ink-500); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row">
+    <div class="step" style="background: #E9F2F2; color: #0A2D30;"><div class="name">50</div><div class="hex">#E9F2F2</div></div>
+    <div class="step" style="background: #D3E6E7; color: #0A2D30;"><div class="name">100</div><div class="hex">#D3E6E7</div></div>
+    <div class="step" style="background: #71A8AB; color: #0A2D30;"><div class="name">300</div><div class="hex">#71A8AB</div></div>
+    <div class="step" style="background: #1F6B6E; color: #D3E6E7;"><div class="name">500 ▸ primary</div><div class="hex">#1F6B6E</div></div>
+    <div class="step" style="background: #114448; color: #D3E6E7;"><div class="name">700 · hover</div><div class="hex">#114448</div></div>
+    <div class="step" style="background: #0A2D30; color: #71A8AB;"><div class="name">900</div><div class="hex">#0A2D30</div></div>
+  </div>
+  <div class="legend"><b style="color: var(--fg-paper); font-family: var(--font-sans);">Teal</b> — the single chromatic accent. 500 is primary; 700 is hover/pressed; 100/300 are washes for selected rows and subtle highlights. Reads as <em>money green</em> without celebrating gains.</div>
+</div>
+</body></html>

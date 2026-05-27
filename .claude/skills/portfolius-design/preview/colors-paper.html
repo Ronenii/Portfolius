@@ -1,0 +1,22 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Paper surfaces</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 20px 24px; gap: 12px; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .sw { padding: 14px; border-radius: 6px; border: 1px solid var(--rule); min-height: 96px; display: flex; flex-direction: column; justify-content: space-between; }
+  .sw .name { font-size: 12px; font-weight: 500; color: var(--fg-paper); }
+  .sw .hex { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); }
+  .sw .role { font-size: 10px; color: var(--ink-500); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="swatches">
+    <div class="sw" style="background: #FAF8F2;"><div><div class="name">paper-50</div><div class="role">page bg</div></div><div class="hex">#FAF8F2</div></div>
+    <div class="sw" style="background: #F4F1E8;"><div><div class="name">paper-100</div><div class="role">cards</div></div><div class="hex">#F4F1E8</div></div>
+    <div class="sw" style="background: #ECE7D7;"><div><div class="name">paper-200</div><div class="role">sunk / hover</div></div><div class="hex">#ECE7D7</div></div>
+    <div class="sw" style="background: #E2DCC6;"><div><div class="name">paper-300</div><div class="role">pressed</div></div><div class="hex">#E2DCC6</div></div>
+  </div>
+</div>
+</body></html>

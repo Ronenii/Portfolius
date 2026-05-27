@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Assistant bubble</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .card { padding: 16px 24px; gap: 10px; justify-content: center; }
+  .msg { max-width: 78%; padding: 11px 14px; border-radius: 10px; font-family: var(--font-sans); font-size: 13px; line-height: 1.5; }
+  .user { background: var(--paper-200); color: var(--fg-paper); align-self: flex-end; border-bottom-right-radius: 2px; }
+  .ai { background: var(--paper-100); border: 1px solid var(--rule); color: var(--fg-paper); align-self: flex-start; border-bottom-left-radius: 2px; position: relative; padding-left: 32px; }
+  .ai::before { content: ""; position: absolute; left: 10px; top: 12px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent-500); }
+  .ai::after { content: ""; position: absolute; left: 14px; top: 16px; width: 6px; height: 6px; border-radius: 50%; background: var(--paper-50); }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+  .ctx { font-family: var(--font-mono); font-size: 10px; color: var(--ink-500); align-self: flex-start; margin-left: 32px; }
+</style>
+</head>
+<body>
+<div class="card" style="display: flex; flex-direction: column;">
+  <div class="msg user">What should I buy next to hit my target allocation?</div>
+  <div class="msg ai">Your US exposure is at <span class="num">68%</span> against your <span class="num">60%</span> target. The next monthly contribution of <span class="num">$1,500</span> into <b>VXUS</b> would close <span class="num">~1.4 pts</span> of the gap.</div>
+  <div class="ctx">Grounded in: profile · 8 holdings · daily close 14:32 UTC</div>
+</div>
+</body></html>
