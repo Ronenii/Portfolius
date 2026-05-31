@@ -5,3 +5,6 @@ __pycache__/
 .venv/
 *.egg-info/
 backend/portfolius.db
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
