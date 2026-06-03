@@ -46,7 +46,7 @@ The frontend is a React + Vite + TypeScript single-page app. It owns presentatio
 
 Expected responsibilities:
 
-- Supabase magic-link authentication.
+- Supabase authentication — magic-link email and Google OAuth (social login). Additional providers (GitHub, Apple) can be enabled in the Supabase dashboard without backend changes.
 - Dashboard pages and setup flows.
 - TanStack Query cache and request state.
 - Chart rendering through Recharts.
@@ -207,6 +207,22 @@ POST /api/v1/assistant/messages
 POST /api/v1/jobs/refresh-prices
 ```
 
+## Authentication Strategy
+
+Authentication is handled entirely by Supabase Auth. The frontend never handles passwords or stores credentials.
+
+Supported sign-in methods (M1):
+
+- **Google OAuth** (primary): `supabase.auth.signInWithOAuth({ provider: 'google' })`. Requires a Google Cloud OAuth client ID and secret configured in the Supabase dashboard.
+- **Magic-link email** (fallback): `supabase.auth.signInWithOtp({ email })`. No third-party OAuth setup required.
+
+Both methods produce a Supabase JWT. The backend verifies that JWT on every protected request using `SUPABASE_JWT_SECRET`. The backend does not differentiate between auth providers.
+
+To enable Google OAuth:
+1. Create an OAuth client in Google Cloud Console (Credentials → OAuth 2.0 Client ID, type: Web).
+2. Add the Supabase callback URL as an authorised redirect URI: `https://<project>.supabase.co/auth/v1/callback`.
+3. In the Supabase dashboard: Authentication → Providers → Google → enable, paste Client ID and Secret.
+
 ## Security Boundaries
 
 - Frontend authenticates with Supabase and sends the access token to the backend.
@@ -234,7 +250,7 @@ POST /api/v1/jobs/refresh-prices
 ## Milestone Boundaries
 
 - M0: walking skeleton from deployed frontend to deployed backend to database.
-- M1: profile wizard and manual holdings CRUD.
+- M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
 - M2: price refresh and allocation breakdowns.
 - M3: AI assistant grounded in portfolio context.
 - M4: transactions, projections, PWA install, and CSV import.
