@@ -1,21 +1,40 @@
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import ec
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
+import app.core.auth as auth_module
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.config import Settings
 
-JWT_SECRET = "test-supabase-jwt-secret-with-32-bytes"
+PRIVATE_KEY = ec.generate_private_key(ec.SECP256R1())
+PUBLIC_KEY = PRIVATE_KEY.public_key()
+KEY_ID = "test-key-id"
+
+
+@dataclass(frozen=True)
+class FakeSigningKey:
+    key: object
+
+
+class FakeJwksClient:
+    def get_signing_key_from_jwt(self, token: str) -> FakeSigningKey:
+        return FakeSigningKey(PUBLIC_KEY)
 
 
 @pytest.fixture
-def auth_settings() -> Settings:
+def auth_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
+    monkeypatch.setattr(
+        auth_module,
+        "get_jwks_client",
+        lambda supabase_url: FakeJwksClient(),
+    )
     return Settings(
         supabase_url="https://example.supabase.co",
-        supabase_jwt_secret=JWT_SECRET,
         auth_audience="authenticated",
     )
 
@@ -26,9 +45,15 @@ def create_token(**claims: object) -> str:
         "aud": "authenticated",
         "email": "investor@example.com",
         "exp": datetime.now(UTC) + timedelta(minutes=5),
+        "iss": "https://example.supabase.co/auth/v1",
     }
     payload.update(claims)
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    return jwt.encode(
+        payload,
+        PRIVATE_KEY,
+        algorithm="ES256",
+        headers={"kid": KEY_ID},
+    )
 
 
 def bearer_credentials(token: str) -> HTTPAuthorizationCredentials:
