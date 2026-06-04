@@ -10,7 +10,6 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
     supabase_url: str = ""
-    supabase_jwt_secret: str = ""
     auth_audience: str = "authenticated"
 
     model_config = SettingsConfigDict(

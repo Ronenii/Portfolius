@@ -216,7 +216,7 @@ Supported sign-in methods (M1):
 - **Google OAuth** (primary): `supabase.auth.signInWithOAuth({ provider: 'google' })`. Requires a Google Cloud OAuth client ID and secret configured in the Supabase dashboard.
 - **Magic-link email** (fallback): `supabase.auth.signInWithOtp({ email })`. No third-party OAuth setup required.
 
-Both methods produce a Supabase JWT. The backend verifies that JWT on every protected request using `SUPABASE_JWT_SECRET`. The backend does not differentiate between auth providers.
+Both methods produce a Supabase JWT. The backend verifies that JWT on every protected request using Supabase's JWKS discovery endpoint at `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`, with `AUTH_AUDIENCE=authenticated`. The backend does not differentiate between auth providers.
 
 To enable Google OAuth:
 1. Create an OAuth client in Google Cloud Console (Credentials → OAuth 2.0 Client ID, type: Web).

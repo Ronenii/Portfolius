@@ -2,7 +2,7 @@
 
 > A long-term investor dashboard that shows you what you actually own by market exposure, sector, and asset class with an AI assistant help you rebalance against your goals.
 
-**Status:** Hobby project · Pre-alpha
+**Status:** Hobby project · M1 implemented, live provider verification pending
 
 ## Why this exists
 
@@ -20,21 +20,22 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 
 ## Features
 
-- **Profile setup**: goals, time horizon, investment frequency, markets of interest.
-- **Holdings tracking**: enter what you bought, when, and how much. Daily-close prices fetched automatically.
-- **Multi-dimensional breakdowns**: same portfolio, different lenses (region, sector, asset class, currency).
-- **AI assistant**: chat panel with full context of your portfolio + profile. Always grounded in the actual numbers.
-- **Responsive**: works on desktop and phone (PWA-installable).
+- **Profile setup**: display name, base currency, time horizon, and investment frequency.
+- **Holdings tracking**: manually create, edit, list, and delete holdings.
+- **Authenticated API**: Supabase Auth sessions are verified by the backend and scoped by user ID.
+- **Planned breakdowns**: same portfolio, different lenses (region, sector, asset class, currency).
+- **Planned AI assistant**: chat panel grounded in portfolio + profile context.
+- **Responsive**: works on desktop and phone.
 
 ## Tech stack
 
 | Layer | Choice |
 |---|---|
-| Frontend | React + Vite + TypeScript, Tailwind, shadcn/ui, Recharts, TanStack Query |
+| Frontend | React + Vite + TypeScript, Tailwind, TanStack Query |
 | Backend | FastAPI (Python 3.11+), SQLAlchemy 2.0, Alembic |
-| Database + Auth | Supabase (Postgres + magic-link auth) |
-| Market data | yfinance (prices), Financial Modeling Prep (sector/region metadata) |
-| LLM | Groq (Llama 3.3 70B) — configurable |
+| Database + Auth | Supabase (Postgres + Google OAuth or magic-link auth) |
+| Market data | Planned: yfinance and Financial Modeling Prep |
+| LLM | Planned: Groq, configurable |
 | Frontend hosting | Vercel |
 | Backend hosting | Render (free web service) |
 | Cron (price refresh) | GitHub Actions |
@@ -84,8 +85,6 @@ portfolius/
 - Docker (for local Postgres)
 - A Supabase project (free tier)
 - A Render account (free, no card required)
-- A Groq API key (free, no card required)
-- A Financial Modeling Prep API key (free tier: 250 req/day)
 
 ### Local setup
 
@@ -97,7 +96,7 @@ git clone <repo> portfolius && cd portfolius
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env          # fill in SUPABASE_*, GROQ_API_KEY, FMP_API_KEY
+cp .env.example .env          # fill in SUPABASE_URL and FRONTEND_ORIGINS if needed
 docker compose up -d db       # local postgres on :5432
 alembic upgrade head
 uvicorn app.main:app --reload # http://localhost:8000  /docs for swagger
@@ -116,12 +115,12 @@ npm run dev                   # http://localhost:5173
 ```
 DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/portfolius
 SUPABASE_URL=https://<project>.supabase.co
-SUPABASE_JWT_SECRET=...                 # for verifying frontend tokens
-GROQ_API_KEY=...
-GROQ_MODEL=llama-3.3-70b-versatile
-FMP_API_KEY=...
-JOB_TOKEN=<random-string>               # shared with GH Actions cron
+AUTH_AUDIENCE=authenticated
+FRONTEND_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
 ```
+
+The backend verifies Supabase access tokens through the project's JWKS discovery endpoint:
+`https://<project>.supabase.co/auth/v1/.well-known/jwks.json`. Do not use the legacy JWT secret for M1 backend auth.
 
 **Frontend (`frontend/.env.local`):**
 
@@ -151,8 +150,6 @@ python -m app.jobs.refresh_prices       # run cron job locally
 npm run dev                             # vite dev server
 npm run build                           # production build
 npm run lint                            # eslint
-npm run typecheck                       # tsc --noEmit
-npm run gen:api                         # regenerate api client from backend openapi
 ```
 
 ## Deployment
@@ -169,13 +166,27 @@ Secrets are set in each platform's secret store. Nothing sensitive lives in the 
 
 1. Push the repo to GitHub.
 2. In Render: **New → Blueprint**, point at the repo. It picks up `backend/render.yaml` and creates the web service.
-3. Add environment variables (`SUPABASE_*`, `GROQ_API_KEY`, `FMP_API_KEY`, `JOB_TOKEN`, `DATABASE_URL`) in the service dashboard. Mark them as secret.
+3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, and `FRONTEND_ORIGINS`) in the service dashboard. Mark `DATABASE_URL` and provider URLs as secret where available.
 4. Take the resulting `https://<service>.onrender.com` URL and set it as `VITE_API_URL` in Vercel.
+
+For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example:
+
+```text
+["http://localhost:5173","https://<your-vercel-app>.vercel.app"]
+```
+
+### Setting up Supabase Auth
+
+1. In Supabase, copy the project URL from **Project Settings -> API** and use it as `SUPABASE_URL` on Render and `VITE_SUPABASE_URL` on Vercel.
+2. Copy the **anon public** key from **Project Settings -> API keys -> legacy anon, service_role API keys** and use it as `VITE_SUPABASE_ANON_KEY` on Vercel.
+3. For Google OAuth, create a Google Cloud web OAuth client and add `https://<project>.supabase.co/auth/v1/callback` as an authorized redirect URI.
+4. In Supabase **Authentication -> Providers -> Google**, enable Google and paste the Google client ID and secret.
+5. For local magic links, include `http://localhost:5173` in Supabase **Authentication -> URL Configuration** as an allowed redirect URL.
 
 ## Roadmap
 
 - [x] M0 — Walking skeleton (frontend + backend + DB deployed end-to-end)
-- [ ] M1 — Profile wizard + manual holdings CRUD
+- [ ] M1 — Profile wizard + manual holdings CRUD implemented; live Supabase/hosting verification pending
 - [ ] M2 — Daily price refresh + multi-dimensional breakdowns
 - [ ] M3 — LLM chat with portfolio context
 - [ ] M4 — Transactions log, goal projection, PWA install, CSV import
