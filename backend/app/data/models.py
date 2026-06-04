@@ -1,7 +1,16 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
-from sqlalchemy import DateTime, Integer
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -17,3 +26,82 @@ class AppHealthCheck(Base):
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+    __table_args__ = (UniqueConstraint("user_id", name="uq_profiles_user_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    base_currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    time_horizon: Mapped[str] = mapped_column(String(120), nullable=False)
+    investment_frequency: Mapped[str] = mapped_column(String(80), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
+class Instrument(Base):
+    __tablename__ = "instruments"
+    __table_args__ = (
+        UniqueConstraint("symbol", "exchange", name="uq_instruments_symbol_exchange"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    exchange: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    asset_class: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    sector: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    region: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    metadata_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    holdings: Mapped[list["Holding"]] = relationship(
+        back_populates="instrument",
+        cascade="all, delete-orphan",
+    )
+
+
+class Holding(Base):
+    __tablename__ = "holdings"
+    __table_args__ = (
+        Index("ix_holdings_user_id", "user_id"),
+        Index("ix_holdings_instrument_id", "instrument_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id"),
+        nullable=False,
+    )
+    quantity: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    average_cost: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+    instrument: Mapped[Instrument] = relationship(back_populates="holdings")
