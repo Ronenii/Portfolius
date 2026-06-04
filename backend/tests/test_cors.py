@@ -16,14 +16,16 @@ def test_local_frontend_origin_is_allowed_for_healthz() -> None:
     options = cors_options()
 
     assert "http://localhost:5173" in options["allow_origins"]
-    assert "GET" in options["allow_methods"]
+    assert options["allow_methods"] == ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    assert options["allow_headers"] == ["*"]
 
 
 def test_local_loopback_frontend_origin_is_allowed_for_healthz() -> None:
     options = cors_options()
 
     assert "http://127.0.0.1:5173" in options["allow_origins"]
-    assert "GET" in options["allow_methods"]
+    assert options["allow_methods"] == ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    assert options["allow_headers"] == ["*"]
 
 
 def test_unknown_origin_is_not_allowed_for_healthz() -> None:

@@ -16,6 +16,7 @@ from app.api.v1.holdings import (
 )
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.data.models import Holding, Instrument
+from app.main import app
 from app.schemas.holdings import HoldingRequest
 
 
@@ -37,9 +38,11 @@ def holding_payload(**overrides: object) -> HoldingRequest:
 
 
 def test_holdings_routes_require_auth() -> None:
-    route_paths = {getattr(route, "path", None) for route in router.routes}
+    route_paths = {getattr(route, "path", None) for route in app.routes}
 
-    assert route_paths == {"/api/v1/holdings", "/api/v1/holdings/{holding_id}"}
+    assert {"/api/v1/holdings", "/api/v1/holdings/{holding_id}"}.issubset(
+        route_paths
+    )
     for route in router.routes:
         dependency_calls = {
             dependency.call for dependency in route.dependant.dependencies

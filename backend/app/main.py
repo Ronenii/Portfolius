@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.db_ping import router as db_ping_router
 from app.api.v1.health import router as health_router
+from app.api.v1.holdings import router as holdings_router
 from app.api.v1.profile import router as profile_router
 from app.core.config import get_settings
 
@@ -13,12 +14,13 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.frontend_origins,
-        allow_methods=["GET"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
     app.include_router(health_router)
     app.include_router(db_ping_router)
     app.include_router(profile_router)
+    app.include_router(holdings_router)
     return app
 
 
