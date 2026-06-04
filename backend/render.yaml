@@ -6,8 +6,9 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install -e ".[dev]"
-    preDeployCommand: alembic upgrade head
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # NOTE: preDeployCommand is ignored on Render's free plan, so migrations
+    # are run from startCommand instead. `alembic upgrade head` is idempotent.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /healthz
     envVars:
       - key: DATABASE_URL
