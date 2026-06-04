@@ -43,7 +43,11 @@ def upgrade() -> None:
         sa.Column("country", sa.String(length=120), nullable=True),
         sa.Column("region", sa.String(length=120), nullable=True),
         sa.Column("metadata_updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.UniqueConstraint("symbol", "exchange", name="uq_instruments_symbol_exchange"),
+        sa.UniqueConstraint(
+            "symbol",
+            "exchange",
+            name="uq_instruments_symbol_exchange",
+        ),
     )
     op.create_table(
         "holdings",

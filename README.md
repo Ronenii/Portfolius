@@ -2,7 +2,7 @@
 
 > A long-term investor dashboard that shows you what you actually own by market exposure, sector, and asset class with an AI assistant help you rebalance against your goals.
 
-**Status:** Hobby project · M1 implemented, live provider verification pending
+**Status:** Hobby project · M1 fixed and complete
 
 ## Why this exists
 
@@ -186,7 +186,7 @@ For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example
 ## Roadmap
 
 - [x] M0 — Walking skeleton (frontend + backend + DB deployed end-to-end)
-- [ ] M1 — Profile wizard + manual holdings CRUD implemented; live Supabase/hosting verification pending
+- [x] M1 — Profile wizard + manual holdings CRUD
 - [ ] M2 — Daily price refresh + multi-dimensional breakdowns
 - [ ] M3 — LLM chat with portfolio context
 - [ ] M4 — Transactions log, goal projection, PWA install, CSV import
