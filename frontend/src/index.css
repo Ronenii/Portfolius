@@ -278,6 +278,69 @@ h1 {
   color: var(--ink-500);
 }
 
+.login-page {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  align-items: start;
+}
+
+.login-copy {
+  max-width: 620px;
+}
+
+.login-copy p:last-child {
+  max-width: 520px;
+  margin: 18px 0 0;
+  color: var(--ink-700);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.login-panel,
+.magic-link-form {
+  display: grid;
+  gap: 14px;
+}
+
+.login-panel {
+  padding: 18px;
+  border: 1px solid var(--rule);
+  border-top: 2px solid var(--accent-500);
+  border-radius: 6px;
+  background: var(--paper-50);
+  box-shadow: var(--shadow-1);
+}
+
+.magic-link-form {
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.magic-link-form label {
+  color: var(--ink-500);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.magic-link-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-100);
+  color: var(--fg-paper);
+}
+
+.magic-link-form input:focus {
+  border-color: var(--accent-500);
+  outline: 2px solid var(--accent-100);
+  outline-offset: 0;
+}
+
 @media (max-width: 860px) {
   .app-frame {
     grid-template-columns: 1fr;
@@ -304,6 +367,10 @@ h1 {
 
   .status-strip {
     grid-template-columns: auto 1fr;
+  }
+
+  .login-page {
+    grid-template-columns: 1fr;
   }
 
   .status-detail,
