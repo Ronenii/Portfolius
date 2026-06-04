@@ -1,6 +1,7 @@
 import {
   createBrowserRouter,
   createMemoryRouter,
+  Navigate,
   Outlet,
   type RouteObject,
 } from "react-router-dom";
@@ -9,9 +10,10 @@ import AppShell from "../components/layout/AppShell";
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { ProtectedRoute, PublicOnlyRoute } from "../features/auth/AuthRoutes";
 import LoginPage from "../features/auth/LoginPage";
+import ProfileGate from "../features/profile/ProfileGate";
+import ProfileWizardPage from "../features/profile/ProfileWizardPage";
 import DashboardPage from "../pages/DashboardPage";
 import HoldingsPage from "../pages/HoldingsPage";
-import ProfileSetupPage from "../pages/ProfileSetupPage";
 
 export const routes: RouteObject[] = [
   {
@@ -36,9 +38,15 @@ export const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
         children: [
-          { path: "/", element: <DashboardPage /> },
-          { path: "/profile/setup", element: <ProfileSetupPage /> },
-          { path: "/holdings", element: <HoldingsPage /> },
+          {
+            element: <ProfileGate />,
+            children: [
+              { index: true, element: <Navigate to="/dashboard" replace /> },
+              { path: "/dashboard", element: <DashboardPage /> },
+              { path: "/profile/setup", element: <ProfileWizardPage /> },
+              { path: "/holdings", element: <HoldingsPage /> },
+            ],
+          },
         ],
       },
     ],

@@ -2,7 +2,7 @@ import { BarChart3, ClipboardList, UserRound } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 const navItems = [
-  { to: "/", label: "Dashboard", icon: BarChart3 },
+  { to: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { to: "/holdings", label: "Holdings", icon: ClipboardList },
   { to: "/profile/setup", label: "Profile", icon: UserRound },
 ];

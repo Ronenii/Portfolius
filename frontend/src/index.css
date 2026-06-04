@@ -341,6 +341,69 @@ h1 {
   outline-offset: 0;
 }
 
+.profile-form {
+  display: grid;
+  gap: 20px;
+  max-width: 760px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field label {
+  color: var(--ink-500);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-50);
+  color: var(--fg-paper);
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--accent-500);
+  outline: 2px solid var(--accent-100);
+  outline-offset: 0;
+}
+
+.field-error,
+.form-error {
+  color: var(--loss-500);
+  font-size: 13px;
+}
+
+.form-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgb(168 68 44 / 35%);
+  border-radius: 6px;
+  background: rgb(168 68 44 / 8%);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 @media (max-width: 860px) {
   .app-frame {
     grid-template-columns: 1fr;
@@ -370,6 +433,10 @@ h1 {
   }
 
   .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
     grid-template-columns: 1fr;
   }
 

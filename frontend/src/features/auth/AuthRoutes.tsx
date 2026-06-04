@@ -34,7 +34,7 @@ export function PublicOnlyRoute({ children }: { children: ReactNode }) {
   }
 
   if (session) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

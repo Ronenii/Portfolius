@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../../app/query-client";
 import { createAppRouter } from "../../app/router";
 import { supabase } from "../../lib/supabase";
+import { getProfile } from "../profile/profile-api";
 
 vi.mock("../../lib/supabase", () => ({
   supabase: {
@@ -21,6 +22,11 @@ vi.mock("../../lib/supabase", () => ({
   },
 }));
 
+vi.mock("../profile/profile-api", () => ({
+  getProfile: vi.fn(),
+  saveProfile: vi.fn(),
+}));
+
 const mockSession = {
   access_token: "access-token",
   refresh_token: "refresh-token",
@@ -28,6 +34,17 @@ const mockSession = {
   token_type: "bearer",
   user: { id: "user-123", email: "investor@example.com" },
 } as Session;
+
+const mockProfile = {
+  id: 1,
+  user_id: "user-123",
+  display_name: "Ronen",
+  base_currency: "USD",
+  time_horizon: "10+ years",
+  investment_frequency: "monthly",
+  created_at: "2026-06-04T00:00:00Z",
+  updated_at: "2026-06-04T00:00:00Z",
+};
 
 function mockAuthState(session: typeof mockSession | null) {
   vi.mocked(supabase.auth.getSession).mockResolvedValue(
@@ -119,6 +136,7 @@ describe("auth flow", () => {
 
   it("does not show the login page to authenticated users", async () => {
     mockAuthState(mockSession);
+    vi.mocked(getProfile).mockResolvedValue(mockProfile);
     renderRoute("/login");
 
     await waitFor(() => {
