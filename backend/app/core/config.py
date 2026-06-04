@@ -9,6 +9,9 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+    supabase_url: str = ""
+    supabase_jwt_secret: str = ""
+    auth_audience: str = "authenticated"
 
     model_config = SettingsConfigDict(
         env_file=".env",
