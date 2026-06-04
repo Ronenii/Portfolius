@@ -404,6 +404,140 @@ h1 {
   justify-content: flex-start;
 }
 
+.holdings-page {
+  max-width: 1320px;
+}
+
+.holdings-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.holdings-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-100);
+  box-shadow: var(--shadow-1);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.panel-heading h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.muted-copy {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 14px;
+}
+
+.empty-state {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+  border: 1px dashed var(--ink-100);
+  border-radius: 6px;
+  background: var(--paper-50);
+}
+
+.empty-state strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.empty-state span {
+  color: var(--ink-500);
+  font-size: 14px;
+}
+
+.holdings-table-wrap {
+  overflow-x: auto;
+}
+
+.holdings-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.holdings-table th,
+.holdings-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.holdings-table th {
+  color: var(--ink-500);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.holdings-table td {
+  color: var(--ink-700);
+}
+
+.holdings-table td strong {
+  color: var(--fg-paper);
+  font-weight: 700;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-50);
+  color: var(--ink-700);
+  cursor: pointer;
+}
+
+.icon-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.icon-button--danger {
+  color: var(--loss-500);
+}
+
+.holding-form {
+  display: grid;
+  gap: 18px;
+}
+
+.holdings-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 860px) {
   .app-frame {
     grid-template-columns: 1fr;
@@ -440,6 +574,10 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .holdings-workspace {
+    grid-template-columns: 1fr;
+  }
+
   .status-detail,
   .status-endpoint,
   .status-checked {
@@ -456,5 +594,49 @@ h1 {
   .nav-link svg {
     width: 18px;
     height: 18px;
+  }
+
+  .holdings-table {
+    min-width: 0;
+  }
+
+  .holdings-table thead {
+    display: none;
+  }
+
+  .holdings-table,
+  .holdings-table tbody,
+  .holdings-table tr,
+  .holdings-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .holdings-table tr {
+    display: grid;
+    gap: 8px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .holdings-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .holdings-table td::before {
+    content: attr(data-label);
+    color: var(--ink-500);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .row-actions {
+    justify-content: flex-end;
   }
 }

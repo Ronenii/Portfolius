@@ -10,10 +10,10 @@ import AppShell from "../components/layout/AppShell";
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { ProtectedRoute, PublicOnlyRoute } from "../features/auth/AuthRoutes";
 import LoginPage from "../features/auth/LoginPage";
+import HoldingsPage from "../features/holdings/HoldingsPage";
 import ProfileGate from "../features/profile/ProfileGate";
 import ProfileWizardPage from "../features/profile/ProfileWizardPage";
 import DashboardPage from "../pages/DashboardPage";
-import HoldingsPage from "../pages/HoldingsPage";
 
 export const routes: RouteObject[] = [
   {

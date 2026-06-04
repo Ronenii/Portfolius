@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "./query-client";
 import { createAppRouter } from "./router";
+import { listHoldings } from "../features/holdings/holdings-api";
 import { ApiError } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { getProfile } from "../features/profile/profile-api";
@@ -25,6 +26,13 @@ vi.mock("../lib/supabase", () => ({
 vi.mock("../features/profile/profile-api", () => ({
   getProfile: vi.fn(),
   saveProfile: vi.fn(),
+}));
+
+vi.mock("../features/holdings/holdings-api", () => ({
+  listHoldings: vi.fn(),
+  createHolding: vi.fn(),
+  updateHolding: vi.fn(),
+  deleteHolding: vi.fn(),
 }));
 
 const mockSession = {
@@ -129,6 +137,7 @@ describe("app router foundation", () => {
   it("registers the holdings route", async () => {
     mockAuthState(mockSession);
     vi.mocked(getProfile).mockResolvedValue(mockProfile);
+    vi.mocked(listHoldings).mockResolvedValue([]);
     renderRoute("/holdings");
 
     expect(
