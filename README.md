@@ -96,8 +96,7 @@ git clone <repo> portfolius && cd portfolius
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env          # fill in SUPABASE_URL and FRONTEND_ORIGINS if needed
-docker compose up -d db       # local postgres on :5432
+cp .env.local.example .env.local # fill with dev Supabase values for debugging
 alembic upgrade head
 uvicorn app.main:app --reload # http://localhost:8000  /docs for swagger
 
@@ -110,14 +109,18 @@ npm run dev                   # http://localhost:5173
 
 ### Required environment variables
 
-**Backend (`backend/.env`):**
+**Backend debug (`backend/.env.local`):**
 
 ```
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/portfolius
-SUPABASE_URL=https://<project>.supabase.co
+DATABASE_URL=postgresql+psycopg://postgres:<dev-db-password>@<dev-db-host>:5432/postgres
+SUPABASE_URL=https://<dev-project>.supabase.co
 AUTH_AUDIENCE=authenticated
 FRONTEND_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
 ```
+
+VS Code's `Backend: FastAPI` debug configuration reads `backend/.env.local`, so point it at the dev Supabase project rather than production.
+
+For backend-only migration or repository work, you can still point `DATABASE_URL` at a local Postgres container instead. For full frontend/backend debugging, use the dev Supabase database so Auth and API tokens belong to the same Supabase project.
 
 The backend verifies Supabase access tokens through the project's JWKS discovery endpoint:
 `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`. Do not use the legacy JWT secret for M1 backend auth.

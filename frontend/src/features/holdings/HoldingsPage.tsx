@@ -5,6 +5,8 @@ import { type FormEvent, useState } from "react";
 import Button from "../../components/ui/Button";
 import { ApiError } from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
+import InstrumentSearchInput from "../instruments/InstrumentSearchInput";
+import type { InstrumentSearchResult } from "../instruments/instrument-search-api";
 import {
   createHolding,
   deleteHolding,
@@ -162,6 +164,21 @@ export default function HoldingsPage() {
     setErrors({});
   }
 
+  function selectInstrument(result: InstrumentSearchResult) {
+    setForm((current) => ({
+      ...current,
+      symbol: result.symbol,
+      name: result.name ?? "",
+      exchange: result.exchange ?? "",
+      currency: result.currency ?? "",
+      asset_class: result.asset_class ?? "",
+      sector: result.sector ?? "",
+      country: result.country ?? "",
+      region: result.region ?? "",
+    }));
+    setErrors((current) => ({ ...current, symbol: undefined, form: undefined }));
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const payload = cleanedPayload(form);
@@ -316,11 +333,13 @@ export default function HoldingsPage() {
 
             <div className="form-grid holdings-form-grid">
               <div className="field">
-                <label htmlFor="holding-symbol">Symbol</label>
-                <input
+                <InstrumentSearchInput
+                  accessToken={accessToken ?? ""}
                   id="holding-symbol"
+                  label="Symbol"
                   value={form.symbol}
-                  onChange={(event) => updateField("symbol", event.target.value)}
+                  onChange={(value) => updateField("symbol", value)}
+                  onSelect={selectInstrument}
                 />
                 {errors.symbol ? <span className="field-error">{errors.symbol}</span> : null}
               </div>

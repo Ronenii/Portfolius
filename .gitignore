@@ -1,4 +1,5 @@
-.env
+.env*
+backend/.env.local
 __pycache__/
 .pytest_cache/
 .ruff_cache/

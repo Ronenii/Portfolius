@@ -386,9 +386,14 @@ h1 {
 }
 
 .field-error,
+.field-hint,
 .form-error {
   color: var(--loss-500);
   font-size: 13px;
+}
+
+.field-hint {
+  color: var(--ink-500);
 }
 
 .form-error {
@@ -536,6 +541,59 @@ h1 {
 
 .holdings-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.instrument-search {
+  position: relative;
+  display: grid;
+  gap: 7px;
+}
+
+.instrument-results {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-50);
+  box-shadow: var(--shadow-1);
+}
+
+.instrument-result {
+  display: grid;
+  gap: 2px;
+  padding: 10px 11px;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: var(--fg-paper);
+  cursor: pointer;
+  text-align: left;
+}
+
+.instrument-result:last-child {
+  border-bottom: 0;
+}
+
+.instrument-result:hover,
+.instrument-result:focus {
+  background: var(--accent-100);
+  outline: 0;
+}
+
+.instrument-result strong {
+  font-size: 14px;
+}
+
+.instrument-result span,
+.instrument-result small {
+  color: var(--ink-500);
+  font-size: 12px;
 }
 
 @media (max-width: 860px) {

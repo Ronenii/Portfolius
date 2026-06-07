@@ -11,9 +11,10 @@ class Settings(BaseSettings):
     ]
     supabase_url: str = ""
     auth_audience: str = "authenticated"
+    fmp_api_key: str | None = None
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",
         extra="ignore",
     )

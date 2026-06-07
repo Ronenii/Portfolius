@@ -9,6 +9,7 @@ import { createQueryClient } from "../../app/query-client";
 import { createAppRouter } from "../../app/router";
 import { ApiError } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
+import { searchInstruments } from "../instruments/instrument-search-api";
 import { getProfile } from "../profile/profile-api";
 import {
   createHolding,
@@ -33,6 +34,10 @@ vi.mock("../../lib/supabase", () => ({
 vi.mock("../profile/profile-api", () => ({
   getProfile: vi.fn(),
   saveProfile: vi.fn(),
+}));
+
+vi.mock("../instruments/instrument-search-api", () => ({
+  searchInstruments: vi.fn(),
 }));
 
 vi.mock("./holdings-api", () => ({
@@ -91,6 +96,18 @@ const teslaHolding: Holding = {
   },
   quantity: "3",
   average_cost: "180.00",
+};
+
+const indiaSearchResult = {
+  symbol: "INDA",
+  name: "iShares MSCI India ETF",
+  exchange: "BATS",
+  currency: "USD",
+  asset_class: "ETF",
+  sector: "Broad Market",
+  country: "India",
+  region: "Asia",
+  source: "fmp",
 };
 
 function mockAuthState() {
@@ -158,6 +175,7 @@ describe("holdings page", () => {
     vi.mocked(createHolding).mockResolvedValue(teslaHolding);
     vi.mocked(updateHolding).mockResolvedValue(appleHolding);
     vi.mocked(deleteHolding).mockResolvedValue(undefined);
+    vi.mocked(searchInstruments).mockResolvedValue([]);
   });
 
   it("lists fetched holdings", async () => {
@@ -197,6 +215,33 @@ describe("holdings page", () => {
         region: "North America",
         quantity: "4.25",
         average_cost: "312.50",
+      });
+    });
+  });
+
+  it("autofills instrument metadata from a selected search result", async () => {
+    vi.mocked(listHoldings).mockResolvedValue([]);
+    vi.mocked(searchInstruments).mockResolvedValue([indiaSearchResult]);
+    renderHoldingsRoute();
+
+    await userEvent.type(await screen.findByLabelText("Symbol"), "IN");
+    await userEvent.click(await screen.findByRole("option", { name: /INDA/i }));
+    await userEvent.type(screen.getByLabelText("Quantity"), "2");
+    await userEvent.type(screen.getByLabelText("Average cost"), "44.50");
+    await userEvent.click(screen.getByRole("button", { name: "Save holding" }));
+
+    await waitFor(() => {
+      expect(createHolding).toHaveBeenCalledWith("access-token", {
+        symbol: "INDA",
+        name: "iShares MSCI India ETF",
+        exchange: "BATS",
+        currency: "USD",
+        asset_class: "ETF",
+        sector: "Broad Market",
+        country: "India",
+        region: "Asia",
+        quantity: "2",
+        average_cost: "44.50",
       });
     });
   });
