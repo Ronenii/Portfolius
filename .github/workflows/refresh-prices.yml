@@ -1,0 +1,21 @@
+name: Refresh Prices
+
+on:
+  schedule:
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  refresh-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh portfolio prices
+        run: |
+          curl --fail-with-body \
+            --request POST \
+            --header "X-Scheduler-Secret: $PORTFOLIUS_SCHEDULER_SECRET" \
+            "$PORTFOLIUS_API_URL/api/v1/jobs/refresh-prices?user_id=$PORTFOLIUS_REFRESH_USER_ID"
+        env:
+          PORTFOLIUS_API_URL: ${{ secrets.PORTFOLIUS_API_URL }}
+          PORTFOLIUS_REFRESH_USER_ID: ${{ secrets.PORTFOLIUS_REFRESH_USER_ID }}
+          PORTFOLIUS_SCHEDULER_SECRET: ${{ secrets.PORTFOLIUS_SCHEDULER_SECRET }}
