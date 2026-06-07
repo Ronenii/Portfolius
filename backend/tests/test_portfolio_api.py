@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -180,6 +180,7 @@ def test_manual_refresh_uses_authenticated_user(
     response = refresh_prices(
         db_session,
         market_data_client,
+        datetime(2026, 6, 5, 21, 0, tzinfo=UTC),
         settings=Settings(),
         current_user=authenticated_user,
     )
@@ -199,6 +200,7 @@ def test_scheduler_secret_can_refresh_requested_user(
     response = refresh_prices(
         db_session,
         market_data_client,
+        datetime(2026, 6, 5, 15, 0, tzinfo=UTC),
         settings=Settings(scheduler_secret="secret"),
         scheduler_secret="secret",
         user_id=authenticated_user.user_id,
@@ -208,11 +210,36 @@ def test_scheduler_secret_can_refresh_requested_user(
     assert response.updated == 1
 
 
+def test_scheduler_refresh_skips_when_us_market_is_closed(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    add_profile(db_session, authenticated_user.user_id)
+    add_holding(db_session, authenticated_user.user_id, "VOO", close_price=None)
+    market_data_client = FakeMarketDataClient()
+
+    response = refresh_prices(
+        db_session,
+        market_data_client,
+        datetime(2026, 6, 5, 21, 0, tzinfo=UTC),
+        settings=Settings(scheduler_secret="secret"),
+        scheduler_secret="secret",
+        user_id=authenticated_user.user_id,
+    )
+
+    assert response.requested == 0
+    assert response.updated == 0
+    assert response.skipped == 0
+    assert response.failed == 0
+    assert market_data_client.requests == []
+
+
 def test_wrong_scheduler_secret_returns_401(db_session: Session) -> None:
     with pytest.raises(HTTPException) as exc_info:
         refresh_prices(
             db_session,
             FakeMarketDataClient(),
+            datetime(2026, 6, 5, 15, 0, tzinfo=UTC),
             settings=Settings(scheduler_secret="secret"),
             scheduler_secret="wrong",
             user_id="user-123",
@@ -228,6 +255,7 @@ def test_refresh_without_user_or_scheduler_secret_returns_401(
         refresh_prices(
             db_session,
             FakeMarketDataClient(),
+            datetime(2026, 6, 5, 15, 0, tzinfo=UTC),
             settings=Settings(),
         )
 

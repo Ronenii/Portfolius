@@ -99,7 +99,8 @@ backend/app/
 ├── domain/
 │   ├── portfolio_math.py
 │   ├── snapshots.py
-│   └── allocation.py
+│   ├── allocation.py
+│   └── simulation.py
 ├── integrations/
 │   ├── market_data.py
 │   ├── fmp.py
@@ -204,9 +205,53 @@ GET/POST /api/v1/holdings
 GET/PUT/DELETE /api/v1/holdings/{holding_id}
 GET /api/v1/portfolio/snapshot
 GET /api/v1/portfolio/breakdowns
+POST /api/v1/portfolio/simulate
 POST /api/v1/assistant/messages
 POST /api/v1/jobs/refresh-prices
 ```
+
+## Portfolio Simulation (M3)
+
+Portfolio simulation lets a user run *what-if scenarios* before committing to a trade. A scenario is a basket of hypothetical buy/sell legs (for example, sell 10 of AAPL, buy 5 of VXUS and 3 of BND). Portfolius then shows the resulting allocation **before, after, and delta** across every existing breakdown dimension, so the user can see how a prospective trade would shift their distribution. This is the bridge between understanding the current portfolio and deciding how to rebalance, and in M3 it becomes the substrate the AI assistant reasons over when suggesting trades.
+
+### Stateless reuse of the snapshot pipeline
+
+Simulation introduces no new persistence and no new portfolio math. A scenario is a pure, in-memory transform over the existing deterministic pipeline:
+
+```text
+real holdings + latest prices
+        │
+        ├─► build_portfolio_snapshot ─► build_allocation_breakdowns   = "before"
+        │
+   apply_trades(holdings, prices, legs)        (new pure function)
+        │
+        └─► build_portfolio_snapshot ─► build_allocation_breakdowns   = "after"
+                                  │
+                          diff_breakdowns(before, after)               = "delta"
+```
+
+- A new `domain/simulation.py` module holds `apply_trades(...)`, which returns a hypothetical `(holdings, prices)`, and `diff_breakdowns(...)`, which computes per-dimension deltas. Both are pure and unit-testable, consistent with the principle of keeping portfolio math deterministic before adding AI behavior.
+- Buying an instrument that is not yet held reuses the M2 instrument search to resolve its metadata and latest price. Without sector, country, and region the holding cannot be allocated meaningfully, so simulation depends on M2 instrument metadata being in place.
+- Sells reduce an existing position and are validated against the held quantity. The product does not model shorting.
+- Scenarios are computed on demand and not stored. Saving named scenarios is a possible later enhancement, deliberately deferred.
+
+### API shape
+
+```text
+POST /api/v1/portfolio/simulate
+
+Request:  { legs: [ { symbol | instrument_id, action: "buy" | "sell", quantity, price? } ] }
+Response: { current: PortfolioBreakdowns,
+            simulated: PortfolioBreakdowns,
+            delta: [ { dimension, label, percent_before, percent_after, percent_change } ],
+            warnings: [ ... ] }
+```
+
+The endpoint uses POST because the input is a structured basket, even though the operation is non-mutating. It is user-scoped exactly like the other portfolio endpoints, and `price?` defaults to the latest stored close. Warnings cover cases such as an unpriced new instrument or a sell that exceeds the held quantity.
+
+### Assistant integration
+
+The assistant invokes the same `simulate` pipeline to ground rebalancing suggestions in a concrete before/after delta rather than vague advice. As with all assistant context, it receives summarized simulated allocation, not raw holdings or secrets.
 
 ## Authentication Strategy
 
@@ -253,7 +298,7 @@ To enable Google OAuth:
 - M0: walking skeleton from deployed frontend to deployed backend to database.
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
 - M2: instrument search/autofill, price refresh, and allocation breakdowns.
-- M3: AI assistant grounded in portfolio context.
+- M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
 - M4: transactions, projections, PWA install, and CSV import.
 
 M0 should not include portfolio math, charting, market-data providers, or LLM integration. Those are intentionally deferred.

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
@@ -12,6 +13,7 @@ from app.core.auth import (
 )
 from app.core.config import Settings, get_settings
 from app.data.database import get_db
+from app.domain.market_hours import is_us_market_open
 from app.domain.price_refresh import PriceRefreshResult, refresh_prices_for_user
 from app.integrations.market_data import MarketDataClient
 from app.integrations.yfinance_client import YFinanceMarketDataClient
@@ -21,6 +23,10 @@ router = APIRouter(tags=["jobs"])
 
 def get_market_data_client() -> MarketDataClient:
     return YFinanceMarketDataClient()
+
+
+def current_utc_time() -> datetime:
+    return datetime.now(UTC)
 
 
 def get_optional_current_user(
@@ -50,6 +56,7 @@ def get_optional_current_user(
 def refresh_prices(
     db: Annotated[Session, Depends(get_db)],
     market_data_client: Annotated[MarketDataClient, Depends(get_market_data_client)],
+    current_time: Annotated[datetime, Depends(current_utc_time)],
     settings: Annotated[Settings, Depends(get_settings)],
     current_user: Annotated[
         AuthenticatedUser | None,
@@ -64,6 +71,9 @@ def refresh_prices(
         scheduler_secret,
         user_id,
     )
+    if scheduler_secret is not None and not is_us_market_open(current_time):
+        return PriceRefreshResult(requested=0, updated=0, skipped=0, failed=0)
+
     return refresh_prices_for_user(db, refresh_user_id, market_data_client)
 
 
