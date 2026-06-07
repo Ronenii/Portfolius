@@ -16,6 +16,9 @@ class InstrumentLookupClient(Protocol):
     def search(self, query: str, limit: int = 10) -> list[InstrumentSearchResult]:
         ...
 
+    def profile(self, symbol: str) -> InstrumentSearchResult | None:
+        ...
+
 
 def get_instrument_lookup_client(
     settings: Annotated[Settings, Depends(get_settings)],

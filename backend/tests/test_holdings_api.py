@@ -18,6 +18,24 @@ from app.core.auth import AuthenticatedUser, get_current_user
 from app.data.models import Holding, Instrument
 from app.main import app
 from app.schemas.holdings import HoldingRequest
+from app.schemas.instruments import InstrumentSearchResult
+
+
+class FakeInstrumentLookupClient:
+    def __init__(
+        self,
+        profile_result: InstrumentSearchResult | None = None,
+        should_raise: bool = False,
+    ) -> None:
+        self.profile_result = profile_result
+        self.should_raise = should_raise
+        self.profile_symbols: list[str] = []
+
+    def profile(self, symbol: str) -> InstrumentSearchResult | None:
+        self.profile_symbols.append(symbol)
+        if self.should_raise:
+            raise RuntimeError("provider down")
+        return self.profile_result
 
 
 def holding_payload(**overrides: object) -> HoldingRequest:
@@ -37,6 +55,52 @@ def holding_payload(**overrides: object) -> HoldingRequest:
     return HoldingRequest.model_validate(payload)
 
 
+def profile_result(**overrides: object) -> InstrumentSearchResult:
+    payload: dict[str, object] = {
+        "symbol": "VOO",
+        "name": "Vanguard S&P 500 ETF",
+        "exchange": "NYSEARCA",
+        "currency": "USD",
+        "asset_class": "ETF",
+        "sector": "Broad Market",
+        "country": "United States",
+        "region": "North America",
+        "source": "fmp",
+    }
+    payload.update(overrides)
+    return InstrumentSearchResult.model_validate(payload)
+
+
+def save_holding(
+    payload: HoldingRequest,
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+    lookup_client: FakeInstrumentLookupClient | None = None,
+):
+    return add_holding(
+        payload,
+        authenticated_user,
+        db_session,
+        lookup_client or FakeInstrumentLookupClient(),
+    )
+
+
+def save_holding_update(
+    holding_id: int,
+    payload: HoldingRequest,
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+    lookup_client: FakeInstrumentLookupClient | None = None,
+):
+    return edit_holding(
+        holding_id,
+        payload,
+        authenticated_user,
+        db_session,
+        lookup_client or FakeInstrumentLookupClient(),
+    )
+
+
 def test_holdings_routes_require_auth() -> None:
     route_paths = {getattr(route, "path", None) for route in app.routes}
 
@@ -54,8 +118,8 @@ def test_creating_holding_inserts_and_reuses_instrument(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    first_response = add_holding(holding_payload(), authenticated_user, db_session)
-    second_response = add_holding(
+    first_response = save_holding(holding_payload(), authenticated_user, db_session)
+    second_response = save_holding(
         holding_payload(quantity="3"),
         authenticated_user,
         db_session,
@@ -72,17 +136,55 @@ def test_creating_holding_inserts_and_reuses_instrument(
     assert first_response.instrument.currency == "USD"
 
 
+def test_creating_holding_enriches_missing_metadata_from_profile(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    lookup_client = FakeInstrumentLookupClient(profile_result())
+
+    response = save_holding(
+        holding_payload(name=None, sector=None, country=None, region=None),
+        authenticated_user,
+        db_session,
+        lookup_client,
+    )
+
+    assert lookup_client.profile_symbols == ["VOO"]
+    assert response.instrument.name == "Vanguard S&P 500 ETF"
+    assert response.instrument.sector == "Broad Market"
+    assert response.instrument.country == "United States"
+    assert response.instrument.region == "North America"
+
+
+def test_creating_holding_continues_when_profile_lookup_fails(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    lookup_client = FakeInstrumentLookupClient(should_raise=True)
+
+    response = save_holding(
+        holding_payload(sector=None, country=None, region=None),
+        authenticated_user,
+        db_session,
+        lookup_client,
+    )
+
+    assert lookup_client.profile_symbols == ["VOO"]
+    assert response.instrument.symbol == "VOO"
+    assert response.instrument.sector is None
+
+
 def test_listing_holdings_returns_only_authenticated_users_holdings(
     authenticated_user: AuthenticatedUser,
     second_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    own_holding = add_holding(
+    own_holding = save_holding(
         holding_payload(symbol="VOO"),
         authenticated_user,
         db_session,
     )
-    add_holding(holding_payload(symbol="VXUS"), second_user, db_session)
+    save_holding(holding_payload(symbol="VXUS"), second_user, db_session)
 
     holdings = list_holdings(authenticated_user, db_session)
 
@@ -94,7 +196,7 @@ def test_getting_another_users_holding_returns_404(
     second_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    other_holding = add_holding(holding_payload(), second_user, db_session)
+    other_holding = save_holding(holding_payload(), second_user, db_session)
 
     with pytest.raises(HTTPException) as exc_info:
         read_holding(other_holding.id, authenticated_user, db_session)
@@ -107,10 +209,10 @@ def test_updating_another_users_holding_returns_404(
     second_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    other_holding = add_holding(holding_payload(), second_user, db_session)
+    other_holding = save_holding(holding_payload(), second_user, db_session)
 
     with pytest.raises(HTTPException) as exc_info:
-        edit_holding(
+        save_holding_update(
             other_holding.id,
             holding_payload(quantity="5"),
             authenticated_user,
@@ -125,7 +227,7 @@ def test_deleting_another_users_holding_returns_404(
     second_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    other_holding = add_holding(holding_payload(), second_user, db_session)
+    other_holding = save_holding(holding_payload(), second_user, db_session)
 
     with pytest.raises(HTTPException) as exc_info:
         remove_holding(other_holding.id, authenticated_user, db_session)
@@ -137,9 +239,9 @@ def test_updating_own_holding_changes_quantity_and_instrument(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    holding = add_holding(holding_payload(), authenticated_user, db_session)
+    holding = save_holding(holding_payload(), authenticated_user, db_session)
 
-    response = edit_holding(
+    response = save_holding_update(
         holding.id,
         holding_payload(symbol="vxus", exchange="", quantity="7.25"),
         authenticated_user,
@@ -156,7 +258,7 @@ def test_deleting_own_holding_returns_204_and_removes_row(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    holding = add_holding(holding_payload(), authenticated_user, db_session)
+    holding = save_holding(holding_payload(), authenticated_user, db_session)
 
     response = remove_holding(holding.id, authenticated_user, db_session)
 
@@ -177,7 +279,7 @@ def test_symbol_and_currency_are_normalized_in_responses(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
-    response = add_holding(
+    response = save_holding(
         holding_payload(symbol="voo", currency="usd"),
         authenticated_user,
         db_session,
