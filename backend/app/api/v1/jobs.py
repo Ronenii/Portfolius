@@ -1,0 +1,87 @@
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header
+from fastapi.security import HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+
+from app.core.auth import (
+    AuthenticatedUser,
+    bearer_scheme,
+    decode_supabase_jwt,
+    unauthorized,
+)
+from app.core.config import Settings, get_settings
+from app.data.database import get_db
+from app.domain.price_refresh import PriceRefreshResult, refresh_prices_for_user
+from app.integrations.market_data import MarketDataClient
+from app.integrations.yfinance_client import YFinanceMarketDataClient
+
+router = APIRouter(tags=["jobs"])
+
+
+def get_market_data_client() -> MarketDataClient:
+    return YFinanceMarketDataClient()
+
+
+def get_optional_current_user(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer_scheme),
+    ],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AuthenticatedUser | None:
+    if credentials is None:
+        return None
+
+    claims = decode_supabase_jwt(credentials.credentials, settings)
+    subject = claims.get("sub")
+    if not isinstance(subject, str) or not subject:
+        raise unauthorized()
+
+    email = claims.get("email")
+    return AuthenticatedUser(
+        user_id=subject,
+        email=email if isinstance(email, str) else None,
+        claims=claims,
+    )
+
+
+@router.post("/api/v1/jobs/refresh-prices", response_model=PriceRefreshResult)
+def refresh_prices(
+    db: Annotated[Session, Depends(get_db)],
+    market_data_client: Annotated[MarketDataClient, Depends(get_market_data_client)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    current_user: Annotated[
+        AuthenticatedUser | None,
+        Depends(get_optional_current_user),
+    ] = None,
+    scheduler_secret: Annotated[str | None, Header(alias="X-Scheduler-Secret")] = None,
+    user_id: str | None = None,
+) -> PriceRefreshResult:
+    refresh_user_id = user_id_from_auth(
+        settings,
+        current_user,
+        scheduler_secret,
+        user_id,
+    )
+    return refresh_prices_for_user(db, refresh_user_id, market_data_client)
+
+
+def user_id_from_auth(
+    settings: Settings,
+    current_user: AuthenticatedUser | None,
+    scheduler_secret: str | None,
+    user_id: str | None,
+) -> str:
+    if scheduler_secret is not None:
+        if (
+            not settings.scheduler_secret
+            or scheduler_secret != settings.scheduler_secret
+            or not user_id
+        ):
+            raise unauthorized()
+        return user_id
+
+    if current_user is None:
+        raise unauthorized()
+    return current_user.user_id

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     auth_audience: str = "authenticated"
     fmp_api_key: str | None = None
+    scheduler_secret: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),
