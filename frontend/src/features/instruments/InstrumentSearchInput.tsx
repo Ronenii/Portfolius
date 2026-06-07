@@ -33,7 +33,7 @@ export default function InstrumentSearchInput({
 
   useEffect(() => {
     const query = inputValue.trim();
-    if (!accessToken || query.length < 3) {
+    if (!accessToken || query.length < 2) {
       setResults([]);
       setIsSearching(false);
       return;

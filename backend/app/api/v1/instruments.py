@@ -45,7 +45,7 @@ def search_instruments(
     if current_user is None:
         raise unauthorized()
 
-    if len(query.strip()) < 3:
+    if len(query.strip()) < 2:
         return []
 
     local_results = search_local_instruments(db, query, limit=10)

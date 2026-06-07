@@ -54,11 +54,11 @@ describe("InstrumentSearchInput", () => {
     vi.useRealTimers();
   });
 
-  it("does not search for one- or two-character input", async () => {
+  it("does not search for one-character input", async () => {
     vi.mocked(searchInstruments).mockResolvedValue([indaResult]);
     renderSearchInput();
 
-    await userEvent.type(screen.getByLabelText("Symbol"), "IN");
+    await userEvent.type(screen.getByLabelText("Symbol"), "I");
 
     await waitFor(() => {
       expect(searchInstruments).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe("InstrumentSearchInput", () => {
     renderSearchInput();
 
     fireEvent.change(screen.getByLabelText("Symbol"), {
-      target: { value: "IND" },
+      target: { value: "VT" },
     });
 
     await act(async () => {
@@ -84,7 +84,7 @@ describe("InstrumentSearchInput", () => {
       vi.advanceTimersByTime(1);
       await Promise.resolve();
     });
-    expect(searchInstruments).toHaveBeenCalledWith("access-token", "IND");
+    expect(searchInstruments).toHaveBeenCalledWith("access-token", "VT");
   });
 
   it("shows matching instruments and calls onSelect", async () => {

@@ -62,31 +62,31 @@ def test_instrument_search_returns_local_results_before_provider(
 ) -> None:
     db_session.add(
         Instrument(
-            symbol="TSM",
-            name="Taiwan Semiconductor Manufacturing Company Limited",
-            exchange="NYSE",
+            symbol="VT",
+            name="Vanguard Total World Stock ETF",
+            exchange="NYSEARCA",
             currency="USD",
-            asset_class="ADR",
-            sector="Technology",
-            country="TW",
-            region="Asia",
+            asset_class="ETF",
+            sector="Broad Market",
+            country="Global",
+            region="Global",
         )
     )
     db_session.commit()
     lookup_client = FakeLookupClient()
 
-    results = search_instruments("TSM", authenticated_user, db_session, lookup_client)
+    results = search_instruments("VT", authenticated_user, db_session, lookup_client)
 
     assert lookup_client.queries == []
     assert results[0] == InstrumentSearchResult(
-        symbol="TSM",
-        name="Taiwan Semiconductor Manufacturing Company Limited",
-        exchange="NYSE",
+        symbol="VT",
+        name="Vanguard Total World Stock ETF",
+        exchange="NYSEARCA",
         currency="USD",
-        asset_class="ADR",
-        sector="Technology",
-        country="TW",
-        region="Asia",
+        asset_class="ETF",
+        sector="Broad Market",
+        country="Global",
+        region="Global",
         source="local",
     )
 
@@ -97,7 +97,7 @@ def test_instrument_search_short_query_skips_provider(
 ) -> None:
     lookup_client = FakeLookupClient()
 
-    assert search_instruments("IN", authenticated_user, db_session, lookup_client) == []
+    assert search_instruments("I", authenticated_user, db_session, lookup_client) == []
     assert lookup_client.queries == []
 
 

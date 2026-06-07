@@ -44,7 +44,7 @@ def search_local_instruments(
     limit: int = 10,
 ) -> list[InstrumentSearchResult]:
     normalized_query = query.strip().upper()
-    if len(normalized_query) < 3:
+    if len(normalized_query) < 2:
         return []
 
     instruments = db.scalars(
