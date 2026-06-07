@@ -75,7 +75,7 @@ function validateHolding(payload: HoldingPayload): HoldingFormErrors {
     errors.quantity = "Quantity is required";
   }
   if (!payload.average_cost.trim()) {
-    errors.average_cost = "Average cost is required";
+    errors.average_cost = "Purchase cost is required";
   }
 
   return errors;
@@ -89,6 +89,21 @@ function mutationErrorMessage(error: unknown) {
 
 function displayValue(value: string | null | undefined) {
   return value && value.trim() ? value : "-";
+}
+
+function formatDecimal(value: string) {
+  const numericValue = Number(value);
+  return new Intl.NumberFormat("en", {
+    maximumFractionDigits: 8,
+  }).format(Number.isFinite(numericValue) ? numericValue : 0);
+}
+
+function formatMoney(value: string, currency = "USD") {
+  const numericValue = Number(value);
+  return new Intl.NumberFormat("en", {
+    currency,
+    style: "currency",
+  }).format(Number.isFinite(numericValue) ? numericValue : 0);
 }
 
 export default function HoldingsPage() {
@@ -240,7 +255,7 @@ export default function HoldingsPage() {
                     <th>Exchange</th>
                     <th>Currency</th>
                     <th>Quantity</th>
-                    <th>Average cost</th>
+                    <th>Purchase cost</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -258,10 +273,13 @@ export default function HoldingsPage() {
                         {holding.instrument.currency?.toUpperCase() ?? "-"}
                       </td>
                       <td data-label="Quantity" className="num">
-                        {holding.quantity}
+                        {formatDecimal(holding.quantity)}
                       </td>
-                      <td data-label="Average cost" className="num">
-                        {holding.average_cost}
+                      <td data-label="Purchase cost" className="num">
+                        {formatMoney(
+                          holding.average_cost,
+                          holding.instrument.currency ?? "USD"
+                        )}
                       </td>
                       <td data-label="Actions">
                         <div className="row-actions">
@@ -412,7 +430,7 @@ export default function HoldingsPage() {
                 ) : null}
               </div>
               <div className="field">
-                <label htmlFor="holding-average-cost">Average cost</label>
+                <label htmlFor="holding-average-cost">Purchase cost</label>
                 <input
                   id="holding-average-cost"
                   inputMode="decimal"

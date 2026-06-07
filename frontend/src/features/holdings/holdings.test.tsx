@@ -158,8 +158,8 @@ async function fillHoldingForm(symbol = "msft") {
   await userEvent.type(screen.getByLabelText("Region"), "North America");
   await userEvent.clear(screen.getByLabelText("Quantity"));
   await userEvent.type(screen.getByLabelText("Quantity"), "4.25");
-  await userEvent.clear(screen.getByLabelText("Average cost"));
-  await userEvent.type(screen.getByLabelText("Average cost"), "312.50");
+  await userEvent.clear(screen.getByLabelText("Purchase cost"));
+  await userEvent.type(screen.getByLabelText("Purchase cost"), "312.50");
 }
 
 describe("holdings page", () => {
@@ -185,7 +185,25 @@ describe("holdings page", () => {
     expect(await screen.findByText("AAPL")).toBeInTheDocument();
     expect(screen.getByText("Apple Inc.")).toBeInTheDocument();
     expect(screen.getByText("12.5")).toBeInTheDocument();
-    expect(screen.getByText("145.20")).toBeInTheDocument();
+    expect(screen.getByText("$145.20")).toBeInTheDocument();
+  });
+
+  it("formats decimal fields in the holdings table without trailing zero noise", async () => {
+    vi.mocked(listHoldings).mockResolvedValue([
+      {
+        ...appleHolding,
+        quantity: "12.50000000",
+        average_cost: "145.20000000",
+      },
+    ]);
+
+    renderHoldingsRoute();
+
+    const row = await screen.findByRole("row", { name: /AAPL/i });
+    expect(within(row).getByText("12.5")).toBeInTheDocument();
+    expect(within(row).getByText("$145.20")).toBeInTheDocument();
+    expect(within(row).queryByText("12.50000000")).not.toBeInTheDocument();
+    expect(within(row).queryByText("145.20000000")).not.toBeInTheDocument();
   });
 
   it("shows an empty state when there are no holdings", async () => {
@@ -227,7 +245,7 @@ describe("holdings page", () => {
     await userEvent.type(await screen.findByLabelText("Symbol"), "IND");
     await userEvent.click(await screen.findByRole("option", { name: /INDA/i }));
     await userEvent.type(screen.getByLabelText("Quantity"), "2");
-    await userEvent.type(screen.getByLabelText("Average cost"), "44.50");
+    await userEvent.type(screen.getByLabelText("Purchase cost"), "44.50");
     await userEvent.click(screen.getByRole("button", { name: "Save holding" }));
 
     await waitFor(() => {
