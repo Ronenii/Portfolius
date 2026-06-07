@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,8 +7,10 @@ import { createQueryClient } from "../app/query-client";
 import { ApiError, fetchBackendHealth } from "../lib/api";
 import { useAuth } from "../features/auth/AuthContext";
 import {
+  getPortfolioBreakdowns,
   getPortfolioSnapshot,
   refreshPrices,
+  type PortfolioBreakdowns,
   type PortfolioSnapshot,
 } from "../features/portfolio/portfolio-api";
 import DashboardPage from "./DashboardPage";
@@ -18,6 +20,7 @@ vi.mock("../features/auth/AuthContext", () => ({
 }));
 
 vi.mock("../features/portfolio/portfolio-api", () => ({
+  getPortfolioBreakdowns: vi.fn(),
   getPortfolioSnapshot: vi.fn(),
   refreshPrices: vi.fn(),
 }));
@@ -72,6 +75,70 @@ const pricedSnapshot: PortfolioSnapshot = {
   },
 };
 
+const pricedBreakdowns: PortfolioBreakdowns = {
+  asset_class: [
+    {
+      currency: "USD",
+      dimension: "asset_class",
+      holding_count: 1,
+      label: "ETF",
+      market_value: "1250.00",
+      percent: "62.5",
+    },
+  ],
+  country: [
+    {
+      currency: "USD",
+      dimension: "country",
+      holding_count: 1,
+      label: "United States",
+      market_value: "1250.00",
+      percent: "100",
+    },
+  ],
+  currency: [
+    {
+      currency: "USD",
+      dimension: "currency",
+      holding_count: 1,
+      label: "USD",
+      market_value: "1250.00",
+      percent: "100",
+    },
+  ],
+  instrument: [
+    {
+      currency: "USD",
+      dimension: "instrument",
+      holding_count: 1,
+      label: "VOO",
+      market_value: "1250.00",
+      percent: "100",
+    },
+  ],
+  region: [
+    {
+      currency: "USD",
+      dimension: "region",
+      holding_count: 1,
+      label: "North America",
+      market_value: "1250.00",
+      percent: "100",
+    },
+  ],
+  sector: [
+    {
+      currency: "USD",
+      dimension: "sector",
+      holding_count: 1,
+      label: "Broad Market",
+      market_value: "1250.00",
+      percent: "100",
+    },
+  ],
+  unpriced_holding_count: 0,
+};
+
 function emptySnapshot(): PortfolioSnapshot {
   return {
     ...pricedSnapshot,
@@ -117,6 +184,7 @@ describe("DashboardPage", () => {
       user: null,
     });
     vi.mocked(fetchBackendHealth).mockResolvedValue({ status: "ok" });
+    vi.mocked(getPortfolioBreakdowns).mockResolvedValue(pricedBreakdowns);
     vi.mocked(getPortfolioSnapshot).mockResolvedValue(pricedSnapshot);
     vi.mocked(refreshPrices).mockResolvedValue({
       requested: 1,
@@ -169,10 +237,54 @@ describe("DashboardPage", () => {
   it("renders summary values when priced data is returned", async () => {
     renderDashboard();
 
-    expect(await screen.findByText("$1,250.00")).toBeInTheDocument();
-    expect(screen.getByText("$1,000.00")).toBeInTheDocument();
-    expect(screen.getByText("$250.00")).toBeInTheDocument();
-    expect(screen.getByText("1 priced / 0 missing")).toBeInTheDocument();
+    const summary = await screen.findByLabelText("Portfolio summary");
+
+    expect(await within(summary).findByText("$1,250.00")).toBeInTheDocument();
+    expect(within(summary).getByText("$1,000.00")).toBeInTheDocument();
+    expect(within(summary).getByText("$250.00")).toBeInTheDocument();
+    expect(within(summary).getByText("1 priced / 0 missing")).toBeInTheDocument();
+  });
+
+  it("renders the asset class breakdown by default", async () => {
+    renderDashboard();
+
+    expect(await screen.findByRole("heading", { name: "Allocation breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Asset class" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(await screen.findByRole("cell", { name: "ETF" })).toBeInTheDocument();
+  });
+
+  it("updates table labels when the breakdown dimension changes", async () => {
+    renderDashboard();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Sector" }));
+
+    expect(screen.getByRole("button", { name: "Sector" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("cell", { name: "Broad Market" })).toBeInTheDocument();
+    expect(screen.queryByRole("cell", { name: "ETF" })).not.toBeInTheDocument();
+  });
+
+  it("renders an empty state when the selected breakdown has no rows", async () => {
+    vi.mocked(getPortfolioBreakdowns).mockResolvedValue({
+      ...pricedBreakdowns,
+      sector: [],
+    });
+
+    renderDashboard();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Sector" }));
+
+    expect(screen.getByText("No allocation rows yet")).toBeInTheDocument();
+  });
+
+  it("renders breakdown percentages and market values from the API", async () => {
+    renderDashboard();
+
+    expect(await screen.findByRole("cell", { name: "$1,250.00" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "62.5%" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "1" })).toBeInTheDocument();
   });
 
   it("refreshes prices and invalidates portfolio queries", async () => {

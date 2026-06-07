@@ -287,6 +287,111 @@ h1 {
   font-size: 13px;
 }
 
+.allocation-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-100);
+  box-shadow: var(--shadow-1);
+}
+
+.allocation-note {
+  align-self: start;
+  padding: 5px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink-500);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.segmented-button {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-50);
+  color: var(--ink-700);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.segmented-button--active {
+  border-color: rgb(22 124 124 / 42%);
+  background: var(--accent-50);
+  color: var(--accent-700);
+}
+
+.allocation-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.allocation-chart {
+  min-width: 0;
+  min-height: 240px;
+  padding: 8px 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-50);
+}
+
+.allocation-chart text {
+  fill: var(--ink-500);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.allocation-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.allocation-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.allocation-table th,
+.allocation-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.allocation-table th {
+  color: var(--ink-500);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.allocation-table td {
+  color: var(--ink-700);
+}
+
+.allocation-table td:first-child {
+  color: var(--fg-paper);
+  font-weight: 700;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -689,6 +794,10 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .allocation-layout {
+    grid-template-columns: 1fr;
+  }
+
   .status-detail,
   .status-endpoint,
   .status-checked {
@@ -720,26 +829,40 @@ h1 {
     min-width: 0;
   }
 
+  .allocation-table {
+    min-width: 0;
+  }
+
   .holdings-table thead {
+    display: none;
+  }
+
+  .allocation-table thead {
     display: none;
   }
 
   .holdings-table,
   .holdings-table tbody,
   .holdings-table tr,
-  .holdings-table td {
+  .holdings-table td,
+  .allocation-table,
+  .allocation-table tbody,
+  .allocation-table tr,
+  .allocation-table td {
     display: block;
     width: 100%;
   }
 
-  .holdings-table tr {
+  .holdings-table tr,
+  .allocation-table tr {
     display: grid;
     gap: 8px;
     padding: 12px 0;
     border-bottom: 1px solid var(--rule);
   }
 
-  .holdings-table td {
+  .holdings-table td,
+  .allocation-table td {
     display: flex;
     justify-content: space-between;
     gap: 12px;
@@ -747,7 +870,8 @@ h1 {
     border-bottom: 0;
   }
 
-  .holdings-table td::before {
+  .holdings-table td::before,
+  .allocation-table td::before {
     content: attr(data-label);
     color: var(--ink-500);
     font-size: 11px;

@@ -2,7 +2,7 @@
 
 > A long-term investor dashboard that shows you what you actually own by market exposure, sector, and asset class with an AI assistant help you rebalance against your goals.
 
-**Status:** Hobby project · M1 fixed and complete
+**Status:** Hobby project · M2 implementation in progress
 
 ## Why this exists
 
@@ -21,9 +21,9 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 ## Features
 
 - **Profile setup**: display name, base currency, time horizon, and investment frequency.
-- **Holdings tracking**: manually create, edit, list, and delete holdings.
+- **Holdings tracking**: create, edit, list, and delete holdings with instrument search/autofill.
 - **Authenticated API**: Supabase Auth sessions are verified by the backend and scoped by user ID.
-- **Planned breakdowns**: same portfolio, different lenses (region, sector, asset class, currency).
+- **Portfolio dashboard**: current values, cost basis, gain/loss, price coverage, and allocation breakdowns by instrument, asset class, sector, country, region, and currency.
 - **Planned AI assistant**: chat panel grounded in portfolio + profile context.
 - **Responsive**: works on desktop and phone.
 
@@ -34,7 +34,7 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 | Frontend | React + Vite + TypeScript, Tailwind, TanStack Query |
 | Backend | FastAPI (Python 3.11+), SQLAlchemy 2.0, Alembic |
 | Database + Auth | Supabase (Postgres + Google OAuth or magic-link auth) |
-| Market data | Planned: yfinance and Financial Modeling Prep |
+| Market data | Financial Modeling Prep for instrument search, yfinance for daily close prices |
 | LLM | Planned: Groq, configurable |
 | Frontend hosting | Vercel |
 | Backend hosting | Render (free web service) |
@@ -71,7 +71,7 @@ portfolius/
 │   └── vite.config.ts
 ├── .github/workflows/
 │   ├── ci.yml                 # lint + test on PR
-│   └── refresh-prices.yml     # nightly cron
+│   └── refresh-prices.yml     # market-hours price refresh
 ├── CLAUDE.md                  # instructions for Claude Code
 └── README.md
 ```
@@ -116,6 +116,8 @@ DATABASE_URL=postgresql+psycopg://postgres:<dev-db-password>@<dev-db-host>:5432/
 SUPABASE_URL=https://<dev-project>.supabase.co
 AUTH_AUDIENCE=authenticated
 FRONTEND_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
+FMP_API_KEY=...
+SCHEDULER_SECRET=...
 ```
 
 VS Code's `Backend: FastAPI` debug configuration reads `backend/.env.local`, so point it at the dev Supabase project rather than production.
@@ -124,6 +126,10 @@ For backend-only migration or repository work, you can still point `DATABASE_URL
 
 The backend verifies Supabase access tokens through the project's JWKS discovery endpoint:
 `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`. Do not use the legacy JWT secret for M1 backend auth.
+
+M2 market data uses Financial Modeling Prep for instrument search and metadata autofill, and `yfinance` for latest daily close prices. `FMP_API_KEY` enables provider-backed search; without it, the backend returns an empty search result rather than breaking the holdings form. `SCHEDULER_SECRET` protects scheduler-triggered refreshes.
+
+M2 does not do FX conversion. Portfolio-wide summary totals include priced holdings in the profile base currency, while holdings and allocation rows retain their instrument currency.
 
 **Frontend (`frontend/.env.local`):**
 
@@ -144,7 +150,7 @@ ruff check . && ruff format .           # lint + format
 mypy app                                # type-check
 alembic revision --autogenerate -m "…"  # new migration
 alembic upgrade head                    # apply migrations
-python -m app.jobs.refresh_prices       # run cron job locally
+python -m app.jobs.refresh_prices --user-id <supabase-user-id>
 ```
 
 ### Frontend
@@ -165,11 +171,30 @@ Pushes to `main` deploy automatically:
 
 Secrets are set in each platform's secret store. Nothing sensitive lives in the repo.
 
+### Scheduled price refresh
+
+M2 refreshes daily close prices through `.github/workflows/refresh-prices.yml`. The workflow runs hourly on weekdays during the regular U.S. market session window and calls:
+
+```text
+POST $PORTFOLIUS_API_URL/api/v1/jobs/refresh-prices?user_id=$PORTFOLIUS_REFRESH_USER_ID
+X-Scheduler-Secret: $PORTFOLIUS_SCHEDULER_SECRET
+```
+
+The backend also checks regular U.S. market hours before accepting scheduler-triggered refreshes, so manual dashboard refreshes can still run while scheduled refreshes skip closed-market windows. Exchange holidays are not modeled in M2.
+
+Required GitHub repository secrets:
+
+```text
+PORTFOLIUS_API_URL=https://<backend-service>
+PORTFOLIUS_REFRESH_USER_ID=<supabase-user-id>
+PORTFOLIUS_SCHEDULER_SECRET=<same value as backend SCHEDULER_SECRET>
+```
+
 ### Setting up Render (one-time)
 
 1. Push the repo to GitHub.
 2. In Render: **New → Blueprint**, point at the repo. It picks up `backend/render.yaml` and creates the web service.
-3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, and `FRONTEND_ORIGINS`) in the service dashboard. Mark `DATABASE_URL` and provider URLs as secret where available.
+3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, and `SCHEDULER_SECRET`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available.
 4. Take the resulting `https://<service>.onrender.com` URL and set it as `VITE_API_URL` in Vercel.
 
 For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example:

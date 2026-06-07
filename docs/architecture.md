@@ -35,7 +35,7 @@ FastAPI service
 
 GitHub Actions
   |--> CI
-  |--> scheduled price refresh endpoint or job command
+  |--> hourly market-hours price refresh endpoint
 ```
 
 ## Runtime Components
@@ -76,6 +76,8 @@ Integrations must sit behind local client modules so they can be mocked in tests
 - `yfinance`: daily close prices.
 - Financial Modeling Prep: instrument profile, sector, country, and asset metadata.
 - Groq-compatible LLM API: assistant responses grounded in portfolio context.
+
+M2 intentionally does not perform FX conversion. Snapshot summary fields include priced holdings in the user's profile base currency, while holdings and allocation rows preserve instrument currencies.
 
 ## Backend Module Layout
 
@@ -209,6 +211,20 @@ POST /api/v1/portfolio/simulate
 POST /api/v1/assistant/messages
 POST /api/v1/jobs/refresh-prices
 ```
+
+Implemented M2 job endpoint behavior:
+
+```text
+Manual dashboard refresh:
+POST /api/v1/jobs/refresh-prices
+Authorization: Bearer <Supabase access token>
+
+Scheduled refresh:
+POST /api/v1/jobs/refresh-prices?user_id=<supabase-user-id>
+X-Scheduler-Secret: <SCHEDULER_SECRET>
+```
+
+The scheduled path is called by GitHub Actions using repository secrets `PORTFOLIUS_API_URL`, `PORTFOLIUS_REFRESH_USER_ID`, and `PORTFOLIUS_SCHEDULER_SECRET`. The workflow runs hourly on weekdays during the regular U.S. market session window. The backend still checks regular U.S. market hours and returns a zero-count result for scheduler calls outside that window; exchange holidays are not modeled in M2. Local operators can run `python -m app.jobs.refresh_prices --user-id <supabase-user-id>` when a command-line refresh is more convenient.
 
 ## Portfolio Simulation (M3)
 
