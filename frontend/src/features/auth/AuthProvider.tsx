@@ -21,6 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(data.session);
         setIsLoading(false);
       }
+    }).catch(() => {
+      if (isMounted) {
+        setIsLoading(false);
+      }
     });
 
     const {

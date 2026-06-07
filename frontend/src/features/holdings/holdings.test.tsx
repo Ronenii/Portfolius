@@ -9,6 +9,7 @@ import { createQueryClient } from "../../app/query-client";
 import { createAppRouter } from "../../app/router";
 import { ApiError } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
+import { searchInstruments } from "../instruments/instrument-search-api";
 import { getProfile } from "../profile/profile-api";
 import {
   createHolding,
@@ -33,6 +34,10 @@ vi.mock("../../lib/supabase", () => ({
 vi.mock("../profile/profile-api", () => ({
   getProfile: vi.fn(),
   saveProfile: vi.fn(),
+}));
+
+vi.mock("../instruments/instrument-search-api", () => ({
+  searchInstruments: vi.fn(),
 }));
 
 vi.mock("./holdings-api", () => ({
@@ -93,6 +98,18 @@ const teslaHolding: Holding = {
   average_cost: "180.00",
 };
 
+const indiaSearchResult = {
+  symbol: "INDA",
+  name: "iShares MSCI India ETF",
+  exchange: "BATS",
+  currency: "USD",
+  asset_class: "ETF",
+  sector: "Broad Market",
+  country: "India",
+  region: "Asia",
+  source: "fmp",
+};
+
 function mockAuthState() {
   vi.mocked(supabase.auth.getSession).mockResolvedValue(
     {
@@ -141,8 +158,8 @@ async function fillHoldingForm(symbol = "msft") {
   await userEvent.type(screen.getByLabelText("Region"), "North America");
   await userEvent.clear(screen.getByLabelText("Quantity"));
   await userEvent.type(screen.getByLabelText("Quantity"), "4.25");
-  await userEvent.clear(screen.getByLabelText("Average cost"));
-  await userEvent.type(screen.getByLabelText("Average cost"), "312.50");
+  await userEvent.clear(screen.getByLabelText("Purchase cost"));
+  await userEvent.type(screen.getByLabelText("Purchase cost"), "312.50");
 }
 
 describe("holdings page", () => {
@@ -158,6 +175,7 @@ describe("holdings page", () => {
     vi.mocked(createHolding).mockResolvedValue(teslaHolding);
     vi.mocked(updateHolding).mockResolvedValue(appleHolding);
     vi.mocked(deleteHolding).mockResolvedValue(undefined);
+    vi.mocked(searchInstruments).mockResolvedValue([]);
   });
 
   it("lists fetched holdings", async () => {
@@ -167,7 +185,25 @@ describe("holdings page", () => {
     expect(await screen.findByText("AAPL")).toBeInTheDocument();
     expect(screen.getByText("Apple Inc.")).toBeInTheDocument();
     expect(screen.getByText("12.5")).toBeInTheDocument();
-    expect(screen.getByText("145.20")).toBeInTheDocument();
+    expect(screen.getByText("$145.20")).toBeInTheDocument();
+  });
+
+  it("formats decimal fields in the holdings table without trailing zero noise", async () => {
+    vi.mocked(listHoldings).mockResolvedValue([
+      {
+        ...appleHolding,
+        quantity: "12.50000000",
+        average_cost: "145.20000000",
+      },
+    ]);
+
+    renderHoldingsRoute();
+
+    const row = await screen.findByRole("row", { name: /AAPL/i });
+    expect(within(row).getByText("12.5")).toBeInTheDocument();
+    expect(within(row).getByText("$145.20")).toBeInTheDocument();
+    expect(within(row).queryByText("12.50000000")).not.toBeInTheDocument();
+    expect(within(row).queryByText("145.20000000")).not.toBeInTheDocument();
   });
 
   it("shows an empty state when there are no holdings", async () => {
@@ -197,6 +233,33 @@ describe("holdings page", () => {
         region: "North America",
         quantity: "4.25",
         average_cost: "312.50",
+      });
+    });
+  });
+
+  it("autofills instrument metadata from a selected search result", async () => {
+    vi.mocked(listHoldings).mockResolvedValue([]);
+    vi.mocked(searchInstruments).mockResolvedValue([indiaSearchResult]);
+    renderHoldingsRoute();
+
+    await userEvent.type(await screen.findByLabelText("Symbol"), "IND");
+    await userEvent.click(await screen.findByRole("option", { name: /INDA/i }));
+    await userEvent.type(screen.getByLabelText("Quantity"), "2");
+    await userEvent.type(screen.getByLabelText("Purchase cost"), "44.50");
+    await userEvent.click(screen.getByRole("button", { name: "Save holding" }));
+
+    await waitFor(() => {
+      expect(createHolding).toHaveBeenCalledWith("access-token", {
+        symbol: "INDA",
+        name: "iShares MSCI India ETF",
+        exchange: "BATS",
+        currency: "USD",
+        asset_class: "ETF",
+        sector: "Broad Market",
+        country: "India",
+        region: "Asia",
+        quantity: "2",
+        average_cost: "44.50",
       });
     });
   });

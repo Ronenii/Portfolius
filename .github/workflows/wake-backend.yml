@@ -1,0 +1,16 @@
+name: Wake Backend
+
+on:
+  schedule:
+    - cron: "29 13-21 * * 1-5"
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend to wake Render instance
+        run: |
+          curl --silent --output /dev/null \
+            "$PORTFOLIUS_API_URL/health" || true
+        env:
+          PORTFOLIUS_API_URL: ${{ secrets.PORTFOLIUS_API_URL }}

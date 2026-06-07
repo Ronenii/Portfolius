@@ -1,7 +1,9 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -75,6 +77,10 @@ class Instrument(Base):
         back_populates="instrument",
         cascade="all, delete-orphan",
     )
+    prices: Mapped[list["Price"]] = relationship(
+        back_populates="instrument",
+        cascade="all, delete-orphan",
+    )
 
 
 class Holding(Base):
@@ -105,3 +111,38 @@ class Holding(Base):
     )
 
     instrument: Mapped[Instrument] = relationship(back_populates="holdings")
+
+
+class Price(Base):
+    __tablename__ = "prices"
+    __table_args__ = (
+        UniqueConstraint(
+            "instrument_id",
+            "price_date",
+            "source",
+            name="uq_prices_instrument_date_source",
+        ),
+        CheckConstraint(
+            "close_price >= 0",
+            name="ck_prices_close_price_non_negative",
+        ),
+        Index("ix_prices_instrument_date", "instrument_id", "price_date"),
+        Index("ix_prices_price_date", "price_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id"),
+        nullable=False,
+    )
+    price_date: Mapped[date] = mapped_column(Date, nullable=False)
+    close_price: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    source: Mapped[str] = mapped_column(String(80), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+    instrument: Mapped[Instrument] = relationship(back_populates="prices")

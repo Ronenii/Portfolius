@@ -2,16 +2,28 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.data.models import Holding, Instrument
+from app.data.repositories.instruments import get_instrument_for_payload
 from app.schemas.holdings import HoldingRequest
 
 
+def fill_missing_instrument_metadata(
+    instrument: Instrument,
+    payload: HoldingRequest,
+) -> None:
+    for field in (
+        "name",
+        "currency",
+        "asset_class",
+        "sector",
+        "country",
+        "region",
+    ):
+        if getattr(instrument, field) is None and getattr(payload, field) is not None:
+            setattr(instrument, field, getattr(payload, field))
+
+
 def get_or_create_instrument(db: Session, payload: HoldingRequest) -> Instrument:
-    instrument = db.scalar(
-        select(Instrument).where(
-            Instrument.symbol == payload.symbol,
-            Instrument.exchange == payload.exchange,
-        )
-    )
+    instrument = get_instrument_for_payload(db, payload)
     if instrument is None:
         instrument = Instrument(
             symbol=payload.symbol,
@@ -25,6 +37,8 @@ def get_or_create_instrument(db: Session, payload: HoldingRequest) -> Instrument
         )
         db.add(instrument)
         db.flush()
+    else:
+        fill_missing_instrument_metadata(instrument, payload)
 
     return instrument
 
@@ -45,6 +59,32 @@ def create_holding(db: Session, user_id: str, payload: HoldingRequest) -> Holdin
 
 def list_holdings_for_user(db: Session, user_id: str) -> list[Holding]:
     return list(db.scalars(select(Holding).where(Holding.user_id == user_id)))
+
+
+def list_instruments_for_user_holdings(
+    db: Session,
+    user_id: str,
+) -> list[Instrument]:
+    return list(
+        db.scalars(
+            select(Instrument)
+            .join(Holding)
+            .where(Holding.user_id == user_id)
+            .distinct()
+            .order_by(Instrument.symbol, Instrument.exchange)
+        )
+    )
+
+
+def list_all_instruments_with_holdings(db: Session) -> list[Instrument]:
+    return list(
+        db.scalars(
+            select(Instrument)
+            .join(Holding)
+            .distinct()
+            .order_by(Instrument.symbol, Instrument.exchange)
+        )
+    )
 
 
 def get_holding_for_user(

@@ -35,7 +35,7 @@ FastAPI service
 
 GitHub Actions
   |--> CI
-  |--> scheduled price refresh endpoint or job command
+  |--> hourly market-hours price refresh endpoint
 ```
 
 ## Runtime Components
@@ -77,6 +77,8 @@ Integrations must sit behind local client modules so they can be mocked in tests
 - Financial Modeling Prep: instrument profile, sector, country, and asset metadata.
 - Groq-compatible LLM API: assistant responses grounded in portfolio context.
 
+M2 intentionally does not perform FX conversion. Snapshot summary fields include priced holdings in the user's profile base currency, while holdings and allocation rows preserve instrument currencies.
+
 ## Backend Module Layout
 
 ```text
@@ -99,7 +101,8 @@ backend/app/
 ├── domain/
 │   ├── portfolio_math.py
 │   ├── snapshots.py
-│   └── allocation.py
+│   ├── allocation.py
+│   └── simulation.py
 ├── integrations/
 │   ├── market_data.py
 │   ├── fmp.py
@@ -199,13 +202,88 @@ Planned product endpoints:
 
 ```text
 GET/PUT /api/v1/profile
+GET /api/v1/instruments/search
 GET/POST /api/v1/holdings
 GET/PUT/DELETE /api/v1/holdings/{holding_id}
 GET /api/v1/portfolio/snapshot
 GET /api/v1/portfolio/breakdowns
+POST /api/v1/portfolio/simulate
 POST /api/v1/assistant/messages
 POST /api/v1/jobs/refresh-prices
 ```
+
+Implemented M2 job endpoint behavior:
+
+```text
+Manual dashboard refresh:
+POST /api/v1/jobs/refresh-prices
+Authorization: Bearer <Supabase access token>
+
+Scheduled refresh:
+POST /api/v1/jobs/refresh-prices
+X-Scheduler-Secret: <SCHEDULER_SECRET>
+```
+
+The scheduled path is called by GitHub Actions using repository secrets `PORTFOLIUS_API_URL` and `PORTFOLIUS_SCHEDULER_SECRET` for the deployed production backend. The workflow runs hourly on weekdays during the regular U.S. market session window and can also be dispatched manually. The backend still checks regular U.S. market hours and returns a zero-count result for scheduler calls outside that window; exchange holidays are not modeled in M2. Scheduler-triggered refreshes operate across all production users and request each distinct held instrument once. Local operators can run `python -m app.jobs.refresh_prices` when a command-line refresh is more convenient.
+
+## Allocation Exploration (M3a)
+
+Allocation breakdowns should support progressive disclosure: a user can start with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspect what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row should show the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
+
+The backend should remain the source of truth for the math. Future breakdown responses can include child composition rows per parent row, or expose a dedicated drill-down endpoint such as:
+
+```text
+GET /api/v1/portfolio/breakdowns/{dimension}/{key}/composition
+```
+
+The composition payload should include the child instrument label, currency, market value, holding count where relevant, percent of the selected parent slice, and percent of the whole portfolio. This distinction matters because a tooltip may need to say both "VOO is 30% of the portfolio" and "VOO is 48% of the ETF slice." Missing-price holdings remain excluded from allocation percentages and should be surfaced separately, just as the M2 breakdowns do.
+
+The frontend can render the same allocation data through multiple chart types. The user should be able to switch between chart views such as column/bar, pie or donut, and table-first views. Line charts should be reserved for time-series data after a later milestone adds historical prices or allocation history; they should not imply trend data from a single current snapshot. Chart type selection is a presentation preference and should not change the backend math or the table rows used for accessibility and precise reading.
+
+Hover-only drill-downs must have keyboard-accessible equivalents. The table row, chart segment, or column should expose the same composition popover on focus or selection, and the dense table should remain the canonical readable view for screen readers, tests, and users who prefer exact numbers.
+
+## Portfolio Simulation (M3)
+
+Portfolio simulation lets a user run *what-if scenarios* before committing to a trade. A scenario is a basket of hypothetical buy/sell legs (for example, sell 10 of AAPL, buy 5 of VXUS and 3 of BND). Portfolius then shows the resulting allocation **before, after, and delta** across every existing breakdown dimension, so the user can see how a prospective trade would shift their distribution. This is the bridge between understanding the current portfolio and deciding how to rebalance, and in M3 it becomes the substrate the AI assistant reasons over when suggesting trades.
+
+### Stateless reuse of the snapshot pipeline
+
+Simulation introduces no new persistence and no new portfolio math. A scenario is a pure, in-memory transform over the existing deterministic pipeline:
+
+```text
+real holdings + latest prices
+        │
+        ├─► build_portfolio_snapshot ─► build_allocation_breakdowns   = "before"
+        │
+   apply_trades(holdings, prices, legs)        (new pure function)
+        │
+        └─► build_portfolio_snapshot ─► build_allocation_breakdowns   = "after"
+                                  │
+                          diff_breakdowns(before, after)               = "delta"
+```
+
+- A new `domain/simulation.py` module holds `apply_trades(...)`, which returns a hypothetical `(holdings, prices)`, and `diff_breakdowns(...)`, which computes per-dimension deltas. Both are pure and unit-testable, consistent with the principle of keeping portfolio math deterministic before adding AI behavior.
+- Buying an instrument that is not yet held reuses the M2 instrument search to resolve its metadata and latest price. Without sector, country, and region the holding cannot be allocated meaningfully, so simulation depends on M2 instrument metadata being in place.
+- Sells reduce an existing position and are validated against the held quantity. The product does not model shorting.
+- Scenarios are computed on demand and not stored. Saving named scenarios is a possible later enhancement, deliberately deferred.
+
+### API shape
+
+```text
+POST /api/v1/portfolio/simulate
+
+Request:  { legs: [ { symbol | instrument_id, action: "buy" | "sell", quantity, price? } ] }
+Response: { current: PortfolioBreakdowns,
+            simulated: PortfolioBreakdowns,
+            delta: [ { dimension, label, percent_before, percent_after, percent_change } ],
+            warnings: [ ... ] }
+```
+
+The endpoint uses POST because the input is a structured basket, even though the operation is non-mutating. It is user-scoped exactly like the other portfolio endpoints, and `price?` defaults to the latest stored close. Warnings cover cases such as an unpriced new instrument or a sell that exceeds the held quantity.
+
+### Assistant integration
+
+The assistant invokes the same `simulate` pipeline to ground rebalancing suggestions in a concrete before/after delta rather than vague advice. As with all assistant context, it receives summarized simulated allocation, not raw holdings or secrets.
 
 ## Authentication Strategy
 
@@ -251,8 +329,9 @@ To enable Google OAuth:
 
 - M0: walking skeleton from deployed frontend to deployed backend to database.
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
-- M2: price refresh and allocation breakdowns.
-- M3: AI assistant grounded in portfolio context.
+- M2: instrument search/autofill, price refresh, and allocation breakdowns.
+- M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
+- M3a: allocation exploration, including composition drill-downs and user-selectable chart types.
 - M4: transactions, projections, PWA install, and CSV import.
 
 M0 should not include portfolio math, charting, market-data providers, or LLM integration. Those are intentionally deferred.
