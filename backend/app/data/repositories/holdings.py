@@ -61,6 +61,21 @@ def list_holdings_for_user(db: Session, user_id: str) -> list[Holding]:
     return list(db.scalars(select(Holding).where(Holding.user_id == user_id)))
 
 
+def list_instruments_for_user_holdings(
+    db: Session,
+    user_id: str,
+) -> list[Instrument]:
+    return list(
+        db.scalars(
+            select(Instrument)
+            .join(Holding)
+            .where(Holding.user_id == user_id)
+            .distinct()
+            .order_by(Instrument.symbol, Instrument.exchange)
+        )
+    )
+
+
 def get_holding_for_user(
     db: Session,
     user_id: str,
