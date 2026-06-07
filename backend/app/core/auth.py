@@ -34,7 +34,10 @@ def supabase_issuer(supabase_url: str) -> str:
 
 @lru_cache
 def get_jwks_client(supabase_url: str) -> PyJWKClient:
-    return PyJWKClient(f"{supabase_issuer(supabase_url)}/.well-known/jwks.json", timeout=10)
+    return PyJWKClient(
+        f"{supabase_issuer(supabase_url)}/.well-known/jwks.json",
+        timeout=10,
+    )
 
 
 def decode_supabase_jwt(token: str, settings: Settings) -> dict[str, object]:

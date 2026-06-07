@@ -224,7 +224,7 @@ describe("holdings page", () => {
     vi.mocked(searchInstruments).mockResolvedValue([indiaSearchResult]);
     renderHoldingsRoute();
 
-    await userEvent.type(await screen.findByLabelText("Symbol"), "IN");
+    await userEvent.type(await screen.findByLabelText("Symbol"), "IND");
     await userEvent.click(await screen.findByRole("option", { name: /INDA/i }));
     await userEvent.type(screen.getByLabelText("Quantity"), "2");
     await userEvent.type(screen.getByLabelText("Average cost"), "44.50");

@@ -156,6 +156,98 @@ def test_creating_holding_enriches_missing_metadata_from_profile(
     assert response.instrument.region == "North America"
 
 
+def test_creating_existing_complete_instrument_skips_profile_lookup(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    db_session.add(
+        Instrument(
+            symbol="TSM",
+            name="Taiwan Semiconductor Manufacturing Company Limited",
+            exchange="NYSE",
+            currency="USD",
+            asset_class="ADR",
+            sector="Technology",
+            country="TW",
+            region="Asia",
+        )
+    )
+    db_session.commit()
+    lookup_client = FakeInstrumentLookupClient(profile_result(symbol="TSM"))
+
+    response = save_holding(
+        holding_payload(
+            symbol="TSM",
+            name=None,
+            exchange="",
+            currency=None,
+            asset_class=None,
+            sector=None,
+            country=None,
+            region=None,
+        ),
+        authenticated_user,
+        db_session,
+        lookup_client,
+    )
+
+    assert lookup_client.profile_symbols == []
+    assert response.instrument.exchange == "NYSE"
+    assert response.instrument.asset_class == "ADR"
+    assert response.instrument.region == "Asia"
+
+
+def test_creating_existing_incomplete_instrument_enriches_once(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    db_session.add(
+        Instrument(
+            symbol="TSM",
+            name="Taiwan Semiconductor Manufacturing Company Limited",
+            exchange="NYSE",
+            currency="USD",
+            asset_class=None,
+            sector=None,
+            country=None,
+            region=None,
+        )
+    )
+    db_session.commit()
+    lookup_client = FakeInstrumentLookupClient(
+        profile_result(
+            symbol="TSM",
+            name="Taiwan Semiconductor Manufacturing Company Limited",
+            exchange="NYSE",
+            currency="USD",
+            asset_class="ADR",
+            sector="Technology",
+            country="TW",
+            region="Asia",
+        )
+    )
+
+    response = save_holding(
+        holding_payload(
+            symbol="TSM",
+            name=None,
+            exchange="",
+            currency=None,
+            asset_class=None,
+            sector=None,
+            country=None,
+            region=None,
+        ),
+        authenticated_user,
+        db_session,
+        lookup_client,
+    )
+
+    assert lookup_client.profile_symbols == ["TSM"]
+    assert response.instrument.asset_class == "ADR"
+    assert response.instrument.sector == "Technology"
+
+
 def test_creating_holding_continues_when_profile_lookup_fails(
     authenticated_user: AuthenticatedUser,
     db_session: Session,

@@ -2,16 +2,28 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.data.models import Holding, Instrument
+from app.data.repositories.instruments import get_instrument_for_payload
 from app.schemas.holdings import HoldingRequest
 
 
+def fill_missing_instrument_metadata(
+    instrument: Instrument,
+    payload: HoldingRequest,
+) -> None:
+    for field in (
+        "name",
+        "currency",
+        "asset_class",
+        "sector",
+        "country",
+        "region",
+    ):
+        if getattr(instrument, field) is None and getattr(payload, field) is not None:
+            setattr(instrument, field, getattr(payload, field))
+
+
 def get_or_create_instrument(db: Session, payload: HoldingRequest) -> Instrument:
-    instrument = db.scalar(
-        select(Instrument).where(
-            Instrument.symbol == payload.symbol,
-            Instrument.exchange == payload.exchange,
-        )
-    )
+    instrument = get_instrument_for_payload(db, payload)
     if instrument is None:
         instrument = Instrument(
             symbol=payload.symbol,
@@ -25,6 +37,8 @@ def get_or_create_instrument(db: Session, payload: HoldingRequest) -> Instrument
         )
         db.add(instrument)
         db.flush()
+    else:
+        fill_missing_instrument_metadata(instrument, payload)
 
     return instrument
 

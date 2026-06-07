@@ -33,7 +33,7 @@ export default function InstrumentSearchInput({
 
   useEffect(() => {
     const query = inputValue.trim();
-    if (!accessToken || query.length < 2) {
+    if (!accessToken || query.length < 3) {
       setResults([]);
       setIsSearching(false);
       return;
@@ -58,7 +58,7 @@ export default function InstrumentSearchInput({
             setIsSearching(false);
           }
         });
-    }, 150);
+    }, 350);
 
     return () => window.clearTimeout(timeout);
   }, [accessToken, inputValue]);

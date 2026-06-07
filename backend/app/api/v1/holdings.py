@@ -10,12 +10,18 @@ from app.api.v1.instruments import (
 )
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.data.database import get_db
+from app.data.models import Instrument
 from app.data.repositories.holdings import (
     create_holding,
     delete_holding,
     get_holding_for_user,
     list_holdings_for_user,
     update_holding,
+)
+from app.data.repositories.instruments import (
+    get_instrument_for_payload,
+    instrument_has_useful_metadata,
+    instrument_to_search_result,
 )
 from app.schemas.holdings import HoldingRequest, HoldingResponse
 from app.schemas.instruments import InstrumentSearchResult
@@ -37,8 +43,16 @@ def value_or_fallback(value: str | None, fallback: str | None) -> str | None:
 
 def enrich_holding_payload(
     payload: HoldingRequest,
+    db: Session,
     lookup_client: InstrumentLookupClient,
 ) -> HoldingRequest:
+    instrument = get_instrument_for_payload(db, payload)
+    if instrument is not None and instrument_has_useful_metadata(instrument):
+        return merge_profile_into_payload(
+            payload,
+            instrument_to_search_result(instrument),
+        )
+
     try:
         profile = lookup_client.profile(payload.symbol)
     except Exception:
@@ -48,12 +62,13 @@ def enrich_holding_payload(
     if profile is None:
         return payload
 
-    return merge_profile_into_payload(payload, profile)
+    return merge_profile_into_payload(payload, profile, instrument)
 
 
 def merge_profile_into_payload(
     payload: HoldingRequest,
     profile: InstrumentSearchResult,
+    instrument: Instrument | None = None,
 ) -> HoldingRequest:
     return HoldingRequest(
         symbol=value_or_fallback(profile.symbol, payload.symbol) or payload.symbol,
@@ -92,7 +107,7 @@ def add_holding(
         Depends(get_instrument_lookup_client),
     ],
 ) -> HoldingResponse:
-    payload = enrich_holding_payload(payload, lookup_client)
+    payload = enrich_holding_payload(payload, db, lookup_client)
     holding = create_holding(db, current_user.user_id, payload)
     return HoldingResponse.model_validate(holding)
 
@@ -123,7 +138,7 @@ def edit_holding(
     holding = get_holding_for_user(db, current_user.user_id, holding_id)
     if holding is None:
         raise not_found()
-    payload = enrich_holding_payload(payload, lookup_client)
+    payload = enrich_holding_payload(payload, db, lookup_client)
     updated_holding = update_holding(db, holding, payload)
     return HoldingResponse.model_validate(updated_holding)
 

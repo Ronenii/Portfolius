@@ -2,9 +2,12 @@ import logging
 from typing import Annotated, Protocol
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from app.core.auth import AuthenticatedUser, get_current_user, unauthorized
 from app.core.config import Settings, get_settings
+from app.data.database import get_db
+from app.data.repositories.instruments import search_local_instruments
 from app.integrations.fmp import FmpInstrumentLookupClient
 from app.schemas.instruments import InstrumentSearchResult
 
@@ -33,6 +36,7 @@ def get_instrument_lookup_client(
 def search_instruments(
     query: str,
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
     lookup_client: Annotated[
         InstrumentLookupClient,
         Depends(get_instrument_lookup_client),
@@ -41,8 +45,12 @@ def search_instruments(
     if current_user is None:
         raise unauthorized()
 
-    if len(query.strip()) < 2:
+    if len(query.strip()) < 3:
         return []
+
+    local_results = search_local_instruments(db, query, limit=10)
+    if local_results:
+        return local_results
 
     try:
         return lookup_client.search(query, limit=10)

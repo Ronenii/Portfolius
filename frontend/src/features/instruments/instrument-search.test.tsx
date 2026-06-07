@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -51,27 +51,57 @@ describe("InstrumentSearchInput", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
-  it("does not search for one-character input", async () => {
+  it("does not search for one- or two-character input", async () => {
     vi.mocked(searchInstruments).mockResolvedValue([indaResult]);
     renderSearchInput();
 
-    await userEvent.type(screen.getByLabelText("Symbol"), "I");
+    await userEvent.type(screen.getByLabelText("Symbol"), "IN");
 
     await waitFor(() => {
       expect(searchInstruments).not.toHaveBeenCalled();
     });
   });
 
+  it("waits for a 350ms debounce before searching", async () => {
+    vi.useFakeTimers();
+    vi.mocked(searchInstruments).mockResolvedValue([indaResult]);
+    renderSearchInput();
+
+    fireEvent.change(screen.getByLabelText("Symbol"), {
+      target: { value: "IND" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(349);
+      await Promise.resolve();
+    });
+    expect(searchInstruments).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+    });
+    expect(searchInstruments).toHaveBeenCalledWith("access-token", "IND");
+  });
+
   it("shows matching instruments and calls onSelect", async () => {
+    vi.useFakeTimers();
     vi.mocked(searchInstruments).mockResolvedValue([indaResult]);
     const { onSelect } = renderSearchInput();
 
-    await userEvent.type(screen.getByLabelText("Symbol"), "IN");
-    await userEvent.click(await screen.findByRole("option", { name: /INDA/i }));
+    fireEvent.change(screen.getByLabelText("Symbol"), {
+      target: { value: "IND" },
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+      await Promise.resolve();
+    });
+    fireEvent.click(screen.getByRole("option", { name: /INDA/i }));
 
-    expect(searchInstruments).toHaveBeenCalledWith("access-token", "IN");
+    expect(searchInstruments).toHaveBeenCalledWith("access-token", "IND");
     expect(onSelect).toHaveBeenCalledWith(indaResult);
   });
 });
