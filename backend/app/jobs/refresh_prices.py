@@ -1,35 +1,25 @@
 import argparse
-import sys
 from collections.abc import Sequence
 
 from app.data.database import SessionLocal
-from app.domain.price_refresh import refresh_prices_for_user
+from app.domain.price_refresh import refresh_prices_for_all_users
 from app.integrations.yfinance_client import YFinanceMarketDataClient
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Refresh latest market prices for one Portfolius user.",
+    return argparse.ArgumentParser(
+        description="Refresh latest market prices for all held Portfolius instruments.",
     )
-    parser.add_argument(
-        "--user-id",
-        help="Supabase Auth user ID whose held instruments should be refreshed.",
-    )
-    return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
-    if not args.user_id:
-        print("--user-id is required", file=sys.stderr)
-        return 2
+    parser.parse_args(argv)
 
     db = SessionLocal()
     try:
-        result = refresh_prices_for_user(
+        result = refresh_prices_for_all_users(
             db,
-            args.user_id,
             YFinanceMarketDataClient(),
         )
     finally:

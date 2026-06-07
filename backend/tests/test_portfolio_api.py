@@ -189,12 +189,15 @@ def test_manual_refresh_uses_authenticated_user(
     assert market_data_client.requests == [("VOO", "NYSEARCA", "USD")]
 
 
-def test_scheduler_secret_can_refresh_requested_user(
+def test_scheduler_secret_refreshes_all_users(
     authenticated_user: AuthenticatedUser,
+    second_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
     add_profile(db_session, authenticated_user.user_id)
+    add_profile(db_session, second_user.user_id)
     add_holding(db_session, authenticated_user.user_id, "VOO", close_price=None)
+    add_holding(db_session, second_user.user_id, "BND", close_price=None)
     market_data_client = FakeMarketDataClient()
 
     response = refresh_prices(
@@ -203,11 +206,14 @@ def test_scheduler_secret_can_refresh_requested_user(
         datetime(2026, 6, 5, 15, 0, tzinfo=UTC),
         settings=Settings(scheduler_secret="secret"),
         scheduler_secret="secret",
-        user_id=authenticated_user.user_id,
     )
 
-    assert response.requested == 1
-    assert response.updated == 1
+    assert response.requested == 2
+    assert response.updated == 2
+    assert set(market_data_client.requests) == {
+        ("VOO", "NYSEARCA", "USD"),
+        ("BND", "NYSEARCA", "USD"),
+    }
 
 
 def test_scheduler_refresh_skips_when_us_market_is_closed(
@@ -224,7 +230,6 @@ def test_scheduler_refresh_skips_when_us_market_is_closed(
         datetime(2026, 6, 5, 21, 0, tzinfo=UTC),
         settings=Settings(scheduler_secret="secret"),
         scheduler_secret="secret",
-        user_id=authenticated_user.user_id,
     )
 
     assert response.requested == 0
@@ -242,7 +247,6 @@ def test_wrong_scheduler_secret_returns_401(db_session: Session) -> None:
             datetime(2026, 6, 5, 15, 0, tzinfo=UTC),
             settings=Settings(scheduler_secret="secret"),
             scheduler_secret="wrong",
-            user_id="user-123",
         )
 
     assert exc_info.value.status_code == 401

@@ -220,11 +220,27 @@ POST /api/v1/jobs/refresh-prices
 Authorization: Bearer <Supabase access token>
 
 Scheduled refresh:
-POST /api/v1/jobs/refresh-prices?user_id=<supabase-user-id>
+POST /api/v1/jobs/refresh-prices
 X-Scheduler-Secret: <SCHEDULER_SECRET>
 ```
 
-The scheduled path is called by GitHub Actions using repository secrets `PORTFOLIUS_API_URL`, `PORTFOLIUS_REFRESH_USER_ID`, and `PORTFOLIUS_SCHEDULER_SECRET`. The workflow runs hourly on weekdays during the regular U.S. market session window. The backend still checks regular U.S. market hours and returns a zero-count result for scheduler calls outside that window; exchange holidays are not modeled in M2. Local operators can run `python -m app.jobs.refresh_prices --user-id <supabase-user-id>` when a command-line refresh is more convenient.
+The scheduled path is called by GitHub Actions using repository secrets `PORTFOLIUS_API_URL` and `PORTFOLIUS_SCHEDULER_SECRET` for the deployed production backend. The workflow runs hourly on weekdays during the regular U.S. market session window and can also be dispatched manually. The backend still checks regular U.S. market hours and returns a zero-count result for scheduler calls outside that window; exchange holidays are not modeled in M2. Scheduler-triggered refreshes operate across all production users and request each distinct held instrument once. Local operators can run `python -m app.jobs.refresh_prices` when a command-line refresh is more convenient.
+
+## Allocation Exploration (M3a)
+
+Allocation breakdowns should support progressive disclosure: a user can start with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspect what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row should show the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
+
+The backend should remain the source of truth for the math. Future breakdown responses can include child composition rows per parent row, or expose a dedicated drill-down endpoint such as:
+
+```text
+GET /api/v1/portfolio/breakdowns/{dimension}/{key}/composition
+```
+
+The composition payload should include the child instrument label, currency, market value, holding count where relevant, percent of the selected parent slice, and percent of the whole portfolio. This distinction matters because a tooltip may need to say both "VOO is 30% of the portfolio" and "VOO is 48% of the ETF slice." Missing-price holdings remain excluded from allocation percentages and should be surfaced separately, just as the M2 breakdowns do.
+
+The frontend can render the same allocation data through multiple chart types. The user should be able to switch between chart views such as column/bar, pie or donut, and table-first views. Line charts should be reserved for time-series data after a later milestone adds historical prices or allocation history; they should not imply trend data from a single current snapshot. Chart type selection is a presentation preference and should not change the backend math or the table rows used for accessibility and precise reading.
+
+Hover-only drill-downs must have keyboard-accessible equivalents. The table row, chart segment, or column should expose the same composition popover on focus or selection, and the dense table should remain the canonical readable view for screen readers, tests, and users who prefer exact numbers.
 
 ## Portfolio Simulation (M3)
 
@@ -315,6 +331,7 @@ To enable Google OAuth:
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
 - M2: instrument search/autofill, price refresh, and allocation breakdowns.
 - M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
+- M3a: allocation exploration, including composition drill-downs and user-selectable chart types.
 - M4: transactions, projections, PWA install, and CSV import.
 
 M0 should not include portfolio math, charting, market-data providers, or LLM integration. Those are intentionally deferred.

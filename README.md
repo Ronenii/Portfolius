@@ -150,7 +150,7 @@ ruff check . && ruff format .           # lint + format
 mypy app                                # type-check
 alembic revision --autogenerate -m "…"  # new migration
 alembic upgrade head                    # apply migrations
-python -m app.jobs.refresh_prices --user-id <supabase-user-id>
+python -m app.jobs.refresh_prices
 ```
 
 ### Frontend
@@ -173,14 +173,14 @@ Secrets are set in each platform's secret store. Nothing sensitive lives in the 
 
 ### Scheduled price refresh
 
-M2 refreshes daily close prices through `.github/workflows/refresh-prices.yml`. The workflow runs hourly on weekdays during the regular U.S. market session window and calls:
+M2 refreshes daily close prices through `.github/workflows/refresh-prices.yml`. The workflow runs hourly on weekdays during the regular U.S. market session window and targets the deployed production backend.
 
 ```text
 POST $PORTFOLIUS_API_URL/api/v1/jobs/refresh-prices
 X-Scheduler-Secret: $PORTFOLIUS_SCHEDULER_SECRET
 ```
 
-The backend also checks regular U.S. market hours before accepting scheduler-triggered refreshes, so manual dashboard refreshes can still run while scheduled refreshes skip closed-market windows. Exchange holidays are not modeled in M2.
+The backend also checks regular U.S. market hours before accepting scheduler-triggered refreshes, so manual dashboard refreshes can still run while scheduled refreshes skip closed-market windows. Exchange holidays are not modeled in M2. Scheduler-triggered refreshes operate across all production users and request each distinct held instrument once.
 
 Required GitHub repository secrets:
 

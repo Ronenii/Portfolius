@@ -67,7 +67,6 @@ def refresh_prices(
         Depends(get_optional_current_user),
     ] = None,
     scheduler_secret: Annotated[str | None, Header(alias="X-Scheduler-Secret")] = None,
-    user_id: str | None = None,
 ) -> PriceRefreshResult:
     is_scheduler = validate_scheduler_secret(settings, scheduler_secret)
 
@@ -75,8 +74,6 @@ def refresh_prices(
         return PriceRefreshResult(requested=0, updated=0, skipped=0, failed=0)
 
     if is_scheduler:
-        if user_id:
-            return refresh_prices_for_user(db, user_id, market_data_client)
         return refresh_prices_for_all_users(db, market_data_client)
 
     if current_user is None:

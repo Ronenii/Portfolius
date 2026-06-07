@@ -11,10 +11,17 @@ jobs:
     steps:
       - name: Refresh portfolio prices
         run: |
+          if [ -z "${PORTFOLIUS_API_URL:-}" ] || [ -z "${PORTFOLIUS_SCHEDULER_SECRET:-}" ]; then
+            echo "Missing PORTFOLIUS_API_URL or PORTFOLIUS_SCHEDULER_SECRET"
+            exit 1
+          fi
+
+          refresh_url="${PORTFOLIUS_API_URL%/}/api/v1/jobs/refresh-prices"
+
           curl --fail-with-body \
             --request POST \
             --header "X-Scheduler-Secret: $PORTFOLIUS_SCHEDULER_SECRET" \
-            "$PORTFOLIUS_API_URL/api/v1/jobs/refresh-prices"
+            "$refresh_url"
         env:
           PORTFOLIUS_API_URL: ${{ secrets.PORTFOLIUS_API_URL }}
           PORTFOLIUS_SCHEDULER_SECRET: ${{ secrets.PORTFOLIUS_SCHEDULER_SECRET }}
