@@ -199,6 +199,7 @@ Planned product endpoints:
 
 ```text
 GET/PUT /api/v1/profile
+GET /api/v1/instruments/search
 GET/POST /api/v1/holdings
 GET/PUT/DELETE /api/v1/holdings/{holding_id}
 GET /api/v1/portfolio/snapshot
@@ -251,7 +252,7 @@ To enable Google OAuth:
 
 - M0: walking skeleton from deployed frontend to deployed backend to database.
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
-- M2: price refresh and allocation breakdowns.
+- M2: instrument search/autofill, price refresh, and allocation breakdowns.
 - M3: AI assistant grounded in portfolio context.
 - M4: transactions, projections, PWA install, and CSV import.
 
