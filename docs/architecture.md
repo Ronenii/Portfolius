@@ -329,9 +329,11 @@ To enable Google OAuth:
 
 - M0: walking skeleton from deployed frontend to deployed backend to database.
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
-- M2: instrument search/autofill, price refresh, and allocation breakdowns.
+- M2: instrument search/autofill, price refresh, and allocation breakdowns. **Done.**
 - M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
 - M3a: allocation exploration, including composition drill-downs and user-selectable chart types.
 - M4: transactions, projections, PWA install, and CSV import.
+
+Future holding-entry improvements should make the add-holding flow ticker-first. A user should normally add a holding by entering a ticker and selecting the resolved instrument metadata. Manual instrument details should only be shown when the ticker lookup cannot find the instrument, so users are not asked to fill exchange, currency, asset class, sector, country, or region when the system can resolve them.
 
 M0 should not include portfolio math, charting, market-data providers, or LLM integration. Those are intentionally deferred.
