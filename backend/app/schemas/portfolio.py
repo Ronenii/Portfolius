@@ -62,3 +62,26 @@ class PortfolioSnapshot(BaseModel):
     summary: PortfolioSummary
     holdings: list[PortfolioHoldingSnapshot]
     currency_totals: dict[str, CurrencyTotal]
+
+
+class AllocationRow(BaseModel):
+    dimension: str
+    label: str
+    currency: str
+    market_value: Decimal
+    percent: Decimal
+    holding_count: int
+
+    @field_serializer("market_value", "percent")
+    def serialize_decimal(self, value: Decimal) -> str:
+        return str(value)
+
+
+class PortfolioBreakdowns(BaseModel):
+    instrument: list[AllocationRow]
+    asset_class: list[AllocationRow]
+    sector: list[AllocationRow]
+    country: list[AllocationRow]
+    region: list[AllocationRow]
+    currency: list[AllocationRow]
+    unpriced_holding_count: int
