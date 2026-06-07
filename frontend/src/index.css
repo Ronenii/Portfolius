@@ -189,6 +189,11 @@ h1 {
   box-shadow: var(--shadow-1);
 }
 
+.status-strip--secondary {
+  box-shadow: none;
+  opacity: 0.86;
+}
+
 .status-strip strong {
   display: block;
   margin-top: 2px;
@@ -243,6 +248,45 @@ h1 {
   letter-spacing: 0;
 }
 
+.dashboard-summary {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kpi-tile {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  min-height: 148px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid var(--rule);
+  border-top: 2px solid var(--accent-500);
+  border-radius: 6px;
+  background: var(--paper-100);
+  box-shadow: var(--shadow-1);
+}
+
+.kpi-tile strong {
+  color: var(--fg-paper);
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 600;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.kpi-tile span {
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -265,6 +309,11 @@ h1 {
 .button--primary {
   background: var(--accent-500);
   color: #fff;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .button--secondary {
@@ -624,6 +673,10 @@ h1 {
     grid-template-columns: auto 1fr;
   }
 
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .login-page {
     grid-template-columns: 1fr;
   }
@@ -645,6 +698,15 @@ h1 {
 }
 
 @media (max-width: 560px) {
+  .page-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
   .nav-link {
     font-size: 0;
   }
