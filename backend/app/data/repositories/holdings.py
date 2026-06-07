@@ -76,6 +76,17 @@ def list_instruments_for_user_holdings(
     )
 
 
+def list_all_instruments_with_holdings(db: Session) -> list[Instrument]:
+    return list(
+        db.scalars(
+            select(Instrument)
+            .join(Holding)
+            .distinct()
+            .order_by(Instrument.symbol, Instrument.exchange)
+        )
+    )
+
+
 def get_holding_for_user(
     db: Session,
     user_id: str,

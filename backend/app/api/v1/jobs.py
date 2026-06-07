@@ -14,7 +14,11 @@ from app.core.auth import (
 from app.core.config import Settings, get_settings
 from app.data.database import get_db
 from app.domain.market_hours import is_us_market_open
-from app.domain.price_refresh import PriceRefreshResult, refresh_prices_for_user
+from app.domain.price_refresh import (
+    PriceRefreshResult,
+    refresh_prices_for_all_users,
+    refresh_prices_for_user,
+)
 from app.integrations.market_data import MarketDataClient
 from app.integrations.yfinance_client import YFinanceMarketDataClient
 
@@ -65,33 +69,27 @@ def refresh_prices(
     scheduler_secret: Annotated[str | None, Header(alias="X-Scheduler-Secret")] = None,
     user_id: str | None = None,
 ) -> PriceRefreshResult:
-    refresh_user_id = user_id_from_auth(
-        settings,
-        current_user,
-        scheduler_secret,
-        user_id,
-    )
-    if scheduler_secret is not None and not is_us_market_open(current_time):
+    is_scheduler = validate_scheduler_secret(settings, scheduler_secret)
+
+    if is_scheduler and not is_us_market_open(current_time):
         return PriceRefreshResult(requested=0, updated=0, skipped=0, failed=0)
 
-    return refresh_prices_for_user(db, refresh_user_id, market_data_client)
-
-
-def user_id_from_auth(
-    settings: Settings,
-    current_user: AuthenticatedUser | None,
-    scheduler_secret: str | None,
-    user_id: str | None,
-) -> str:
-    if scheduler_secret is not None:
-        if (
-            not settings.scheduler_secret
-            or scheduler_secret != settings.scheduler_secret
-            or not user_id
-        ):
-            raise unauthorized()
-        return user_id
+    if is_scheduler:
+        if user_id:
+            return refresh_prices_for_user(db, user_id, market_data_client)
+        return refresh_prices_for_all_users(db, market_data_client)
 
     if current_user is None:
         raise unauthorized()
-    return current_user.user_id
+    return refresh_prices_for_user(db, current_user.user_id, market_data_client)
+
+
+def validate_scheduler_secret(
+    settings: Settings,
+    scheduler_secret: str | None,
+) -> bool:
+    if scheduler_secret is None:
+        return False
+    if not settings.scheduler_secret or scheduler_secret != settings.scheduler_secret:
+        raise unauthorized()
+    return True

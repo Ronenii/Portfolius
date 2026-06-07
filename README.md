@@ -176,7 +176,7 @@ Secrets are set in each platform's secret store. Nothing sensitive lives in the 
 M2 refreshes daily close prices through `.github/workflows/refresh-prices.yml`. The workflow runs hourly on weekdays during the regular U.S. market session window and calls:
 
 ```text
-POST $PORTFOLIUS_API_URL/api/v1/jobs/refresh-prices?user_id=$PORTFOLIUS_REFRESH_USER_ID
+POST $PORTFOLIUS_API_URL/api/v1/jobs/refresh-prices
 X-Scheduler-Secret: $PORTFOLIUS_SCHEDULER_SECRET
 ```
 
@@ -186,7 +186,6 @@ Required GitHub repository secrets:
 
 ```text
 PORTFOLIUS_API_URL=https://<backend-service>
-PORTFOLIUS_REFRESH_USER_ID=<supabase-user-id>
 PORTFOLIUS_SCHEDULER_SECRET=<same value as backend SCHEDULER_SECRET>
 ```
 

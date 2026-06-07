@@ -2,7 +2,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from app.data.repositories.holdings import list_instruments_for_user_holdings
+from app.data.repositories.holdings import (
+    list_all_instruments_with_holdings,
+    list_instruments_for_user_holdings,
+)
 from app.data.repositories.prices import upsert_price
 from app.integrations.market_data import MarketDataClient
 
@@ -15,12 +18,11 @@ class PriceRefreshResult:
     failed: int
 
 
-def refresh_prices_for_user(
+def _refresh_prices_for_instruments(
     db: Session,
-    user_id: str,
+    instruments: list,
     market_data_client: MarketDataClient,
 ) -> PriceRefreshResult:
-    instruments = list_instruments_for_user_holdings(db, user_id)
     requested = 0
     updated = 0
     skipped = 0
@@ -52,3 +54,20 @@ def refresh_prices_for_user(
         skipped=skipped,
         failed=failed,
     )
+
+
+def refresh_prices_for_user(
+    db: Session,
+    user_id: str,
+    market_data_client: MarketDataClient,
+) -> PriceRefreshResult:
+    instruments = list_instruments_for_user_holdings(db, user_id)
+    return _refresh_prices_for_instruments(db, instruments, market_data_client)
+
+
+def refresh_prices_for_all_users(
+    db: Session,
+    market_data_client: MarketDataClient,
+) -> PriceRefreshResult:
+    instruments = list_all_instruments_with_holdings(db)
+    return _refresh_prices_for_instruments(db, instruments, market_data_client)
