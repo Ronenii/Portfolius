@@ -1,6 +1,8 @@
 import { BarChart3, ClipboardList, UserRound } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
+import AssistantWidget from "../../features/assistant/AssistantWidget";
+
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { to: "/holdings", label: "Holdings", icon: ClipboardList },
@@ -30,6 +32,7 @@ export default function AppShell() {
       <div className="content-rail">
         <Outlet />
       </div>
+      <AssistantWidget />
     </main>
   );
 }

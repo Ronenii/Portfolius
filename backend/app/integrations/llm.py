@@ -99,7 +99,7 @@ def parse_arguments(raw_arguments: object) -> dict[str, Any]:
         raise LlmError("LLM provider returned invalid tool arguments") from exc
 
     if not isinstance(parsed, dict):
-        raise LlmError("LLM provider returned non-object tool arguments")
+        return {}
     return parsed
 
 
