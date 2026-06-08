@@ -27,8 +27,8 @@ def test_profile_goal_fields_round_trip_through_api(
     response = save_profile(
         profile_payload(
             risk_tolerance="balanced",
-            interest_tags=["Dividends", "technology", "dividends"],
-            excluded_sectors=["TOBACCO", "crypto", "unknown-sector"],
+            interest_tags=["Dividends", "AI Infrastructure", "dividends"],
+            excluded_sectors=["TOBACCO", "high fee funds", "tobacco"],
             goals_note="  Prefer low-fee ETFs for a home down payment.  ",
         ),
         authenticated_user,
@@ -36,14 +36,14 @@ def test_profile_goal_fields_round_trip_through_api(
     )
 
     assert response.risk_tolerance == "balanced"
-    assert response.interest_tags == ["dividends", "technology"]
-    assert response.excluded_sectors == ["tobacco", "crypto"]
+    assert response.interest_tags == ["dividends", "ai infrastructure"]
+    assert response.excluded_sectors == ["tobacco", "high fee funds"]
     assert response.goals_note == "Prefer low-fee ETFs for a home down payment."
 
     reloaded = read_profile(authenticated_user, db_session)
     assert reloaded.risk_tolerance == "balanced"
-    assert reloaded.interest_tags == ["dividends", "technology"]
-    assert reloaded.excluded_sectors == ["tobacco", "crypto"]
+    assert reloaded.interest_tags == ["dividends", "ai infrastructure"]
+    assert reloaded.excluded_sectors == ["tobacco", "high fee funds"]
     assert reloaded.goals_note == "Prefer low-fee ETFs for a home down payment."
 
 
@@ -69,14 +69,14 @@ def test_existing_profile_without_goal_fields_uses_response_defaults(
     assert response.goals_note is None
 
 
-def test_unknown_interests_and_sectors_are_dropped() -> None:
+def test_free_form_keywords_are_normalized_and_deduped() -> None:
     payload = profile_payload(
-        interest_tags=["growth", "moonshots", "GROWTH", "real_estate"],
-        excluded_sectors=["gambling", "space_mining", "GAMBLING"],
+        interest_tags=["growth", "moonshots", "GROWTH", "real estate"],
+        excluded_sectors=["gambling", "space mining", "GAMBLING"],
     )
 
-    assert payload.interest_tags == ["growth", "real_estate"]
-    assert payload.excluded_sectors == ["gambling"]
+    assert payload.interest_tags == ["growth", "moonshots", "real estate"]
+    assert payload.excluded_sectors == ["gambling", "space mining"]
 
 
 def test_invalid_risk_tolerance_is_rejected() -> None:

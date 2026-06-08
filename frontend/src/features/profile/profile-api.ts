@@ -5,6 +5,10 @@ export type ProfilePayload = {
   base_currency: string;
   time_horizon: string;
   investment_frequency: string;
+  risk_tolerance: string | null;
+  interest_tags: string[];
+  excluded_sectors: string[];
+  goals_note: string | null;
 };
 
 export type Profile = ProfilePayload & {

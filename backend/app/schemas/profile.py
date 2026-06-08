@@ -3,36 +3,24 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 RISK_TOLERANCES = {"conservative", "balanced", "aggressive"}
-INTEREST_TAGS = {
-    "dividends",
-    "growth",
-    "value",
-    "technology",
-    "esg",
-    "bonds",
-    "real_estate",
-    "emerging_markets",
-    "broad_market",
-    "income",
-}
-EXCLUDABLE_SECTORS = {
-    "tobacco",
-    "weapons",
-    "fossil_fuels",
-    "gambling",
-    "crypto",
-    "alcohol",
-}
+MAX_KEYWORDS = 30
+MAX_KEYWORD_LENGTH = 40
 
 
-def normalize_vocab(values: list[str], allowed_values: set[str]) -> list[str]:
+def normalize_keywords(values: list[str]) -> list[str]:
     normalized_values: list[str] = []
     seen_values: set[str] = set()
     for value in values:
         normalized_value = value.strip().lower()
-        if normalized_value in allowed_values and normalized_value not in seen_values:
+        if (
+            normalized_value
+            and len(normalized_value) <= MAX_KEYWORD_LENGTH
+            and normalized_value not in seen_values
+        ):
             normalized_values.append(normalized_value)
             seen_values.add(normalized_value)
+        if len(normalized_values) >= MAX_KEYWORDS:
+            break
     return normalized_values
 
 
@@ -74,12 +62,12 @@ class ProfileRequest(BaseModel):
     @field_validator("interest_tags")
     @classmethod
     def normalize_interest_tags(cls, value: list[str]) -> list[str]:
-        return normalize_vocab(value, INTEREST_TAGS)
+        return normalize_keywords(value)
 
     @field_validator("excluded_sectors")
     @classmethod
     def normalize_excluded_sectors(cls, value: list[str]) -> list[str]:
-        return normalize_vocab(value, EXCLUDABLE_SECTORS)
+        return normalize_keywords(value)
 
     @field_validator("goals_note")
     @classmethod
