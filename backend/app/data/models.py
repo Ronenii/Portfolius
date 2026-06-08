@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     Date,
     DateTime,
@@ -40,6 +41,18 @@ class Profile(Base):
     base_currency: Mapped[str] = mapped_column(String(3), nullable=False)
     time_horizon: Mapped[str] = mapped_column(String(120), nullable=False)
     investment_frequency: Mapped[str] = mapped_column(String(80), nullable=False)
+    risk_tolerance: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    interest_tags: Mapped[list[str]] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+    excluded_sectors: Mapped[list[str]] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+    goals_note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
