@@ -62,3 +62,7 @@ class SimulationResponse(BaseModel):
     simulated: PortfolioBreakdowns
     delta: list[AllocationDelta]
     warnings: list[str]
+
+
+class SimulationRequest(BaseModel):
+    legs: list[TradeLeg]
