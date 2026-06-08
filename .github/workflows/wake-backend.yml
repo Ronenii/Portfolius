@@ -3,7 +3,7 @@ name: Wake Backend
 on:
   schedule:
     - cron: "29 13-21 * * 1-5"
-
+  workflow_dispatch:
 jobs:
   wake:
     runs-on: ubuntu-latest
