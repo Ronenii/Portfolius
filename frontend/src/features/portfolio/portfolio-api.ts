@@ -54,6 +54,30 @@ export type PortfolioBreakdowns = {
   unpriced_holding_count: number;
 };
 
+export type TradeLeg = {
+  instrument_id?: number | null;
+  symbol?: string | null;
+  action: "buy" | "sell";
+  quantity: string;
+  price?: string | null;
+};
+
+export type AllocationDelta = {
+  dimension: string;
+  label: string;
+  currency: string;
+  percent_before: string;
+  percent_after: string;
+  percent_change: string;
+};
+
+export type SimulationResponse = {
+  current: PortfolioBreakdowns;
+  simulated: PortfolioBreakdowns;
+  delta: AllocationDelta[];
+  warnings: string[];
+};
+
 export type RefreshPricesResult = {
   requested: number;
   updated: number;
@@ -76,6 +100,14 @@ export function getPortfolioBreakdowns(accessToken: string) {
 export function refreshPrices(accessToken: string) {
   return apiRequest<RefreshPricesResult>("/api/v1/jobs/refresh-prices", {
     accessToken,
+    method: "POST",
+  });
+}
+
+export function simulatePortfolio(accessToken: string, legs: TradeLeg[]) {
+  return apiRequest<SimulationResponse>("/api/v1/portfolio/simulate", {
+    accessToken,
+    body: { legs },
     method: "POST",
   });
 }

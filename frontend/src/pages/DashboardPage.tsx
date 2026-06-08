@@ -18,6 +18,7 @@ import {
   type PortfolioBreakdowns,
   type PortfolioSnapshot,
 } from "../features/portfolio/portfolio-api";
+import SimulationPanel from "../features/portfolio/SimulationPanel";
 import { ApiError, type BackendHealth, fetchBackendHealth } from "../lib/api";
 
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -361,6 +362,8 @@ export default function DashboardPage() {
           </div>
         ) : null}
       </section>
+
+      {accessToken ? <SimulationPanel accessToken={accessToken} /> : null}
 
       <div className="status-strip status-strip--secondary" aria-live="polite">
         <StatusIcon health={healthQuery.data} isLoading={healthQuery.isLoading} />

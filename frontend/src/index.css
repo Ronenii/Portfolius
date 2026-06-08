@@ -392,6 +392,114 @@ h1 {
   font-weight: 700;
 }
 
+.simulation-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-100);
+  box-shadow: var(--shadow-1);
+}
+
+.simulation-leg-editor {
+  display: grid;
+  grid-template-columns:
+    minmax(96px, 0.45fr)
+    minmax(180px, 1fr)
+    minmax(112px, 0.5fr)
+    minmax(112px, 0.5fr)
+    auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.simulation-leg-editor .instrument-search {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.simulation-leg-editor .instrument-search label {
+  color: var(--ink-500);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.simulation-leg-editor .instrument-search input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-50);
+  color: var(--fg-paper);
+}
+
+.simulation-leg-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.simulation-leg {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 5px 7px 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper-50);
+  color: var(--ink-700);
+  font-size: 13px;
+}
+
+.simulation-leg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-500);
+}
+
+.simulation-leg button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.simulation-result {
+  display: grid;
+  gap: 14px;
+}
+
+.simulation-warnings {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgb(31 107 110 / 22%);
+  border-left: 3px solid var(--accent-500);
+  border-radius: 6px;
+  background: rgb(31 107 110 / 7%);
+  color: var(--ink-700);
+  font-size: 13px;
+}
+
+.simulation-empty {
+  min-height: auto;
+  padding: 12px;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
