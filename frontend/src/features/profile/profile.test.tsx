@@ -43,6 +43,10 @@ const savedProfile = {
   base_currency: "USD",
   time_horizon: "10+ years",
   investment_frequency: "monthly",
+  risk_tolerance: null,
+  interest_tags: [],
+  excluded_sectors: [],
+  goals_note: null,
   created_at: "2026-06-04T00:00:00Z",
   updated_at: "2026-06-04T00:00:00Z",
 };
@@ -128,6 +132,63 @@ describe("profile wizard", () => {
         base_currency: "USD",
         time_horizon: "10+ years",
         investment_frequency: "monthly",
+        risk_tolerance: null,
+        interest_tags: [],
+        excluded_sectors: [],
+        goals_note: null,
+      });
+    });
+  });
+
+  it("renders optional interests and goals controls", async () => {
+    vi.mocked(getProfile).mockRejectedValue(new ApiError(404, "Profile not found"));
+    renderRoute("/profile/setup");
+
+    expect(
+      await screen.findByRole("heading", { name: "Interests & goals" })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Balanced")).toBeInTheDocument();
+    expect(screen.getByLabelText("Add interest keyword")).toBeInTheDocument();
+    expect(screen.getByLabelText("Add avoid keyword")).toBeInTheDocument();
+    expect(screen.getByText(/Examples: dividends, AI infrastructure/)).toBeInTheDocument();
+    expect(screen.getByText(/Examples: tobacco, high fee funds/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Goals note")).toBeInTheDocument();
+  });
+
+  it("commits keyword chips locally and submits them only when saving", async () => {
+    vi.mocked(getProfile).mockRejectedValue(new ApiError(404, "Profile not found"));
+    vi.mocked(saveProfile).mockResolvedValue({
+      ...savedProfile,
+      risk_tolerance: "balanced",
+      interest_tags: ["ai infrastructure", "low-fee etfs"],
+      excluded_sectors: ["high fee funds"],
+      goals_note: "Prefer low-fee ETFs.",
+    });
+    renderRoute("/profile/setup");
+
+    await fillProfileForm();
+    await userEvent.click(screen.getByLabelText("Balanced"));
+    await userEvent.type(screen.getByLabelText("Add interest keyword"), "AI infrastructure{Enter}");
+    await userEvent.type(screen.getByLabelText("Add interest keyword"), "Low-fee ETFs{Enter}");
+    await userEvent.type(screen.getByLabelText("Add avoid keyword"), "High fee funds{Enter}");
+    expect(saveProfile).not.toHaveBeenCalled();
+    expect(screen.getByText("ai infrastructure")).toBeInTheDocument();
+    expect(screen.getByText("low-fee etfs")).toBeInTheDocument();
+    expect(screen.getByText("high fee funds")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Goals note"), "Prefer low-fee ETFs.");
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => {
+      expect(saveProfile).toHaveBeenCalledWith("access-token", {
+        display_name: "Ronen",
+        base_currency: "USD",
+        time_horizon: "10+ years",
+        investment_frequency: "monthly",
+        risk_tolerance: "balanced",
+        interest_tags: ["ai infrastructure", "low-fee etfs"],
+        excluded_sectors: ["high fee funds"],
+        goals_note: "Prefer low-fee ETFs.",
       });
     });
   });

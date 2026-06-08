@@ -23,6 +23,7 @@ vi.mock("../features/portfolio/portfolio-api", () => ({
   getPortfolioBreakdowns: vi.fn(),
   getPortfolioSnapshot: vi.fn(),
   refreshPrices: vi.fn(),
+  simulatePortfolio: vi.fn(),
 }));
 
 vi.mock("../lib/api", async () => {

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     auth_audience: str = "authenticated"
     fmp_api_key: str | None = None
     scheduler_secret: str | None = None
+    llm_api_key: str | None = None
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+    llm_model: str = "llama-3.3-70b-versatile"
+    llm_max_tokens: int = 1024
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),

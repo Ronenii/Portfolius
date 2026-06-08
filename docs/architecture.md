@@ -186,7 +186,25 @@ prices
 - created_at
 ```
 
-Later milestones can add transactions, target allocations, assistant conversations, CSV imports, and richer instrument exposure tables.
+M3 added conversations and messages:
+
+```text
+conversations
+- id
+- user_id
+- title
+- created_at
+- updated_at
+
+messages
+- id
+- conversation_id  (FK → conversations.id, cascade delete)
+- role             ("user" | "assistant")
+- content
+- created_at
+```
+
+Later milestones can add transactions, target allocations, CSV imports, and richer instrument exposure tables.
 
 ## API Shape
 
@@ -208,9 +226,20 @@ GET/PUT/DELETE /api/v1/holdings/{holding_id}
 GET /api/v1/portfolio/snapshot
 GET /api/v1/portfolio/breakdowns
 POST /api/v1/portfolio/simulate
+POST /api/v1/portfolio/simulate
 POST /api/v1/assistant/messages
+GET  /api/v1/assistant/conversations
+GET  /api/v1/assistant/conversations/{conversation_id}
 POST /api/v1/jobs/refresh-prices
 ```
+
+M3 assistant endpoints:
+
+- `POST /api/v1/assistant/messages` — send a user message, receive a grounded reply. Creates a new conversation when `conversation_id` is omitted. Returns `503` when `LLM_API_KEY` is not configured.
+- `GET /api/v1/assistant/conversations` — list the authenticated user's conversations, newest first.
+- `GET /api/v1/assistant/conversations/{conversation_id}` — return the conversation and its ordered messages. Returns `404` for another user's conversation.
+
+The assistant tool-call loop exposes two tools to the model: `get_portfolio_breakdowns()` and `simulate_trades(legs)`. Both execute the same user-scoped domain functions used by the REST endpoints, so the model reasons over identical numbers. The loop is capped at 4 iterations.
 
 Implemented M2 job endpoint behavior:
 
@@ -226,7 +255,7 @@ X-Scheduler-Secret: <SCHEDULER_SECRET>
 
 The scheduled path is called by GitHub Actions using repository secrets `PORTFOLIUS_API_URL` and `PORTFOLIUS_SCHEDULER_SECRET` for the deployed production backend. The workflow runs hourly on weekdays during the regular U.S. market session window and can also be dispatched manually. The backend still checks regular U.S. market hours and returns a zero-count result for scheduler calls outside that window; exchange holidays are not modeled in M2. Scheduler-triggered refreshes operate across all production users and request each distinct held instrument once. Local operators can run `python -m app.jobs.refresh_prices` when a command-line refresh is more convenient.
 
-## Allocation Exploration (M3a)
+## Allocation Exploration (M4)
 
 Allocation breakdowns should support progressive disclosure: a user can start with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspect what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row should show the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
 
@@ -330,10 +359,13 @@ To enable Google OAuth:
 - M0: walking skeleton from deployed frontend to deployed backend to database.
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
 - M2: instrument search/autofill, price refresh, and allocation breakdowns. **Done.**
-- M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
-- M3a: allocation exploration, including composition drill-downs and user-selectable chart types.
-- M4: transactions, projections, PWA install, and CSV import.
+- M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios). **Done.**
+- M4: allocation exploration, including composition drill-downs and user-selectable chart types.
+- M5: transactions, projections, PWA install, and CSV import.
+- M6: profile intelligence and personalization, including dark mode, suggested interest/avoid tags, and automatic typo cleanup for free-form profile keywords.
 
 Future holding-entry improvements should make the add-holding flow ticker-first. A user should normally add a holding by entering a ticker and selecting the resolved instrument metadata. Manual instrument details should only be shown when the ticker lookup cannot find the instrument, so users are not asked to fill exchange, currency, asset class, sector, country, or region when the system can resolve them.
+
+Future profile-keyword improvements can recommend tags from the user's goals and portfolio context, detect likely duplicates, and offer typo fixes before saving. These suggestions should remain user-confirmed rather than silently rewriting profile intent.
 
 M0 should not include portfolio math, charting, market-data providers, or LLM integration. Those are intentionally deferred.

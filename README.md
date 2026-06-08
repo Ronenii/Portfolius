@@ -2,7 +2,7 @@
 
 > A long-term investor dashboard that shows you what you actually own by market exposure, sector, and asset class with an AI assistant help you rebalance against your goals.
 
-**Status:** Hobby project · M2 implementation in progress
+**Status:** Hobby project · M3 complete
 
 ## Why this exists
 
@@ -20,11 +20,12 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 
 ## Features
 
-- **Profile setup**: display name, base currency, time horizon, and investment frequency.
+- **Profile setup**: display name, base currency, time horizon, investment frequency, risk tolerance, interest tags, sectors to avoid, and a free-text goals note.
 - **Holdings tracking**: create, edit, list, and delete holdings with instrument search/autofill.
 - **Authenticated API**: Supabase Auth sessions are verified by the backend and scoped by user ID.
 - **Portfolio dashboard**: current values, cost basis, gain/loss, price coverage, and allocation breakdowns by instrument, asset class, sector, country, region, and currency.
-- **Planned AI assistant**: chat panel grounded in portfolio + profile context.
+- **What-if simulation**: build a buy/sell basket and see before/after/delta across every breakdown dimension without committing any trades.
+- **AI assistant**: floating chat grounded in your holdings, profile goals, and live simulation results. Uses Groq's `llama-3.3-70b-versatile` model with tool-calling. Disabled gracefully when `LLM_API_KEY` is not set.
 - **Responsive**: works on desktop and phone.
 
 ## Tech stack
@@ -35,7 +36,7 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 | Backend | FastAPI (Python 3.11+), SQLAlchemy 2.0, Alembic |
 | Database + Auth | Supabase (Postgres + Google OAuth or magic-link auth) |
 | Market data | Financial Modeling Prep for instrument search, yfinance for daily close prices |
-| LLM | Planned: Groq, configurable |
+| LLM | Groq (`llama-3.3-70b-versatile`), OpenAI-compatible, configurable |
 | Frontend hosting | Vercel |
 | Backend hosting | Render (free web service) |
 | Cron (price refresh) | GitHub Actions |
@@ -131,6 +132,17 @@ M2 market data uses Financial Modeling Prep for instrument search and metadata a
 
 M2 does not do FX conversion. Portfolio-wide summary totals include priced holdings in the profile base currency, while holdings and allocation rows retain their instrument currency.
 
+**M3 assistant and simulation:**
+
+```
+LLM_API_KEY=<your-groq-api-key>      # get one at console.groq.com — free tier
+LLM_BASE_URL=https://api.groq.com/openai/v1  # default; override to use a different OpenAI-compatible provider
+LLM_MODEL=llama-3.3-70b-versatile    # default; override as needed
+LLM_MAX_TOKENS=1024                  # default
+```
+
+Without `LLM_API_KEY` the assistant endpoints return `503 "Assistant is not configured"`. The simulation endpoint (`POST /api/v1/portfolio/simulate`) works without an LLM key — it is a pure, non-mutating backend calculation.
+
 **Frontend (`frontend/.env.local`):**
 
 ```
@@ -193,7 +205,7 @@ PORTFOLIUS_SCHEDULER_SECRET=<same value as backend SCHEDULER_SECRET>
 
 1. Push the repo to GitHub.
 2. In Render: **New → Blueprint**, point at the repo. It picks up `backend/render.yaml` and creates the web service.
-3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, and `SCHEDULER_SECRET`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available.
+3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, `SCHEDULER_SECRET`, and `LLM_API_KEY`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available. `LLM_MODEL` is pre-set in `render.yaml`; override it in the dashboard if you want a different model.
 4. Take the resulting `https://<service>.onrender.com` URL and set it as `VITE_API_URL` in Vercel.
 
 For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example:
@@ -214,9 +226,11 @@ For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example
 
 - [x] M0 — Walking skeleton (frontend + backend + DB deployed end-to-end)
 - [x] M1 — Profile wizard + manual holdings CRUD
-- [ ] M2 — Asset autocomplete + daily price refresh + multi-dimensional breakdowns
-- [ ] M3 — LLM chat with portfolio context
-- [ ] M4 — Transactions log, goal projection, PWA install, CSV import
+- [x] M2 — Asset autocomplete + daily price refresh + multi-dimensional breakdowns
+- [x] M3 — AI assistant grounded in portfolio context + portfolio simulation (what-if buy/sell)
+- [ ] M4 — Allocation exploration (composition drill-downs + selectable chart types)
+- [ ] M5 — Transactions log, goal projection, PWA install, CSV import
+- [ ] M6 — Profile intelligence, dark mode, suggested interest/avoid tags, and automatic typo cleanup
 
 ## Disclaimer
 
