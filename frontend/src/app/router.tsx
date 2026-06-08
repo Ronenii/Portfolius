@@ -11,6 +11,7 @@ import { AuthProvider } from "../features/auth/AuthProvider";
 import { ProtectedRoute, PublicOnlyRoute } from "../features/auth/AuthRoutes";
 import LoginPage from "../features/auth/LoginPage";
 import HoldingsPage from "../features/holdings/HoldingsPage";
+import ProfileEditPage from "../features/profile/ProfileEditPage";
 import ProfileGate from "../features/profile/ProfileGate";
 import ProfileWizardPage from "../features/profile/ProfileWizardPage";
 import DashboardPage from "../pages/DashboardPage";
@@ -44,6 +45,7 @@ export const routes: RouteObject[] = [
               { index: true, element: <Navigate to="/dashboard" replace /> },
               { path: "/dashboard", element: <DashboardPage /> },
               { path: "/profile/setup", element: <ProfileWizardPage /> },
+              { path: "/profile", element: <ProfileEditPage /> },
               { path: "/holdings", element: <HoldingsPage /> },
             ],
           },

@@ -1179,6 +1179,19 @@ h1 {
   background: rgb(168 68 44 / 8%);
 }
 
+.form-success {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgb(34 139 74 / 35%);
+  border-radius: 6px;
+  background: rgb(34 139 74 / 8%);
+  color: var(--gain-500, #228b4a);
+  font-size: 13px;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-start;

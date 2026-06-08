@@ -6,7 +6,7 @@ import AssistantWidget from "../../features/assistant/AssistantWidget";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { to: "/holdings", label: "Holdings", icon: ClipboardList },
-  { to: "/profile/setup", label: "Profile", icon: UserRound },
+  { to: "/profile", label: "Profile", icon: UserRound },
 ];
 
 export default function AppShell() {
