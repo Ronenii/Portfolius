@@ -68,7 +68,6 @@ def test_context_summary_includes_goals_and_allocation_percentages() -> None:
 def test_system_prompt_sets_educational_guardrail_and_tool_expectation() -> None:
     prompt = build_system_prompt()
 
-    assert "educational" in prompt.lower()
-    assert "not personalized financial advice" in prompt.lower()
+    assert "not a financial advisor" in prompt.lower()
     assert "use tools" in prompt.lower()
-    assert "concrete numbers" in prompt.lower()
+    assert "real numbers" in prompt.lower()

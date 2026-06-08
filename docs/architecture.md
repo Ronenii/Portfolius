@@ -186,7 +186,25 @@ prices
 - created_at
 ```
 
-Later milestones can add transactions, target allocations, assistant conversations, CSV imports, and richer instrument exposure tables.
+M3 added conversations and messages:
+
+```text
+conversations
+- id
+- user_id
+- title
+- created_at
+- updated_at
+
+messages
+- id
+- conversation_id  (FK → conversations.id, cascade delete)
+- role             ("user" | "assistant")
+- content
+- created_at
+```
+
+Later milestones can add transactions, target allocations, CSV imports, and richer instrument exposure tables.
 
 ## API Shape
 
@@ -208,9 +226,20 @@ GET/PUT/DELETE /api/v1/holdings/{holding_id}
 GET /api/v1/portfolio/snapshot
 GET /api/v1/portfolio/breakdowns
 POST /api/v1/portfolio/simulate
+POST /api/v1/portfolio/simulate
 POST /api/v1/assistant/messages
+GET  /api/v1/assistant/conversations
+GET  /api/v1/assistant/conversations/{conversation_id}
 POST /api/v1/jobs/refresh-prices
 ```
+
+M3 assistant endpoints:
+
+- `POST /api/v1/assistant/messages` — send a user message, receive a grounded reply. Creates a new conversation when `conversation_id` is omitted. Returns `503` when `LLM_API_KEY` is not configured.
+- `GET /api/v1/assistant/conversations` — list the authenticated user's conversations, newest first.
+- `GET /api/v1/assistant/conversations/{conversation_id}` — return the conversation and its ordered messages. Returns `404` for another user's conversation.
+
+The assistant tool-call loop exposes two tools to the model: `get_portfolio_breakdowns()` and `simulate_trades(legs)`. Both execute the same user-scoped domain functions used by the REST endpoints, so the model reasons over identical numbers. The loop is capped at 4 iterations.
 
 Implemented M2 job endpoint behavior:
 
@@ -330,7 +359,7 @@ To enable Google OAuth:
 - M0: walking skeleton from deployed frontend to deployed backend to database.
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
 - M2: instrument search/autofill, price refresh, and allocation breakdowns. **Done.**
-- M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
+- M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios). **Done.**
 - M4: allocation exploration, including composition drill-downs and user-selectable chart types.
 - M5: transactions, projections, PWA install, and CSV import.
 - M6: profile intelligence and personalization, including dark mode, suggested interest/avoid tags, and automatic typo cleanup for free-form profile keywords.
