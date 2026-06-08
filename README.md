@@ -215,8 +215,9 @@ For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example
 - [x] M0 — Walking skeleton (frontend + backend + DB deployed end-to-end)
 - [x] M1 — Profile wizard + manual holdings CRUD
 - [ ] M2 — Asset autocomplete + daily price refresh + multi-dimensional breakdowns
-- [ ] M3 — LLM chat with portfolio context
-- [ ] M4 — Transactions log, goal projection, PWA install, CSV import
+- [ ] M3 — AI assistant grounded in portfolio context + portfolio simulation (what-if buy/sell)
+- [ ] M4 — Allocation exploration (composition drill-downs + selectable chart types)
+- [ ] M5 — Transactions log, goal projection, PWA install, CSV import
 
 ## Disclaimer
 

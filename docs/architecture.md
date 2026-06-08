@@ -226,7 +226,7 @@ X-Scheduler-Secret: <SCHEDULER_SECRET>
 
 The scheduled path is called by GitHub Actions using repository secrets `PORTFOLIUS_API_URL` and `PORTFOLIUS_SCHEDULER_SECRET` for the deployed production backend. The workflow runs hourly on weekdays during the regular U.S. market session window and can also be dispatched manually. The backend still checks regular U.S. market hours and returns a zero-count result for scheduler calls outside that window; exchange holidays are not modeled in M2. Scheduler-triggered refreshes operate across all production users and request each distinct held instrument once. Local operators can run `python -m app.jobs.refresh_prices` when a command-line refresh is more convenient.
 
-## Allocation Exploration (M3a)
+## Allocation Exploration (M4)
 
 Allocation breakdowns should support progressive disclosure: a user can start with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspect what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row should show the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
 
@@ -331,8 +331,8 @@ To enable Google OAuth:
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
 - M2: instrument search/autofill, price refresh, and allocation breakdowns. **Done.**
 - M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
-- M3a: allocation exploration, including composition drill-downs and user-selectable chart types.
-- M4: transactions, projections, PWA install, and CSV import.
+- M4: allocation exploration, including composition drill-downs and user-selectable chart types.
+- M5: transactions, projections, PWA install, and CSV import.
 
 Future holding-entry improvements should make the add-holding flow ticker-first. A user should normally add a holding by entering a ticker and selecting the resolved instrument metadata. Manual instrument details should only be shown when the ticker lookup cannot find the instrument, so users are not asked to fill exchange, currency, asset class, sector, country, or region when the system can resolve them.
 
