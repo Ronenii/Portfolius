@@ -333,7 +333,10 @@ To enable Google OAuth:
 - M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios).
 - M4: allocation exploration, including composition drill-downs and user-selectable chart types.
 - M5: transactions, projections, PWA install, and CSV import.
+- M6: profile intelligence and personalization, including dark mode, suggested interest/avoid tags, and automatic typo cleanup for free-form profile keywords.
 
 Future holding-entry improvements should make the add-holding flow ticker-first. A user should normally add a holding by entering a ticker and selecting the resolved instrument metadata. Manual instrument details should only be shown when the ticker lookup cannot find the instrument, so users are not asked to fill exchange, currency, asset class, sector, country, or region when the system can resolve them.
+
+Future profile-keyword improvements can recommend tags from the user's goals and portfolio context, detect likely duplicates, and offer typo fixes before saving. These suggestions should remain user-confirmed rather than silently rewriting profile intent.
 
 M0 should not include portfolio math, charting, market-data providers, or LLM integration. Those are intentionally deferred.

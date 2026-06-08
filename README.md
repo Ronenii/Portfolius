@@ -218,6 +218,7 @@ For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example
 - [ ] M3 — AI assistant grounded in portfolio context + portfolio simulation (what-if buy/sell)
 - [ ] M4 — Allocation exploration (composition drill-downs + selectable chart types)
 - [ ] M5 — Transactions log, goal projection, PWA install, CSV import
+- [ ] M6 — Profile intelligence, dark mode, suggested interest/avoid tags, and automatic typo cleanup
 
 ## Disclaimer
 
