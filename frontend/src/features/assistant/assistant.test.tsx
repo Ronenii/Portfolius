@@ -162,6 +162,25 @@ describe("assistant page", () => {
     expect(screen.getByText("ran a simulation")).toBeInTheDocument();
   });
 
+  it("renders a price check tool badge", async () => {
+    vi.mocked(sendAssistantMessage).mockResolvedValue({
+      conversation_id: 8,
+      title: "ETF ideas",
+      reply: "IEMG and VGK are priced options to compare.",
+      used_tools: ["get_instrument_prices"],
+    });
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.type(await screen.findByLabelText("Message"), "What ETFs?");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(
+      await screen.findByText("IEMG and VGK are priced options to compare.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("checked prices")).toBeInTheDocument();
+  });
+
   it("keeps tool badges after the saved conversation replaces optimistic messages", async () => {
     vi.mocked(sendAssistantMessage).mockResolvedValue({
       conversation_id: 8,

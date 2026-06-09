@@ -15,6 +15,8 @@ from app.data.repositories.conversations import (
 )
 from app.domain.assistant import run_assistant_turn
 from app.integrations.llm import GroqLlmClient, LlmClient, is_llm_configured
+from app.integrations.market_data import MarketDataClient
+from app.integrations.yfinance_client import YFinanceMarketDataClient
 from app.schemas.assistant import (
     AssistantMessageRequest,
     AssistantMessageResponse,
@@ -35,6 +37,10 @@ def get_llm_client(
             detail="Assistant is not configured",
         )
     return GroqLlmClient.from_settings(settings)
+
+
+def get_market_data_client() -> MarketDataClient:
+    return YFinanceMarketDataClient()
 
 
 def assistant_not_found() -> HTTPException:
@@ -73,6 +79,10 @@ def post_assistant_message(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
     llm_client: Annotated[LlmClient, Depends(get_llm_client)],
+    market_data_client: Annotated[
+        MarketDataClient,
+        Depends(get_market_data_client),
+    ],
 ) -> AssistantMessageResponse:
     if payload.conversation_id is None:
         conversation = create_conversation(
@@ -95,6 +105,7 @@ def post_assistant_message(
         conversation,
         payload.message,
         llm_client,
+        market_data_client,
     )
     return AssistantMessageResponse(
         conversation_id=conversation.id,

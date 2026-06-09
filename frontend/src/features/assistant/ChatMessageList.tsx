@@ -31,6 +31,9 @@ function toolCopy(tools: string[] | undefined) {
   if (tools.includes("get_portfolio_breakdowns")) {
     return "checked allocation";
   }
+  if (tools.includes("get_instrument_prices")) {
+    return "checked prices";
+  }
   return `used ${tools.length} tool${tools.length === 1 ? "" : "s"}`;
 }
 

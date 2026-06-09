@@ -6,10 +6,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.data.models import Conversation, Profile
+from app.data.models import Conversation, Instrument, Profile
 from app.data.repositories.conversations import append_message, list_messages
+from app.data.repositories.prices import get_latest_prices_for_instruments
 from app.data.repositories.profiles import get_profile_by_user_id
 from app.domain.portfolio_service import build_breakdowns_for_user, simulate_for_user
 from app.integrations.llm import (
@@ -19,6 +21,7 @@ from app.integrations.llm import (
     ToolCall,
     ToolSpec,
 )
+from app.integrations.market_data import MarketDataClient, MarketPrice
 from app.schemas.portfolio import AllocationRow, PortfolioBreakdowns
 from app.schemas.simulation import SimulationRequest
 
@@ -96,12 +99,15 @@ def build_system_prompt() -> str:
         "a financial term, explain it in one plain phrase "
         "(e.g. 'spread across different types of investments'). "
         "Use tools for real numbers before making any claims about what the portfolio "
-        "looks like or what would happen if trades were made. "
+        "looks like, what would happen if trades were made, or what an instrument "
+        "currently costs. Use the price tool before naming specific buy ideas or "
+        "comparing recommended instruments. "
         "You are not a financial advisor; only mention risks or limitations when they "
         "are directly relevant to what was asked. "
-        "Reply in 2-4 plain sentences for conversational questions. Only give a longer "
-        "answer when the user asks for detail. Lead with the direct answer — never "
-        "open with a preamble or restate the question."
+        "Reply in 4-6 plain sentences for conversational questions: include the key "
+        "reason, the most relevant number or price when available, and one practical "
+        "next step. Only give a longer answer when the user asks for detail. Lead with "
+        "the direct answer — never open with a preamble or restate the question."
     )
 
 
@@ -147,6 +153,26 @@ def assistant_tool_specs() -> list[ToolSpec]:
                 "additionalProperties": False,
             },
         ),
+        ToolSpec(
+            name="get_instrument_prices",
+            description=(
+                "Fetch latest available prices for instruments the assistant may "
+                "recommend or compare."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "symbols": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 1,
+                        "maxItems": 8,
+                    }
+                },
+                "required": ["symbols"],
+                "additionalProperties": False,
+            },
+        ),
     ]
 
 
@@ -182,10 +208,107 @@ def summarize_dimension(
     ]
 
 
+def normalize_symbols(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+
+    symbols: list[str] = []
+    for item in value[:8]:
+        if not isinstance(item, str):
+            continue
+        symbol = item.strip().upper()
+        if symbol and symbol not in symbols:
+            symbols.append(symbol)
+    return symbols
+
+
+def local_instruments_by_symbol(
+    db: Session,
+    symbols: list[str],
+) -> dict[str, Instrument]:
+    if not symbols:
+        return {}
+
+    instruments = db.scalars(
+        select(Instrument)
+        .where(Instrument.symbol.in_(symbols))
+        .order_by(Instrument.symbol, Instrument.exchange.desc(), Instrument.id)
+    )
+    by_symbol: dict[str, Instrument] = {}
+    for instrument in instruments:
+        by_symbol.setdefault(instrument.symbol, instrument)
+    return by_symbol
+
+
+def price_payload_from_market_price(market_price: MarketPrice) -> dict[str, str]:
+    return {
+        "symbol": market_price.symbol,
+        "exchange": market_price.exchange,
+        "close_price": str(market_price.close_price),
+        "currency": market_price.currency,
+        "price_date": market_price.price_date.isoformat(),
+        "source": market_price.source,
+    }
+
+
+def price_payload_from_local_price(
+    instrument: Instrument,
+    price: Any,
+) -> dict[str, str]:
+    return {
+        "symbol": instrument.symbol,
+        "exchange": instrument.exchange,
+        "close_price": str(price.close_price),
+        "currency": price.currency,
+        "price_date": price.price_date.isoformat(),
+        "source": price.source,
+    }
+
+
+def fetch_instrument_prices(
+    db: Session,
+    symbols: list[str],
+    market_data_client: MarketDataClient | None,
+) -> dict[str, Any]:
+    local_instruments = local_instruments_by_symbol(db, symbols)
+    local_prices = get_latest_prices_for_instruments(
+        db,
+        [instrument.id for instrument in local_instruments.values()],
+    )
+    results: list[dict[str, str]] = []
+    missing: list[str] = []
+
+    for symbol in symbols:
+        instrument = local_instruments.get(symbol)
+        market_price: MarketPrice | None = None
+        if market_data_client is not None:
+            try:
+                market_price = market_data_client.get_latest_close(
+                    symbol,
+                    instrument.exchange if instrument else "",
+                    instrument.currency if instrument else None,
+                )
+            except Exception:
+                market_price = None
+
+        if market_price is not None:
+            results.append(price_payload_from_market_price(market_price))
+            continue
+
+        local_price = local_prices.get(instrument.id) if instrument else None
+        if local_price is not None:
+            results.append(price_payload_from_local_price(instrument, local_price))
+        else:
+            missing.append(symbol)
+
+    return {"prices": results, "missing": missing}
+
+
 def execute_tool(
     db: Session,
     user_id: str,
     tool_call: ToolCall,
+    market_data_client: MarketDataClient | None = None,
 ) -> str:
     if tool_call.name == "get_portfolio_breakdowns":
         breakdowns = build_breakdowns_for_user(db, user_id)
@@ -212,6 +335,12 @@ def execute_tool(
                 ],
                 "warnings": response.warnings,
             }
+        )
+
+    if tool_call.name == "get_instrument_prices":
+        symbols = normalize_symbols(tool_call.arguments.get("symbols"))
+        return compact_json(
+            fetch_instrument_prices(db, symbols, market_data_client)
         )
 
     return compact_json({"error": f"Unknown tool: {tool_call.name}"})
@@ -247,6 +376,7 @@ def run_assistant_turn(
     conversation: Conversation,
     user_message: str,
     llm_client: LlmClient,
+    market_data_client: MarketDataClient | None = None,
 ) -> AssistantTurnResult:
     append_message(db, conversation, "user", user_message)
     messages = build_initial_messages(db, user_id, conversation)
@@ -266,7 +396,12 @@ def run_assistant_turn(
             messages.append(
                 ChatMessage(
                     role="tool",
-                    content=execute_tool(db, user_id, tool_call),
+                    content=execute_tool(
+                        db,
+                        user_id,
+                        tool_call,
+                        market_data_client,
+                    ),
                     tool_call_id=tool_call.id,
                 )
             )
