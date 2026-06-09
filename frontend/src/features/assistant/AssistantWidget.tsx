@@ -93,7 +93,10 @@ export default function AssistantWidget() {
     },
     onSuccess: async (response) => {
       setSelectedConversationId(response.conversation_id);
-      setOptimisticMessages([assistantReplyMessage(response)]);
+      setOptimisticMessages((current) => [
+        ...current.filter((message) => !message.pending),
+        assistantReplyMessage(response),
+      ]);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["assistant-conversations"] }),
         queryClient.invalidateQueries({
@@ -107,6 +110,8 @@ export default function AssistantWidget() {
     () => conversationMessages(selectedConversationQuery.data, optimisticMessages),
     [optimisticMessages, selectedConversationQuery.data]
   );
+  const shouldShowConversationLoading =
+    selectedConversationQuery.isLoading && threadMessages.length === 0;
 
   function selectConversation(conversation: AssistantConversation) {
     setSelectedConversationId(conversation.id);
@@ -223,7 +228,7 @@ export default function AssistantWidget() {
               ))}
             </div>
           </div>
-        ) : selectedConversationQuery.isLoading ? (
+        ) : shouldShowConversationLoading ? (
           <div className="empty-state assistant-empty">
             <strong>Loading conversation</strong>
             <span>Reading saved messages.</span>

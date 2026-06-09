@@ -153,6 +153,39 @@ def test_turn_without_tools_persists_user_and_assistant_messages(
     ]
 
 
+def test_final_reply_strips_inline_function_call_markup(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    llm_client = ScriptedLlmClient(
+        [
+            assistant_completion(
+                "You could consider broad international ETFs. "
+                "<function=get_portfolio_breakdowns></function>"
+            )
+        ]
+    )
+
+    result = run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "What should I add?",
+        llm_client,
+    )
+
+    assert result.reply == "You could consider broad international ETFs."
+    saved_messages = [
+        (message.role, message.content)
+        for message in list_messages(db_session, conversation)
+    ]
+    assert saved_messages[-1] == (
+        "assistant",
+        "You could consider broad international ETFs.",
+    )
+
+
 def test_tool_loop_executes_simulation_and_feeds_result_back(
     db_session: Session,
     authenticated_user: AuthenticatedUser,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -22,6 +23,10 @@ from app.schemas.portfolio import AllocationRow, PortfolioBreakdowns
 from app.schemas.simulation import SimulationRequest
 
 MAX_TOOL_ITERATIONS = 4
+INLINE_FUNCTION_CALL_RE = re.compile(
+    r"\s*<function=[^>]+>.*?</function>\s*",
+    re.DOTALL,
+)
 
 
 @dataclass(frozen=True)
@@ -232,7 +237,8 @@ def build_initial_messages(
 
 
 def final_reply_from_completion(completion: ChatCompletion) -> str:
-    return completion.message.content or ""
+    content = completion.message.content or ""
+    return INLINE_FUNCTION_CALL_RE.sub(" ", content).strip()
 
 
 def run_assistant_turn(

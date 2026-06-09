@@ -197,6 +197,38 @@ describe("assistant page", () => {
     ).toBeInTheDocument();
   });
 
+  it("hides leaked function call markup from saved assistant messages", async () => {
+    vi.mocked(listConversations).mockResolvedValue([conversationSummary]);
+    vi.mocked(getConversation).mockResolvedValue({
+      ...conversationDetail,
+      messages: [
+        conversationDetail.messages[0],
+        {
+          id: 3,
+          role: "assistant",
+          content:
+            "You could consider broad international ETFs. <function=get_portfolio_breakdowns></function>",
+          created_at: "2026-06-08T10:00:02Z",
+        },
+      ],
+    });
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Conversation history" })
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Regional exposure" })
+    );
+
+    const thread = await screen.findByRole("log", { name: "Assistant thread" });
+    expect(
+      within(thread).getByText("You could consider broad international ETFs.")
+    ).toBeInTheDocument();
+    expect(within(thread).queryByText(/function=get_portfolio_breakdowns/)).not.toBeInTheDocument();
+  });
+
   it("marks the assistant widget for mobile sheet styling", async () => {
     renderAssistantRoute();
     await openAssistant();
@@ -229,5 +261,32 @@ describe("assistant page", () => {
       used_tools: [],
     });
     expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();
+  });
+
+  it("keeps the sent thread visible while the saved conversation reloads", async () => {
+    let resolveReply: (
+      value: Awaited<ReturnType<typeof sendAssistantMessage>>
+    ) => void = () => undefined;
+    vi.mocked(sendAssistantMessage).mockReturnValue(
+      new Promise((resolve) => {
+        resolveReply = resolve;
+      })
+    );
+    vi.mocked(getConversation).mockReturnValue(new Promise(() => undefined));
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.type(await screen.findByLabelText("Message"), "Check this");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    resolveReply({
+      conversation_id: 8,
+      title: "Check this",
+      reply: "Here is the analysis.",
+      used_tools: [],
+    });
+
+    expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();
+    expect(screen.getByText("Check this")).toBeInTheDocument();
+    expect(screen.queryByText("Loading conversation")).not.toBeInTheDocument();
   });
 });

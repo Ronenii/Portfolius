@@ -7,6 +7,12 @@ export type ThreadMessage = AssistantMessage & {
   used_tools?: string[];
 };
 
+const inlineFunctionCallPattern = /\s*<function=[^>]+>.*?<\/function>\s*/gs;
+
+function displayContent(content: string) {
+  return content.replace(inlineFunctionCallPattern, " ").trim();
+}
+
 function toolCopy(tools: string[] | undefined) {
   if (!tools || tools.length === 0) {
     return null;
@@ -46,7 +52,7 @@ export default function ChatMessageList({
             <p className="assistant-message-role">
               {message.role === "user" ? "You" : "Assistant"}
             </p>
-            <p>{message.content}</p>
+            <p>{displayContent(message.content)}</p>
             {message.pending ? <span className="assistant-pending">Thinking</span> : null}
             {tools ? (
               <span className="assistant-tool-badge">
