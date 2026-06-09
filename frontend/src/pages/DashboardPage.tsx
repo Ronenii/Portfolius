@@ -23,6 +23,7 @@ import SimulationPanel from "../features/portfolio/SimulationPanel";
 import { ApiError, type BackendHealth, fetchBackendHealth } from "../lib/api";
 
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const prodModeValues = new Set(["1", "true", "yes", "on"]);
 const breakdownDimensions = [
   { key: "asset_class", label: "Asset class" },
   { key: "sector", label: "Sector" },
@@ -33,6 +34,12 @@ const breakdownDimensions = [
 ] as const;
 
 type BreakdownDimension = (typeof breakdownDimensions)[number]["key"];
+
+function isProdMode() {
+  return prodModeValues.has(
+    String(import.meta.env.VITE_PROD_MODE ?? "").trim().toLowerCase()
+  );
+}
 
 function statusCopy(health: BackendHealth | undefined, isLoading: boolean) {
   if (isLoading) {
@@ -135,7 +142,9 @@ export default function DashboardPage() {
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
   const [selectedDimension, setSelectedDimension] = useState<BreakdownDimension>("asset_class");
+  const showBackendStatus = !isProdMode();
   const healthQuery = useQuery({
+    enabled: showBackendStatus,
     queryKey: ["backend-health", apiUrl],
     queryFn: () => fetchBackendHealth(apiUrl),
   });
@@ -366,19 +375,25 @@ export default function DashboardPage() {
 
       {accessToken ? <SimulationPanel accessToken={accessToken} /> : null}
 
-      <div className="status-strip status-strip--secondary" aria-live="polite">
-        <StatusIcon health={healthQuery.data} isLoading={healthQuery.isLoading} />
-        <div>
-          <p className="panel-label">Backend status</p>
-          <strong>{statusCopy(healthQuery.data, healthQuery.isLoading)}</strong>
+      {showBackendStatus ? (
+        <div className="status-strip status-strip--secondary" aria-live="polite">
+          <StatusIcon health={healthQuery.data} isLoading={healthQuery.isLoading} />
+          <div>
+            <p className="panel-label">Backend status</p>
+            <strong>{statusCopy(healthQuery.data, healthQuery.isLoading)}</strong>
+          </div>
+          <span className="status-detail">
+            {detailCopy(healthQuery.data, healthQuery.isLoading)}
+          </span>
+          <span className="status-endpoint num">
+            {apiUrl.replace(/\/+$/, "")}/healthz
+          </span>
+          <span className="status-checked num">
+            <Clock3 aria-hidden="true" />
+            {checkedAt}
+          </span>
         </div>
-        <span className="status-detail">{detailCopy(healthQuery.data, healthQuery.isLoading)}</span>
-        <span className="status-endpoint num">{apiUrl.replace(/\/+$/, "")}/healthz</span>
-        <span className="status-checked num">
-          <Clock3 aria-hidden="true" />
-          {checkedAt}
-        </span>
-      </div>
+      ) : null}
     </section>
   );
 }
