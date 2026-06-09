@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     auth_audience: str = "authenticated"
     fmp_api_key: str | None = None
+    alpha_vantage_api_key: str | None = None
     scheduler_secret: str | None = None
     llm_api_key: str | None = None
     llm_base_url: str = "https://api.groq.com/openai/v1"

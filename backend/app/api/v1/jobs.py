@@ -9,24 +9,39 @@ from app.core.auth import (
     AuthenticatedUser,
     bearer_scheme,
     decode_supabase_jwt,
+    get_current_user,
     unauthorized,
 )
 from app.core.config import Settings, get_settings
 from app.data.database import get_db
 from app.domain.market_hours import is_us_market_open
+from app.domain.metadata_refresh import refresh_etf_metadata_for_user
 from app.domain.price_refresh import (
     PriceRefreshResult,
     refresh_prices_for_all_users,
     refresh_prices_for_user,
 )
+from app.integrations.alpha_vantage import AlphaVantageEtfProfileClient
+from app.integrations.fmp import FmpInstrumentLookupClient
+from app.integrations.instrument_lookup import CompositeInstrumentLookupClient
 from app.integrations.market_data import MarketDataClient
 from app.integrations.yfinance_client import YFinanceMarketDataClient
+from app.schemas.jobs import MetadataRefreshResult
 
 router = APIRouter(tags=["jobs"])
 
 
 def get_market_data_client() -> MarketDataClient:
     return YFinanceMarketDataClient()
+
+
+def get_instrument_lookup_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> CompositeInstrumentLookupClient:
+    return CompositeInstrumentLookupClient(
+        FmpInstrumentLookupClient(settings.fmp_api_key),
+        AlphaVantageEtfProfileClient(settings.alpha_vantage_api_key),
+    )
 
 
 def current_utc_time() -> datetime:
@@ -79,6 +94,21 @@ def refresh_prices(
     if current_user is None:
         raise unauthorized()
     return refresh_prices_for_user(db, current_user.user_id, market_data_client)
+
+
+@router.post(
+    "/api/v1/jobs/refresh-etf-metadata",
+    response_model=MetadataRefreshResult,
+)
+def refresh_etf_metadata(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    lookup_client: Annotated[
+        CompositeInstrumentLookupClient,
+        Depends(get_instrument_lookup_client),
+    ],
+) -> MetadataRefreshResult:
+    return refresh_etf_metadata_for_user(db, current_user.user_id, lookup_client)
 
 
 def validate_scheduler_secret(

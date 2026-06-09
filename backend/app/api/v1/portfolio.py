@@ -13,7 +13,9 @@ from app.domain.portfolio_service import (
     build_snapshot_for_user,
     simulate_for_user,
 )
+from app.integrations.alpha_vantage import AlphaVantageEtfProfileClient
 from app.integrations.fmp import FmpInstrumentLookupClient
+from app.integrations.instrument_lookup import CompositeInstrumentLookupClient
 from app.integrations.market_data import MarketDataClient
 from app.integrations.yfinance_client import YFinanceMarketDataClient
 from app.schemas.portfolio import (
@@ -28,8 +30,11 @@ router = APIRouter(tags=["portfolio"])
 
 def get_instrument_lookup_client(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> FmpInstrumentLookupClient:
-    return FmpInstrumentLookupClient(api_key=settings.fmp_api_key)
+) -> CompositeInstrumentLookupClient:
+    return CompositeInstrumentLookupClient(
+        FmpInstrumentLookupClient(api_key=settings.fmp_api_key),
+        AlphaVantageEtfProfileClient(api_key=settings.alpha_vantage_api_key),
+    )
 
 
 def get_market_data_client() -> MarketDataClient:

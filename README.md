@@ -118,6 +118,7 @@ SUPABASE_URL=https://<dev-project>.supabase.co
 AUTH_AUDIENCE=authenticated
 FRONTEND_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
 FMP_API_KEY=...
+ALPHA_VANTAGE_API_KEY=...
 SCHEDULER_SECRET=...
 ```
 
@@ -128,7 +129,14 @@ For backend-only migration or repository work, you can still point `DATABASE_URL
 The backend verifies Supabase access tokens through the project's JWKS discovery endpoint:
 `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`. Do not use the legacy JWT secret for M1 backend auth.
 
-M2 market data uses Financial Modeling Prep for instrument search and metadata autofill, and `yfinance` for latest daily close prices. `FMP_API_KEY` enables provider-backed search; without it, the backend returns an empty search result rather than breaking the holdings form. `SCHEDULER_SECRET` protects scheduler-triggered refreshes.
+M2 market data uses Financial Modeling Prep for instrument search and basic metadata autofill, Alpha Vantage for ETF exposure metadata when `ALPHA_VANTAGE_API_KEY` is set, and `yfinance` for latest daily close prices. `FMP_API_KEY` enables provider-backed search; without it, the backend returns an empty search result rather than breaking the holdings form. `SCHEDULER_SECRET` protects scheduler-triggered refreshes.
+
+Existing ETF instrument metadata can be refreshed by the signed-in user as a one-time cleanup action. This scans ETF instruments in that user's holdings, refreshes provider metadata, and returns `requested`, `updated`, `skipped`, and `failed` counts.
+
+```text
+POST $PORTFOLIUS_API_URL/api/v1/jobs/refresh-etf-metadata
+Authorization: Bearer <supabase-access-token>
+```
 
 M2 does not do FX conversion. Portfolio-wide summary totals include priced holdings in the profile base currency, while holdings and allocation rows retain their instrument currency.
 
@@ -206,7 +214,7 @@ PORTFOLIUS_SCHEDULER_SECRET=<same value as backend SCHEDULER_SECRET>
 
 1. Push the repo to GitHub.
 2. In Render: **New → Blueprint**, point at the repo. It picks up `backend/render.yaml` and creates the web service.
-3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, `SCHEDULER_SECRET`, and `LLM_API_KEY`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available. `LLM_MODEL` is pre-set in `render.yaml`; override it in the dashboard if you want a different model.
+3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `SCHEDULER_SECRET`, and `LLM_API_KEY`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available. `LLM_MODEL` is pre-set in `render.yaml`; override it in the dashboard if you want a different model.
 4. Take the resulting `https://<service>.onrender.com` URL and set it as `VITE_API_URL` in Vercel.
 
 For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example:
