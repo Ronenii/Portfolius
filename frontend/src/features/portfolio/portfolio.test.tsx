@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, apiRequest } from "../../lib/api";
 import {
+  getComposition,
   getPortfolioBreakdowns,
   getPortfolioSnapshot,
   refreshPrices,
@@ -57,6 +58,28 @@ describe("portfolio-api", () => {
     expect(apiRequest).toHaveBeenCalledWith("/api/v1/portfolio/breakdowns", {
       accessToken: "access-token",
     });
+  });
+
+  it("requests composition with encoded key and optional currency", async () => {
+    const composition = {
+      dimension: "asset_class",
+      key: "International ETF",
+      currency: "EUR",
+      market_value: "180",
+      percent_of_portfolio: "100",
+      children: [],
+      unpriced_holding_count: 0,
+    };
+    vi.mocked(apiRequest).mockResolvedValue(composition);
+
+    await expect(
+      getComposition("access-token", "asset_class", "International ETF", "EUR")
+    ).resolves.toEqual(composition);
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/v1/portfolio/breakdowns/asset_class/International%20ETF/composition?currency=EUR",
+      { accessToken: "access-token" }
+    );
   });
 
   it("posts refresh requests with a bearer token and no body", async () => {

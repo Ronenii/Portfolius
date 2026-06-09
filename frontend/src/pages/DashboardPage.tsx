@@ -9,13 +9,16 @@ import {
 import { useMemo, useState } from "react";
 
 import { AllocationChart } from "../components/charts/AllocationChart";
+import { AllocationDonut } from "../components/charts/AllocationDonut";
 import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
 import {
+  getComposition,
   getPortfolioBreakdowns,
   getPortfolioSnapshot,
   refreshPrices,
   type AllocationRow,
+  type CompositionResponse,
   type PortfolioBreakdowns,
   type PortfolioSnapshot,
 } from "../features/portfolio/portfolio-api";
@@ -32,8 +35,36 @@ const breakdownDimensions = [
   { key: "currency", label: "Currency" },
   { key: "instrument", label: "Instrument" },
 ] as const;
+const chartTypeOptions = [
+  { key: "bar", label: "Bar" },
+  { key: "donut", label: "Donut" },
+  { key: "table", label: "Table" },
+] as const;
+const allocationChartTypeKey = "portfolius:allocation-chart-type";
 
 type BreakdownDimension = (typeof breakdownDimensions)[number]["key"];
+type AllocationChartType = (typeof chartTypeOptions)[number]["key"];
+
+function isAllocationChartType(value: string | null): value is AllocationChartType {
+  return chartTypeOptions.some((option) => option.key === value);
+}
+
+function readAllocationChartType(): AllocationChartType {
+  try {
+    const storedType = localStorage.getItem(allocationChartTypeKey);
+    return isAllocationChartType(storedType) ? storedType : "bar";
+  } catch {
+    return "bar";
+  }
+}
+
+function writeAllocationChartType(chartType: AllocationChartType) {
+  try {
+    localStorage.setItem(allocationChartTypeKey, chartType);
+  } catch {
+    // Client-side presentation preference only; ignore unavailable storage.
+  }
+}
 
 function isProdMode() {
   return prodModeValues.has(
@@ -142,6 +173,10 @@ export default function DashboardPage() {
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
   const [selectedDimension, setSelectedDimension] = useState<BreakdownDimension>("asset_class");
+  const [selectedChartType, setSelectedChartType] = useState<AllocationChartType>(
+    readAllocationChartType
+  );
+  const [selectedBucket, setSelectedBucket] = useState<AllocationRow | null>(null);
   const showBackendStatus = !isProdMode();
   const healthQuery = useQuery({
     enabled: showBackendStatus,
@@ -157,6 +192,23 @@ export default function DashboardPage() {
     enabled: Boolean(accessToken),
     queryKey: ["portfolio-breakdowns", accessToken],
     queryFn: () => getPortfolioBreakdowns(accessToken ?? ""),
+  });
+  const compositionQuery = useQuery<CompositionResponse>({
+    enabled: Boolean(accessToken && selectedBucket),
+    queryKey: [
+      "portfolio-composition",
+      accessToken,
+      selectedBucket?.dimension,
+      selectedBucket?.label,
+      selectedBucket?.currency,
+    ],
+    queryFn: () =>
+      getComposition(
+        accessToken ?? "",
+        selectedBucket?.dimension ?? selectedDimension,
+        selectedBucket?.label ?? "",
+        selectedBucket?.currency
+      ),
   });
   const refreshMutation = useMutation({
     mutationFn: () => refreshPrices(accessToken ?? ""),
@@ -179,6 +231,23 @@ export default function DashboardPage() {
     breakdownDimensions.find((dimension) => dimension.key === selectedDimension)?.label ??
     "Allocation";
   const selectedRows = breakdownRows(breakdownsQuery.data, selectedDimension);
+  const selectedBucketKey = selectedBucket
+    ? `${selectedBucket.dimension}-${selectedBucket.label}-${selectedBucket.currency}`
+    : null;
+
+  function selectDimension(dimension: BreakdownDimension) {
+    setSelectedDimension(dimension);
+    setSelectedBucket(null);
+  }
+
+  function selectBucket(row: AllocationRow) {
+    setSelectedBucket(row);
+  }
+
+  function selectChartType(chartType: AllocationChartType) {
+    setSelectedChartType(chartType);
+    writeAllocationChartType(chartType);
+  }
 
   return (
     <section className="dashboard-page" aria-labelledby="dashboard-title">
@@ -286,22 +355,41 @@ export default function DashboardPage() {
           ) : null}
         </div>
 
-        <div className="segmented-control" aria-label="Allocation dimension">
-          {breakdownDimensions.map((dimension) => (
-            <button
-              className={
-                selectedDimension === dimension.key
-                  ? "segmented-button segmented-button--active"
-                  : "segmented-button"
-              }
-              key={dimension.key}
-              type="button"
-              aria-pressed={selectedDimension === dimension.key}
-              onClick={() => setSelectedDimension(dimension.key)}
-            >
-              {dimension.label}
-            </button>
-          ))}
+        <div className="allocation-controls">
+          <div className="segmented-control" aria-label="Allocation dimension">
+            {breakdownDimensions.map((dimension) => (
+              <button
+                className={
+                  selectedDimension === dimension.key
+                    ? "segmented-button segmented-button--active"
+                    : "segmented-button"
+                }
+                key={dimension.key}
+                type="button"
+                aria-pressed={selectedDimension === dimension.key}
+                onClick={() => selectDimension(dimension.key)}
+              >
+                {dimension.label}
+              </button>
+            ))}
+          </div>
+          <div className="segmented-control" aria-label="Allocation chart type">
+            {chartTypeOptions.map((chartType) => (
+              <button
+                className={
+                  selectedChartType === chartType.key
+                    ? "segmented-button segmented-button--active"
+                    : "segmented-button"
+                }
+                key={chartType.key}
+                type="button"
+                aria-pressed={selectedChartType === chartType.key}
+                onClick={() => selectChartType(chartType.key)}
+              >
+                {chartType.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {breakdownsQuery.isLoading ? (
@@ -330,13 +418,31 @@ export default function DashboardPage() {
         ) : null}
 
         {selectedRows.length > 0 ? (
-          <div className="allocation-layout">
-            <AllocationChart
-              formatPercent={formatPercent}
-              formatValue={formatMoney}
-              rows={selectedRows}
-              title={selectedDimensionLabel}
-            />
+          <div
+            className={
+              selectedChartType === "table"
+                ? "allocation-layout allocation-layout--table"
+                : "allocation-layout"
+            }
+          >
+            {selectedChartType === "bar" ? (
+              <AllocationChart
+                formatPercent={formatPercent}
+                formatValue={formatMoney}
+                onSelectRow={selectBucket}
+                rows={selectedRows}
+                title={selectedDimensionLabel}
+              />
+            ) : null}
+            {selectedChartType === "donut" ? (
+              <AllocationDonut
+                formatPercent={formatPercent}
+                formatValue={formatMoney}
+                onSelectRow={selectBucket}
+                rows={selectedRows}
+                title={selectedDimensionLabel}
+              />
+            ) : null}
             <div className="allocation-table-wrap">
               <table className="allocation-table">
                 <thead>
@@ -346,11 +452,19 @@ export default function DashboardPage() {
                     <th scope="col">Market value</th>
                     <th scope="col">Percent</th>
                     <th scope="col">Holdings</th>
+                    <th scope="col">Composition</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedRows.map((row) => (
-                    <tr key={`${selectedDimension}-${row.label}-${row.currency}`}>
+                    <tr
+                      className={
+                        selectedBucketKey === `${row.dimension}-${row.label}-${row.currency}`
+                          ? "allocation-row allocation-row--selected"
+                          : "allocation-row"
+                      }
+                      key={`${selectedDimension}-${row.label}-${row.currency}`}
+                    >
                       <td data-label="Label">{row.label}</td>
                       <td className="num" data-label="Currency">
                         {row.currency}
@@ -364,12 +478,102 @@ export default function DashboardPage() {
                       <td className="num" data-label="Holdings">
                         {row.holding_count}
                       </td>
+                      <td className="row-actions" data-label="Composition">
+                        <button
+                          className="text-button"
+                          type="button"
+                          onClick={() => selectBucket(row)}
+                        >
+                          <span aria-hidden="true">Details</span>
+                          <span className="sr-only">Show composition for {row.label}</span>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
+        ) : null}
+
+        {selectedBucket ? (
+          <section className="composition-panel" aria-labelledby="composition-title">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">{selectedDimensionLabel} composition</p>
+                <h3 id="composition-title">{selectedBucket.label} composition</h3>
+              </div>
+              <span className="allocation-note">
+                {formatPercent(
+                  compositionQuery.data?.percent_of_portfolio ?? selectedBucket.percent
+                )}{" "}
+                of portfolio
+              </span>
+            </div>
+
+            {compositionQuery.isLoading ? (
+              <TrendLoader label="Reading child instruments" srLabel="Loading composition" />
+            ) : null}
+
+            {compositionQuery.error ? (
+              <div className="empty-state">
+                <strong>Composition unavailable</strong>
+                <span>
+                  {compositionQuery.error instanceof Error
+                    ? compositionQuery.error.message
+                    : "Composition request failed."}
+                </span>
+              </div>
+            ) : null}
+
+            {compositionQuery.data && compositionQuery.data.children.length === 0 ? (
+              <div className="empty-state">
+                <strong>No child instruments</strong>
+                <span>This bucket has no priced child rows in the selected currency.</span>
+              </div>
+            ) : null}
+
+            {compositionQuery.data && compositionQuery.data.children.length > 0 ? (
+              <div className="allocation-table-wrap">
+                <table className="allocation-table composition-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Symbol</th>
+                      <th scope="col">Name</th>
+                      <th scope="col">Currency</th>
+                      <th scope="col">Market value</th>
+                      <th scope="col">% of bucket</th>
+                      <th scope="col">% of portfolio</th>
+                      <th scope="col">Holdings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compositionQuery.data.children.map((child) => (
+                      <tr key={`${child.instrument_id}-${child.currency}`}>
+                        <td data-label="Symbol">{child.symbol}</td>
+                        <td data-label="Name">{child.name}</td>
+                        <td className="num" data-label="Currency">
+                          {child.currency}
+                        </td>
+                        <td className="num" data-label="Market value">
+                          {formatMoney(child.market_value, child.currency)}
+                        </td>
+                        <td className="num" data-label="% of bucket">
+                          {formatPercent(child.percent_of_parent)}
+                        </td>
+                        <td className="num" data-label="% of portfolio">
+                          {formatPercent(child.percent_of_portfolio)}
+                        </td>
+                        <td className="num" data-label="Holdings">
+                          {child.holding_count}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </section>
         ) : null}
       </section>
 

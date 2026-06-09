@@ -1,18 +1,16 @@
 import {
-  Bar,
-  BarChart,
   Cell,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 
 import type { AllocationRow } from "../../features/portfolio/portfolio-api";
 
 const chartColors = ["#167c7c", "#4f6f80", "#7a8b5d", "#a56b4f", "#5b6c93", "#8b6f95"];
 
-type AllocationChartProps = {
+type AllocationDonutProps = {
   formatPercent: (value: string) => string;
   formatValue: (value: string, currency: string) => string;
   onSelectRow?: (row: AllocationRow) => void;
@@ -20,13 +18,13 @@ type AllocationChartProps = {
   title: string;
 };
 
-export function AllocationChart({
+export function AllocationDonut({
   formatPercent,
   formatValue,
   onSelectRow,
   rows,
   title,
-}: AllocationChartProps) {
+}: AllocationDonutProps) {
   const chartRows = rows.slice(0, 8).map((row, index) => ({
     ...row,
     color: chartColors[index % chartColors.length],
@@ -34,23 +32,29 @@ export function AllocationChart({
   }));
 
   return (
-    <div className="allocation-chart" role="img" aria-label={`${title} chart`}>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart
-          data={chartRows}
-          layout="vertical"
-          margin={{ bottom: 4, left: 8, right: 12, top: 4 }}
-        >
-          <XAxis type="number" hide />
-          <YAxis
-            axisLine={false}
-            dataKey="label"
-            tickLine={false}
-            type="category"
-            width={110}
-          />
+    <div className="allocation-chart allocation-donut" role="img" aria-label={`${title} donut chart`}>
+      <ResponsiveContainer width="100%" height={260}>
+        <PieChart margin={{ bottom: 4, left: 4, right: 4, top: 4 }}>
+          <Pie
+            cx="50%"
+            cy="50%"
+            data={chartRows}
+            dataKey="numericMarketValue"
+            innerRadius="56%"
+            outerRadius="82%"
+            nameKey="label"
+            paddingAngle={2}
+          >
+            {chartRows.map((row) => (
+              <Cell
+                cursor={onSelectRow ? "pointer" : "default"}
+                key={`${row.dimension}-${row.label}-${row.currency}`}
+                fill={row.color}
+                onClick={() => onSelectRow?.(row)}
+              />
+            ))}
+          </Pie>
           <Tooltip
-            cursor={{ fill: "rgba(22, 124, 124, 0.08)" }}
             content={({ active, payload }) => {
               if (!active || !payload?.length) {
                 return null;
@@ -83,17 +87,7 @@ export function AllocationChart({
               );
             }}
           />
-          <Bar dataKey="numericMarketValue" radius={[0, 4, 4, 0]}>
-            {chartRows.map((row) => (
-              <Cell
-                cursor={onSelectRow ? "pointer" : "default"}
-                key={`${row.dimension}-${row.label}-${row.currency}`}
-                fill={row.color}
-                onClick={() => onSelectRow?.(row)}
-              />
-            ))}
-          </Bar>
-        </BarChart>
+        </PieChart>
       </ResponsiveContainer>
     </div>
   );

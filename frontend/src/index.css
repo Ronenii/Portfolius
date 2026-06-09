@@ -324,6 +324,10 @@ a {
   border-bottom-color: var(--ink-800);
 }
 
+.mode-terminal .allocation-table td:first-child {
+  color: var(--fg-terminal);
+}
+
 .mode-terminal .panel-heading h2 {
   color: var(--fg-terminal);
 }
@@ -355,6 +359,12 @@ a {
   border-color: var(--accent-300);
   background: color-mix(in srgb, var(--accent-300) 14%, transparent);
   color: var(--accent-300);
+}
+
+.mode-terminal .allocation-note {
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+  color: var(--ink-200);
 }
 
 .mode-terminal .status-strip {
@@ -849,6 +859,13 @@ h1 {
   font-weight: 700;
 }
 
+.allocation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
 .segmented-control {
   display: flex;
   flex-wrap: wrap;
@@ -881,6 +898,10 @@ h1 {
   min-width: 0;
 }
 
+.allocation-layout--table {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .allocation-chart {
   min-width: 0;
   min-height: 240px;
@@ -890,10 +911,69 @@ h1 {
   background: var(--paper-50);
 }
 
+.allocation-donut {
+  min-height: 280px;
+}
+
+.allocation-chart .recharts-wrapper,
+.allocation-chart .recharts-surface,
+.allocation-chart .recharts-layer,
+.allocation-chart .recharts-rectangle,
+.allocation-chart svg,
+.allocation-chart svg * {
+  outline: none;
+}
+
 .allocation-chart text {
   fill: var(--ink-500);
   font-family: var(--font-sans);
   font-size: 12px;
+}
+
+.allocation-tooltip {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+  padding: 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper-50);
+  color: var(--fg-paper);
+  box-shadow: var(--shadow-2);
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.allocation-tooltip strong {
+  color: var(--fg-paper);
+  font-size: 13px;
+}
+
+.allocation-tooltip > span {
+  color: var(--ink-500);
+  font-weight: 700;
+}
+
+.allocation-tooltip dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.allocation-tooltip dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.allocation-tooltip dt {
+  color: var(--ink-500);
+}
+
+.allocation-tooltip dd {
+  margin: 0;
+  color: var(--fg-paper);
+  font-family: var(--font-mono);
 }
 
 .mode-terminal .allocation-chart {
@@ -920,9 +1000,42 @@ h1 {
   color: var(--ink-200) !important;
 }
 
+.mode-terminal .allocation-tooltip {
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+  color: var(--fg-terminal);
+}
+
+.mode-terminal .allocation-tooltip strong,
+.mode-terminal .allocation-tooltip dd {
+  color: var(--fg-terminal);
+}
+
 .allocation-table-wrap {
   min-width: 0;
   overflow-x: auto;
+}
+
+.mode-terminal .allocation-table-wrap {
+  scrollbar-color: var(--ink-700) var(--ink-900);
+}
+
+.mode-terminal .allocation-table-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.mode-terminal .allocation-table-wrap::-webkit-scrollbar-track {
+  background: var(--ink-900);
+}
+
+.mode-terminal .allocation-table-wrap::-webkit-scrollbar-thumb {
+  border: 2px solid var(--ink-900);
+  border-radius: var(--radius-full);
+  background: var(--ink-700);
+}
+
+.mode-terminal .allocation-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-600);
 }
 
 .allocation-table {
@@ -955,6 +1068,45 @@ h1 {
 .allocation-table td:first-child {
   color: var(--fg-paper);
   font-weight: 700;
+}
+
+.allocation-row--selected td {
+  background: var(--accent-50);
+}
+
+.composition-panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper-50);
+}
+
+.composition-panel h3 {
+  margin: 0;
+  color: var(--fg-paper);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.composition-table {
+  min-width: 760px;
+}
+
+.mode-terminal .allocation-row--selected td {
+  background: rgb(113 168 171 / 12%);
+}
+
+.mode-terminal .composition-panel {
+  border-color: var(--ink-800);
+  background: var(--ink-900);
+}
+
+.mode-terminal .composition-panel h3 {
+  color: var(--fg-terminal);
 }
 
 .simulation-panel {
@@ -1975,6 +2127,37 @@ h1 {
   height: 15px;
 }
 
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper-50);
+  color: var(--accent-700);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.text-button:hover {
+  border-color: var(--accent-300);
+  background: var(--accent-50);
+}
+
+.mode-terminal .text-button {
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+  color: var(--accent-300);
+}
+
+.mode-terminal .text-button:hover {
+  border-color: var(--accent-300);
+  background: color-mix(in srgb, var(--accent-300) 14%, transparent);
+}
+
 .icon-button--danger {
   color: var(--loss-500);
 }
@@ -2315,6 +2498,11 @@ h1 {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+
+  .mode-terminal .holdings-table td::before,
+  .mode-terminal .allocation-table td::before {
+    color: var(--ink-300);
   }
 
   .row-actions {
