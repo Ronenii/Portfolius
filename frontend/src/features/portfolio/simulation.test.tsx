@@ -157,6 +157,19 @@ describe("SimulationPanel", () => {
     expect(within(table).getByRole("cell", { name: "QQQ" })).toBeInTheDocument();
   });
 
+  it("marks the simulation dimension control for mobile overflow styling", async () => {
+    renderPanel();
+
+    await userEvent.type(screen.getByLabelText("Symbol"), "QQQ");
+    await userEvent.type(screen.getByLabelText("Quantity"), "2");
+    await userEvent.click(screen.getByRole("button", { name: "Add leg" }));
+    await userEvent.click(screen.getByRole("button", { name: "Simulate" }));
+
+    const dimensionControl = await screen.findByLabelText("Simulation dimension");
+
+    expect(dimensionControl).toHaveClass("simulation-dimension-control");
+  });
+
   it("displays warnings from the simulation response", async () => {
     renderPanel();
 

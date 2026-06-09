@@ -1432,6 +1432,18 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .simulation-leg-editor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .simulation-leg-editor .instrument-search {
+    grid-column: 1 / -1;
+  }
+
+  .simulation-leg-editor .button {
+    width: 100%;
+  }
+
   .status-detail,
   .status-endpoint,
   .status-checked {
@@ -1441,6 +1453,57 @@ h1 {
 }
 
 @media (max-width: 560px) {
+  .simulation-panel {
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .simulation-leg-editor {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .simulation-leg-editor .instrument-search {
+    grid-column: auto;
+  }
+
+  .simulation-leg-list {
+    display: grid;
+  }
+
+  .simulation-leg {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .simulation-leg span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .simulation-leg button {
+    justify-self: end;
+  }
+
+  .simulation-dimension-control {
+    flex-wrap: nowrap;
+    margin-inline: -14px;
+    padding-inline: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .simulation-dimension-control::-webkit-scrollbar {
+    display: none;
+  }
+
+  .simulation-dimension-control .segmented-button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   .page-header {
     align-items: start;
     flex-direction: column;

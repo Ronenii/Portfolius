@@ -229,7 +229,10 @@ function SimulationResult({
         </div>
       ) : null}
 
-      <div className="segmented-control" aria-label="Simulation dimension">
+      <div
+        className="segmented-control simulation-dimension-control"
+        aria-label="Simulation dimension"
+      >
         {breakdownDimensions.map((dimension) => (
           <button
             aria-pressed={selectedDimension === dimension.key}
