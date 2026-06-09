@@ -4,13 +4,23 @@ from sqlalchemy.orm import Session
 
 from app.data.models import Instrument, Price
 from app.data.repositories.holdings import list_holdings_for_user
-from app.data.repositories.prices import get_latest_prices_for_instruments
+from app.data.repositories.prices import (
+    get_latest_prices_for_instruments,
+    upsert_price,
+)
 from app.data.repositories.profiles import get_profile_by_user_id
 from app.domain.allocation import build_allocation_breakdowns
 from app.domain.portfolio_math import build_portfolio_snapshot
 from app.domain.simulation import apply_trades, diff_breakdowns
+from app.integrations.market_data import MarketDataClient
+from app.schemas.instruments import InstrumentSearchResult
 from app.schemas.portfolio import PortfolioBreakdowns, PortfolioSnapshot
 from app.schemas.simulation import SimulationResponse, TradeLeg
+
+
+class InstrumentLookupClient:
+    def profile(self, symbol: str) -> InstrumentSearchResult | None:
+        ...
 
 
 def profile_not_found() -> HTTPException:
@@ -41,6 +51,8 @@ def simulate_for_user(
     db: Session,
     user_id: str,
     legs: list[TradeLeg],
+    lookup_client: InstrumentLookupClient | None = None,
+    market_data_client: MarketDataClient | None = None,
 ) -> SimulationResponse:
     profile = get_profile_by_user_id(db, user_id)
     if profile is None:
@@ -59,22 +71,33 @@ def simulate_for_user(
             holdings,
             latest_prices,
             legs,
-            resolve_instrument=lambda symbol: resolve_local_instrument(db, symbol),
-            resolve_price=lambda instrument_id: resolve_latest_price(db, instrument_id),
+            resolve_instrument=lambda symbol: resolve_or_create_instrument(
+                db,
+                symbol,
+                lookup_client,
+            ),
+            resolve_price=lambda instrument_id: resolve_latest_price(
+                db,
+                instrument_id,
+                market_data_client,
+            ),
         )
-    simulated_snapshot = build_portfolio_snapshot(
-        profile,
-        simulated_holdings,
-        simulated_prices,
-    )
+    with db.no_autoflush:
+        simulated_snapshot = build_portfolio_snapshot(
+            profile,
+            simulated_holdings,
+            simulated_prices,
+        )
     simulated_breakdowns = build_allocation_breakdowns(simulated_snapshot)
 
-    return SimulationResponse(
+    response = SimulationResponse(
         current=current_breakdowns,
         simulated=simulated_breakdowns,
         delta=diff_breakdowns(current_breakdowns, simulated_breakdowns),
         warnings=warnings,
     )
+    db.rollback()
+    return response
 
 
 def resolve_local_instrument(db: Session, symbol: str) -> Instrument | None:
@@ -86,5 +109,67 @@ def resolve_local_instrument(db: Session, symbol: str) -> Instrument | None:
     )
 
 
-def resolve_latest_price(db: Session, instrument_id: int) -> Price | None:
-    return get_latest_prices_for_instruments(db, [instrument_id]).get(instrument_id)
+def resolve_or_create_instrument(
+    db: Session,
+    symbol: str,
+    lookup_client: InstrumentLookupClient | None,
+) -> Instrument | None:
+    local_instrument = resolve_local_instrument(db, symbol)
+    if local_instrument is not None:
+        return local_instrument
+
+    if lookup_client is None:
+        return None
+
+    profile = lookup_client.profile(symbol.strip().upper())
+    if profile is None:
+        return None
+
+    instrument = Instrument(
+        symbol=profile.symbol,
+        name=profile.name,
+        exchange=profile.exchange or "",
+        currency=profile.currency,
+        asset_class=profile.asset_class,
+        sector=profile.sector,
+        country=profile.country,
+        region=profile.region,
+    )
+    db.add(instrument)
+    db.flush()
+    db.commit()
+    db.refresh(instrument)
+    return instrument
+
+
+def resolve_latest_price(
+    db: Session,
+    instrument_id: int,
+    market_data_client: MarketDataClient | None = None,
+) -> Price | None:
+    existing_price = get_latest_prices_for_instruments(db, [instrument_id]).get(
+        instrument_id
+    )
+    if market_data_client is None:
+        return existing_price
+
+    instrument = db.get(Instrument, instrument_id)
+    if instrument is None:
+        return existing_price
+
+    try:
+        market_price = market_data_client.get_latest_close(
+            instrument.symbol,
+            instrument.exchange,
+            instrument.currency,
+        )
+    except Exception:
+        return existing_price
+
+    if market_price is None:
+        return existing_price
+
+    price = upsert_price(db, instrument, market_price)
+    db.commit()
+    db.refresh(price)
+    return price

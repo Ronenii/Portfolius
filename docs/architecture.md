@@ -255,6 +255,71 @@ X-Scheduler-Secret: <SCHEDULER_SECRET>
 
 The scheduled path is called by GitHub Actions using repository secrets `PORTFOLIUS_API_URL` and `PORTFOLIUS_SCHEDULER_SECRET` for the deployed production backend. The workflow runs hourly on weekdays during the regular U.S. market session window and can also be dispatched manually. The backend still checks regular U.S. market hours and returns a zero-count result for scheduler calls outside that window; exchange holidays are not modeled in M2. Scheduler-triggered refreshes operate across all production users and request each distinct held instrument once. Local operators can run `python -m app.jobs.refresh_prices` when a command-line refresh is more convenient.
 
+## Design Language and Terminal Mode (M3.x)
+
+The CSS custom-property token system was expanded into a formal design language covering the full set of surfaces, foreground colors, radii, shadows, motion, and focus rings that all components reference. Key additions:
+
+- **Paper and terminal surface palettes**: `--paper-50` through `--paper-300` for light surfaces; `--ink-950` through `--ink-200` for dark surfaces.
+- **Semantic semantic color pairs**: `--gain-*` / `--loss-*` at 700/500/300/100 stops; `--info-*` and `--caution-*` stops.
+- **Foreground tokens**: `--fg-paper` for light mode, `--fg-terminal` for terminal mode.
+- **Accent ramp**: `--accent-900` through `--accent-50`.
+- **Elevation**: `--shadow-0` through `--shadow-3` and `--shadow-inset`.
+- **Motion**: `--ease-out`, `--ease-in`, `--ease-standard` curves with `--dur-fast` / `--dur-base` / `--dur-slow` durations.
+- **Border radii**: `--radius-xs` through `--radius-full`.
+- **Focus rings**: `--focus-ring` (paper mode) and `--focus-ring-terminal`.
+- **Layout constants**: `--sidebar-w: 220px`, `--header-h: 56px`.
+
+### Terminal mode
+
+`AppShell` adds a `mode-terminal` class to `app-frame` when terminal mode is active. The mode is toggled by a sidebar button that persists the preference to `localStorage` under the key `portfolius:terminal-mode`. A `Sun` icon returns to paper mode; a `Monitor` icon enters terminal mode. All affected components respond to the parent `mode-terminal` class through CSS selectors rather than React context.
+
+### Navigation updates
+
+Nav icons were updated to `LayoutDashboard`, `Landmark`, and `UserRound`. The active nav link background changed from `--paper-50` with a rule border to a `--accent-100` fill with no visible border. Hover transitions use `--dur-fast` with `--ease-out`. Font size dropped from 14 px to 13 px.
+
+### Dashboard KPI tiles
+
+The primary KPI tile (priced value) gains a `kpi-tile--primary` modifier class that applies a stronger typographic weight and an accent-tinted background. In terminal mode the primary tile uses ink surfaces. The `num` utility class was removed from KPI `<strong>` elements; typography is driven by the tile class instead.
+
+### Simulation panel mobile layout
+
+The `simulation-dimension-control` modifier was added to the dimension `segmented-control` in `SimulationPanel`. On narrow viewports it becomes a horizontally scrolling row with hidden scrollbars, keeping the dimension selector usable without wrapping.
+
+## Assistant Enhancements (M3.x)
+
+### Price tool
+
+A third tool, `get_instrument_prices`, was added to the assistant tool-call loop. It accepts up to eight ticker symbols and returns the latest available close price, exchange, currency, and date for each. The resolution strategy is:
+
+1. Attempt a live fetch via `MarketDataClient` (backed by `YFinanceMarketDataClient`).
+2. Fall back to the most recent stored close from the `prices` table for instruments already in the local database.
+3. Symbols with neither a live price nor a local record are returned in a `missing` list.
+
+The `MarketDataClient` is injected into `run_assistant_turn` and `execute_tool` as an optional parameter. The `post_assistant_message` endpoint wires in a `YFinanceMarketDataClient` instance through FastAPI dependency injection (`get_market_data_client`).
+
+The system prompt was updated to instruct the model to use the price tool before naming specific buy ideas or comparing instruments, and to include a relevant price or number in conversational answers.
+
+### Inline function-call markup stripping
+
+Some LLM responses include raw `<function=…>…</function>` tags in the message content. These are now stripped in two places:
+
+- **Backend** (`domain/assistant.py`): `final_reply_from_completion` removes inline markup from the reply before it is persisted and returned.
+- **Frontend** (`ChatMessageList.tsx`): `displayContent` strips the pattern from rendered content. `inlineTools` extracts tool names from embedded markup so they contribute to the tool-badge display even when the backend stripping missed them.
+
+### Tool badge for price checks
+
+`ChatMessageList` maps `get_instrument_prices` in `used_tools` to the label `"checked prices"`, consistent with the existing `"checked allocation"` and `"ran a simulation"` labels.
+
+### Conversation message deduplication fix
+
+`conversationMessages` in `AssistantWidget` previously lost `used_tools` when optimistic messages were replaced by the saved conversation response. The merge now carries `used_tools` from the matching optimistic message onto the real message by key (`role + "\0" + content`), so tool badges survive the transition from optimistic to persisted state.
+
+The loading spinner is now suppressed when optimistic messages are already in the thread, so the user sees the sent exchange immediately rather than a loading state while the conversation reloads.
+
+### Mobile sheet layout
+
+`AssistantWidget` gains the `assistant-mobile-sheet` class, enabling bottom-sheet positioning and full-screen expansion on narrow viewports via `@media` rules in the design-language CSS layer.
+
 ## Allocation Exploration (M4)
 
 Allocation breakdowns should support progressive disclosure: a user can start with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspect what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row should show the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
@@ -360,6 +425,7 @@ To enable Google OAuth:
 - M1: authentication (Google OAuth + magic-link), profile wizard, and manual holdings CRUD.
 - M2: instrument search/autofill, price refresh, and allocation breakdowns. **Done.**
 - M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios). **Done.**
+- M3.x: design language, terminal mode, mobile layout, and assistant price tool. **Done.**
 - M4: allocation exploration, including composition drill-downs and user-selectable chart types.
 - M5: transactions, projections, PWA install, and CSV import.
 - M6: profile intelligence and personalization, including dark mode, suggested interest/avoid tags, and automatic typo cleanup for free-form profile keywords.

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
+import { TrendLoader } from "../../components/ui/TrendLoader";
 import { ApiError } from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { getProfile } from "./profile-api";
@@ -9,7 +10,7 @@ function ProfileLoading() {
   return (
     <section className="page-section" aria-label="Loading profile">
       <p className="eyebrow">Profile</p>
-      <h1>Checking profile</h1>
+      <TrendLoader label="Loading your profile" srLabel="Loading profile" />
     </section>
   );
 }

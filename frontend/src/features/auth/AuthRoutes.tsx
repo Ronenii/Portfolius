@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 
+import { TrendLoader } from "../../components/ui/TrendLoader";
 import { useAuth } from "./AuthContext";
 
 function AuthLoading() {
@@ -8,6 +9,7 @@ function AuthLoading() {
     <section className="page-section" aria-label="Loading authentication">
       <p className="eyebrow">Authentication</p>
       <h1>Checking session</h1>
+      <TrendLoader label="Verifying your session" srLabel="Checking session" />
     </section>
   );
 }

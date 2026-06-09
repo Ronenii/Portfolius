@@ -9,6 +9,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { AllocationChart } from "../components/charts/AllocationChart";
+import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   getPortfolioBreakdowns,
@@ -190,10 +191,10 @@ export default function DashboardPage() {
 
       <section className="dashboard-summary" aria-label="Portfolio summary">
         {snapshotQuery.isLoading ? (
-          <div className="empty-state">
-            <strong>Loading snapshot</strong>
-            <span>Reading portfolio totals and price coverage.</span>
-          </div>
+          <TrendLoader
+            label="Reading portfolio totals and price coverage"
+            srLabel="Loading snapshot"
+          />
         ) : null}
 
         {snapshotQuery.error ? (
@@ -295,10 +296,10 @@ export default function DashboardPage() {
         </div>
 
         {breakdownsQuery.isLoading ? (
-          <div className="empty-state">
-            <strong>Loading allocations</strong>
-            <span>Reading priced exposure by dimension.</span>
-          </div>
+          <TrendLoader
+            label="Reading priced exposure by dimension"
+            srLabel="Loading allocations"
+          />
         ) : null}
 
         {breakdownsQuery.error ? (
