@@ -85,3 +85,36 @@ class PortfolioBreakdowns(BaseModel):
     region: list[AllocationRow]
     currency: list[AllocationRow]
     unpriced_holding_count: int
+
+
+class CompositionRow(BaseModel):
+    instrument_id: int
+    symbol: str
+    name: str
+    currency: str
+    market_value: Decimal
+    holding_count: int
+    percent_of_parent: Decimal
+    percent_of_portfolio: Decimal
+
+    @field_serializer(
+        "market_value",
+        "percent_of_parent",
+        "percent_of_portfolio",
+    )
+    def serialize_decimal(self, value: Decimal) -> str:
+        return str(value)
+
+
+class CompositionResponse(BaseModel):
+    dimension: str
+    key: str
+    currency: str
+    market_value: Decimal
+    percent_of_portfolio: Decimal
+    children: list[CompositionRow]
+    unpriced_holding_count: int
+
+    @field_serializer("market_value", "percent_of_portfolio")
+    def serialize_decimal(self, value: Decimal) -> str:
+        return str(value)
