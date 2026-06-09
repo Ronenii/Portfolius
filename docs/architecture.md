@@ -320,6 +320,14 @@ The loading spinner is now suppressed when optimistic messages are already in th
 
 `AssistantWidget` gains the `assistant-mobile-sheet` class, enabling bottom-sheet positioning and full-screen expansion on narrow viewports via `@media` rules in the design-language CSS layer.
 
+### Trend loader
+
+`components/ui/TrendLoader.tsx` provides a branded loading indicator: an animated upward-trending SVG line with a leading dot, replacing the previous text-only "Loading…" empty-states. The path is normalised to `pathLength={100}` so the stroke draw and dot animation stay in sync regardless of rendered size. It respects `prefers-reduced-motion` (rendering a static tip dot instead of `animateMotion`) and exposes accessible status text via `role="status"` and an `srLabel`. It is used on the dashboard (snapshot and allocation loads) and across the auth, holdings, and profile gates.
+
+### Production mode
+
+The dashboard reads a `VITE_PROD_MODE` flag (truthy values: `1`, `true`, `yes`, `on`). When enabled, `DashboardPage` hides the "Backend status" strip and disables the `backend-health` query entirely, so production users never see the developer-facing health/endpoint diagnostics. The flag defaults to off, preserving the status strip in local development.
+
 ## Allocation Exploration (M4)
 
 Allocation breakdowns should support progressive disclosure: a user can start with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspect what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row should show the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
@@ -342,7 +350,7 @@ Portfolio simulation lets a user run *what-if scenarios* before committing to a 
 
 ### Stateless reuse of the snapshot pipeline
 
-Simulation introduces no new persistence and no new portfolio math. A scenario is a pure, in-memory transform over the existing deterministic pipeline:
+Simulation introduces no new portfolio math, and the simulated snapshot itself is non-mutating — `simulate_for_user` computes the "after" snapshot inside `db.no_autoflush` and issues a `db.rollback()` before returning, so hypothetical legs never persist as holdings. A scenario is otherwise a transform over the existing deterministic pipeline:
 
 ```text
 real holdings + latest prices
@@ -357,7 +365,7 @@ real holdings + latest prices
 ```
 
 - A new `domain/simulation.py` module holds `apply_trades(...)`, which returns a hypothetical `(holdings, prices)`, and `diff_breakdowns(...)`, which computes per-dimension deltas. Both are pure and unit-testable, consistent with the principle of keeping portfolio math deterministic before adding AI behavior.
-- Buying an instrument that is not yet held reuses the M2 instrument search to resolve its metadata and latest price. Without sector, country, and region the holding cannot be allocated meaningfully, so simulation depends on M2 instrument metadata being in place.
+- Buying an instrument that is not yet held resolves its metadata and latest price through injected clients rather than relying on the symbol already being in the local database. `simulate_for_user` accepts an optional `FmpInstrumentLookupClient` and `MarketDataClient` (wired via FastAPI dependency injection in `api/v1/portfolio.py` as `get_instrument_lookup_client` / `get_market_data_client`). `resolve_or_create_instrument` returns a local instrument when present, otherwise fetches an FMP profile and persists a new `instruments` row; `resolve_latest_price` fetches a live close via the `MarketDataClient` and upserts it into `prices`. These resolution/caching writes **are committed** — the rollback above only discards the hypothetical holdings, not the newly-cached instrument metadata and refreshed prices. Without sector, country, and region the holding cannot be allocated meaningfully, so simulation still depends on resolvable instrument metadata.
 - Sells reduce an existing position and are validated against the held quantity. The product does not model shorting.
 - Scenarios are computed on demand and not stored. Saving named scenarios is a possible later enhancement, deliberately deferred.
 
@@ -373,7 +381,7 @@ Response: { current: PortfolioBreakdowns,
             warnings: [ ... ] }
 ```
 
-The endpoint uses POST because the input is a structured basket, even though the operation is non-mutating. It is user-scoped exactly like the other portfolio endpoints, and `price?` defaults to the latest stored close. Warnings cover cases such as an unpriced new instrument or a sell that exceeds the held quantity.
+The endpoint uses POST because the input is a structured basket. The simulated result is non-mutating with respect to the user's holdings, though resolving a not-yet-held instrument may cache its metadata and refresh its latest price as a side effect (see above). It is user-scoped exactly like the other portfolio endpoints, and `price?` defaults to the latest stored close, falling back to a live `MarketDataClient` fetch when none is stored. Warnings cover cases such as an unpriced new instrument or a sell that exceeds the held quantity.
 
 ### Assistant integration
 
