@@ -162,6 +162,51 @@ describe("assistant page", () => {
     expect(screen.getByText("ran a simulation")).toBeInTheDocument();
   });
 
+  it("keeps tool badges after the saved conversation replaces optimistic messages", async () => {
+    vi.mocked(sendAssistantMessage).mockResolvedValue({
+      conversation_id: 8,
+      title: "What if I buy VXUS?",
+      reply: "That would add international exposure.",
+      used_tools: ["simulate_trades"],
+    });
+    vi.mocked(getConversation).mockResolvedValue({
+      id: 8,
+      title: "What if I buy VXUS?",
+      created_at: "2026-06-08T10:00:00Z",
+      updated_at: "2026-06-08T10:00:01Z",
+      messages: [
+        {
+          id: 10,
+          role: "user",
+          content: "What if I buy VXUS?",
+          created_at: "2026-06-08T10:00:00Z",
+        },
+        {
+          id: 11,
+          role: "assistant",
+          content: "That would add international exposure.",
+          created_at: "2026-06-08T10:00:01Z",
+        },
+      ],
+    });
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.type(
+      await screen.findByLabelText("Message"),
+      "What if I buy VXUS?"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(getConversation).toHaveBeenCalledWith("access-token", 8);
+    });
+    expect(
+      await screen.findByText("That would add international exposure.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("ran a simulation")).toBeInTheDocument();
+  });
+
   it("renders assistant not configured when the API returns 503", async () => {
     vi.mocked(sendAssistantMessage).mockRejectedValue(
       new ApiError(503, "Assistant is not configured")
@@ -197,7 +242,7 @@ describe("assistant page", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides leaked function call markup from saved assistant messages", async () => {
+  it("shows a tool badge for leaked function call markup in saved messages", async () => {
     vi.mocked(listConversations).mockResolvedValue([conversationSummary]);
     vi.mocked(getConversation).mockResolvedValue({
       ...conversationDetail,
@@ -226,6 +271,7 @@ describe("assistant page", () => {
     expect(
       within(thread).getByText("You could consider broad international ETFs.")
     ).toBeInTheDocument();
+    expect(within(thread).getByText("checked allocation")).toBeInTheDocument();
     expect(within(thread).queryByText(/function=get_portfolio_breakdowns/)).not.toBeInTheDocument();
   });
 

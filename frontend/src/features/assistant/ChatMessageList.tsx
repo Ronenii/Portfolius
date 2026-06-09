@@ -7,10 +7,18 @@ export type ThreadMessage = AssistantMessage & {
   used_tools?: string[];
 };
 
-const inlineFunctionCallPattern = /\s*<function=[^>]+>.*?<\/function>\s*/gs;
+const inlineFunctionCallPattern = /\s*<function=([^>]+)>.*?<\/function>\s*/gs;
 
 function displayContent(content: string) {
   return content.replace(inlineFunctionCallPattern, " ").trim();
+}
+
+function inlineTools(content: string) {
+  return [...content.matchAll(inlineFunctionCallPattern)].map((match) => match[1]);
+}
+
+function messageTools(message: ThreadMessage) {
+  return [...new Set([...(message.used_tools ?? []), ...inlineTools(message.content)])];
 }
 
 function toolCopy(tools: string[] | undefined) {
@@ -43,7 +51,7 @@ export default function ChatMessageList({
   return (
     <div className="assistant-thread" role="log" aria-label="Assistant thread">
       {messages.map((message) => {
-        const tools = toolCopy(message.used_tools);
+        const tools = toolCopy(messageTools(message));
         return (
           <article
             className={`assistant-message assistant-message--${message.role}`}

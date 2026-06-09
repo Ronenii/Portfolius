@@ -18,11 +18,20 @@ function conversationMessages(
   optimisticMessages: ThreadMessage[]
 ): ThreadMessage[] {
   const real = selectedConversation?.messages ?? [];
-  const realKeys = new Set(real.map((m) => `${m.role}\0${m.content}`));
-  const deduped = optimisticMessages.filter(
-    (m) => !m.content || !realKeys.has(`${m.role}\0${m.content}`)
+  const messageKey = (message: Pick<ThreadMessage, "content" | "role">) =>
+    `${message.role}\0${message.content}`;
+  const optimisticByKey = new Map(
+    optimisticMessages.map((message) => [messageKey(message), message])
   );
-  return [...real, ...deduped];
+  const mergedReal = real.map((message) => ({
+    ...message,
+    used_tools: optimisticByKey.get(messageKey(message))?.used_tools,
+  }));
+  const realKeys = new Set(real.map(messageKey));
+  const deduped = optimisticMessages.filter(
+    (message) => !message.content || !realKeys.has(messageKey(message))
+  );
+  return [...mergedReal, ...deduped];
 }
 
 function pendingUserMessage(content: string): ThreadMessage {
