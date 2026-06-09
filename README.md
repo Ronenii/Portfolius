@@ -141,7 +141,7 @@ LLM_MODEL=llama-3.3-70b-versatile    # default; override as needed
 LLM_MAX_TOKENS=1024                  # default
 ```
 
-Without `LLM_API_KEY` the assistant endpoints return `503 "Assistant is not configured"`. The simulation endpoint (`POST /api/v1/portfolio/simulate`) works without an LLM key — it is a pure, non-mutating backend calculation.
+Without `LLM_API_KEY` the assistant endpoints return `503 "Assistant is not configured"`. The simulation endpoint (`POST /api/v1/portfolio/simulate`) works without an LLM key. The simulated snapshot is non-mutating — hypothetical buy/sell legs are never persisted as holdings — but simulating a buy of an instrument you don't yet hold will resolve and cache its metadata (via FMP) and refresh its latest price (via yfinance) as a side effect.
 
 **Frontend (`frontend/.env.local`):**
 
@@ -149,6 +149,7 @@ Without `LLM_API_KEY` the assistant endpoints return `503 "Assistant is not conf
 VITE_API_URL=http://localhost:8000
 VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_ANON_KEY=...
+VITE_PROD_MODE=false   # set truthy (1/true/yes/on) to hide the dashboard backend-status strip in production
 ```
 
 ## Common commands

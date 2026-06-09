@@ -9,6 +9,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { AllocationChart } from "../components/charts/AllocationChart";
+import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   getPortfolioBreakdowns,
@@ -22,6 +23,7 @@ import SimulationPanel from "../features/portfolio/SimulationPanel";
 import { ApiError, type BackendHealth, fetchBackendHealth } from "../lib/api";
 
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const prodModeValues = new Set(["1", "true", "yes", "on"]);
 const breakdownDimensions = [
   { key: "asset_class", label: "Asset class" },
   { key: "sector", label: "Sector" },
@@ -32,6 +34,12 @@ const breakdownDimensions = [
 ] as const;
 
 type BreakdownDimension = (typeof breakdownDimensions)[number]["key"];
+
+function isProdMode() {
+  return prodModeValues.has(
+    String(import.meta.env.VITE_PROD_MODE ?? "").trim().toLowerCase()
+  );
+}
 
 function statusCopy(health: BackendHealth | undefined, isLoading: boolean) {
   if (isLoading) {
@@ -134,7 +142,9 @@ export default function DashboardPage() {
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
   const [selectedDimension, setSelectedDimension] = useState<BreakdownDimension>("asset_class");
+  const showBackendStatus = !isProdMode();
   const healthQuery = useQuery({
+    enabled: showBackendStatus,
     queryKey: ["backend-health", apiUrl],
     queryFn: () => fetchBackendHealth(apiUrl),
   });
@@ -190,10 +200,10 @@ export default function DashboardPage() {
 
       <section className="dashboard-summary" aria-label="Portfolio summary">
         {snapshotQuery.isLoading ? (
-          <div className="empty-state">
-            <strong>Loading snapshot</strong>
-            <span>Reading portfolio totals and price coverage.</span>
-          </div>
+          <TrendLoader
+            label="Reading portfolio totals and price coverage"
+            srLabel="Loading snapshot"
+          />
         ) : null}
 
         {snapshotQuery.error ? (
@@ -295,10 +305,10 @@ export default function DashboardPage() {
         </div>
 
         {breakdownsQuery.isLoading ? (
-          <div className="empty-state">
-            <strong>Loading allocations</strong>
-            <span>Reading priced exposure by dimension.</span>
-          </div>
+          <TrendLoader
+            label="Reading priced exposure by dimension"
+            srLabel="Loading allocations"
+          />
         ) : null}
 
         {breakdownsQuery.error ? (
@@ -365,19 +375,25 @@ export default function DashboardPage() {
 
       {accessToken ? <SimulationPanel accessToken={accessToken} /> : null}
 
-      <div className="status-strip status-strip--secondary" aria-live="polite">
-        <StatusIcon health={healthQuery.data} isLoading={healthQuery.isLoading} />
-        <div>
-          <p className="panel-label">Backend status</p>
-          <strong>{statusCopy(healthQuery.data, healthQuery.isLoading)}</strong>
+      {showBackendStatus ? (
+        <div className="status-strip status-strip--secondary" aria-live="polite">
+          <StatusIcon health={healthQuery.data} isLoading={healthQuery.isLoading} />
+          <div>
+            <p className="panel-label">Backend status</p>
+            <strong>{statusCopy(healthQuery.data, healthQuery.isLoading)}</strong>
+          </div>
+          <span className="status-detail">
+            {detailCopy(healthQuery.data, healthQuery.isLoading)}
+          </span>
+          <span className="status-endpoint num">
+            {apiUrl.replace(/\/+$/, "")}/healthz
+          </span>
+          <span className="status-checked num">
+            <Clock3 aria-hidden="true" />
+            {checkedAt}
+          </span>
         </div>
-        <span className="status-detail">{detailCopy(healthQuery.data, healthQuery.isLoading)}</span>
-        <span className="status-endpoint num">{apiUrl.replace(/\/+$/, "")}/healthz</span>
-        <span className="status-checked num">
-          <Clock3 aria-hidden="true" />
-          {checkedAt}
-        </span>
-      </div>
+      ) : null}
     </section>
   );
 }

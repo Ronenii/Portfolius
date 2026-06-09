@@ -3,6 +3,7 @@ import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import Button from "../../components/ui/Button";
+import { TrendLoader } from "../../components/ui/TrendLoader";
 import { ApiError } from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import InstrumentSearchInput from "../instruments/InstrumentSearchInput";
@@ -231,7 +232,7 @@ export default function HoldingsPage() {
           </div>
 
           {holdingsQuery.isLoading ? (
-            <p className="muted-copy">Loading holdings</p>
+            <TrendLoader label="Loading holdings" />
           ) : null}
 
           {holdingsQuery.error ? (

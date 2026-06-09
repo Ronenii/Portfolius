@@ -171,6 +171,7 @@ function renderDashboard() {
 describe("DashboardPage", () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
   beforeEach(() => {
@@ -244,6 +245,15 @@ describe("DashboardPage", () => {
     expect(within(summary).getByText("$1,000.00")).toBeInTheDocument();
     expect(within(summary).getByText("$250.00")).toBeInTheDocument();
     expect(within(summary).getByText("1 priced / 0 missing")).toBeInTheDocument();
+  });
+
+  it("hides backend status in prod mode", async () => {
+    vi.stubEnv("VITE_PROD_MODE", "true");
+
+    renderDashboard();
+
+    expect(screen.queryByText("Backend status")).not.toBeInTheDocument();
+    expect(fetchBackendHealth).not.toHaveBeenCalled();
   });
 
   it("renders the asset class breakdown by default", async () => {

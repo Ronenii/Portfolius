@@ -3,6 +3,7 @@ import { CheckCircle, HelpCircle, Save, X } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useState } from "react";
 
 import Button from "../../components/ui/Button";
+import { TrendLoader } from "../../components/ui/TrendLoader";
 import { ApiError } from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { type ProfilePayload, getProfile, saveProfile } from "./profile-api";
@@ -393,9 +394,8 @@ export default function ProfileEditPage() {
   if (profileQuery.isLoading) {
     return (
       <section className="page-section" aria-label="Profile">
-        <div className="empty-state">
-          <strong>Loading profile</strong>
-        </div>
+        <p className="eyebrow">Profile</p>
+        <TrendLoader label="Loading your profile" srLabel="Loading profile" />
       </section>
     );
   }
