@@ -206,9 +206,9 @@ export default function DashboardPage() {
         {snapshotQuery.data ? (
           <>
             <div className="kpi-grid">
-              <article className="kpi-tile">
+              <article className="kpi-tile kpi-tile--primary">
                 <p className="panel-label">Priced value</p>
-                <strong className="num">
+                <strong>
                   {formatMoney(
                     snapshotQuery.data.summary.total_market_value,
                     snapshotQuery.data.summary.base_currency
@@ -218,7 +218,7 @@ export default function DashboardPage() {
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Cost basis</p>
-                <strong className="num">
+                <strong>
                   {formatMoney(
                     snapshotQuery.data.summary.total_cost_basis,
                     snapshotQuery.data.summary.base_currency
@@ -228,7 +228,7 @@ export default function DashboardPage() {
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Unrealized gain</p>
-                <strong className="num">
+                <strong>
                   {formatMoney(
                     snapshotQuery.data.summary.total_unrealized_gain,
                     snapshotQuery.data.summary.base_currency
@@ -238,7 +238,7 @@ export default function DashboardPage() {
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Price coverage</p>
-                <strong className="num">
+                <strong>
                   {snapshotQuery.data.summary.priced_holdings} priced /{" "}
                   {snapshotQuery.data.summary.missing_price_holdings} missing
                 </strong>
