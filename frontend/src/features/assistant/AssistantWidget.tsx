@@ -148,7 +148,10 @@ export default function AssistantWidget() {
   }
 
   return (
-    <section className="assistant-widget" aria-label="Portfolio assistant">
+    <section
+      className="assistant-widget assistant-mobile-sheet"
+      aria-label="Portfolio assistant"
+    >
       <header className="assistant-widget-header">
         <div className="assistant-widget-identity">
           <span className="assistant-widget-avatar" aria-hidden="true">

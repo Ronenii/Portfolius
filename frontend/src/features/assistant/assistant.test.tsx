@@ -197,6 +197,15 @@ describe("assistant page", () => {
     ).toBeInTheDocument();
   });
 
+  it("marks the assistant widget for mobile sheet styling", async () => {
+    renderAssistantRoute();
+    await openAssistant();
+
+    expect(screen.getByLabelText("Portfolio assistant")).toHaveClass(
+      "assistant-mobile-sheet"
+    );
+  });
+
   it("shows a pending indicator while waiting for a reply", async () => {
     let resolveReply: (
       value: Awaited<ReturnType<typeof sendAssistantMessage>>

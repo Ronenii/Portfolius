@@ -2090,6 +2090,85 @@ h1 {
 }
 
 @media (max-width: 560px) {
+  .assistant-launcher {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    width: 52px;
+    height: 52px;
+  }
+
+  .assistant-mobile-sheet {
+    inset: auto 0 0;
+    width: 100vw;
+    height: min(720px, 92dvh);
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .assistant-widget-header {
+    gap: 8px;
+    padding: 12px 12px;
+  }
+
+  .assistant-widget-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .assistant-widget-title {
+    font-size: 15px;
+  }
+
+  .assistant-widget-subtitle {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .assistant-widget-actions {
+    flex: 0 0 auto;
+  }
+
+  .assistant-icon-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .assistant-widget-body {
+    padding: 12px;
+  }
+
+  .assistant-thread {
+    gap: 10px;
+    padding-right: 0;
+  }
+
+  .assistant-message {
+    max-width: 100%;
+    padding: 11px 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .assistant-composer {
+    gap: 7px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .assistant-composer textarea {
+    min-height: 44px;
+    max-height: 96px;
+    font-size: 16px;
+  }
+
+  .assistant-send-button {
+    width: 44px;
+    height: 44px;
+  }
+
   .simulation-panel {
     gap: 14px;
     padding: 14px;
@@ -2148,10 +2227,6 @@ h1 {
 
   .kpi-grid {
     grid-template-columns: 1fr;
-  }
-
-  .assistant-message {
-    max-width: 100%;
   }
 
   .nav-link {
