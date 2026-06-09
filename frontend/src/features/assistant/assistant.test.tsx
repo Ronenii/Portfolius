@@ -162,6 +162,70 @@ describe("assistant page", () => {
     expect(screen.getByText("ran a simulation")).toBeInTheDocument();
   });
 
+  it("renders a price check tool badge", async () => {
+    vi.mocked(sendAssistantMessage).mockResolvedValue({
+      conversation_id: 8,
+      title: "ETF ideas",
+      reply: "IEMG and VGK are priced options to compare.",
+      used_tools: ["get_instrument_prices"],
+    });
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.type(await screen.findByLabelText("Message"), "What ETFs?");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(
+      await screen.findByText("IEMG and VGK are priced options to compare.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("checked prices")).toBeInTheDocument();
+  });
+
+  it("keeps tool badges after the saved conversation replaces optimistic messages", async () => {
+    vi.mocked(sendAssistantMessage).mockResolvedValue({
+      conversation_id: 8,
+      title: "What if I buy VXUS?",
+      reply: "That would add international exposure.",
+      used_tools: ["simulate_trades"],
+    });
+    vi.mocked(getConversation).mockResolvedValue({
+      id: 8,
+      title: "What if I buy VXUS?",
+      created_at: "2026-06-08T10:00:00Z",
+      updated_at: "2026-06-08T10:00:01Z",
+      messages: [
+        {
+          id: 10,
+          role: "user",
+          content: "What if I buy VXUS?",
+          created_at: "2026-06-08T10:00:00Z",
+        },
+        {
+          id: 11,
+          role: "assistant",
+          content: "That would add international exposure.",
+          created_at: "2026-06-08T10:00:01Z",
+        },
+      ],
+    });
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.type(
+      await screen.findByLabelText("Message"),
+      "What if I buy VXUS?"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(getConversation).toHaveBeenCalledWith("access-token", 8);
+    });
+    expect(
+      await screen.findByText("That would add international exposure.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("ran a simulation")).toBeInTheDocument();
+  });
+
   it("renders assistant not configured when the API returns 503", async () => {
     vi.mocked(sendAssistantMessage).mockRejectedValue(
       new ApiError(503, "Assistant is not configured")
@@ -197,6 +261,48 @@ describe("assistant page", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a tool badge for leaked function call markup in saved messages", async () => {
+    vi.mocked(listConversations).mockResolvedValue([conversationSummary]);
+    vi.mocked(getConversation).mockResolvedValue({
+      ...conversationDetail,
+      messages: [
+        conversationDetail.messages[0],
+        {
+          id: 3,
+          role: "assistant",
+          content:
+            "You could consider broad international ETFs. <function=get_portfolio_breakdowns></function>",
+          created_at: "2026-06-08T10:00:02Z",
+        },
+      ],
+    });
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Conversation history" })
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Regional exposure" })
+    );
+
+    const thread = await screen.findByRole("log", { name: "Assistant thread" });
+    expect(
+      within(thread).getByText("You could consider broad international ETFs.")
+    ).toBeInTheDocument();
+    expect(within(thread).getByText("checked allocation")).toBeInTheDocument();
+    expect(within(thread).queryByText(/function=get_portfolio_breakdowns/)).not.toBeInTheDocument();
+  });
+
+  it("marks the assistant widget for mobile sheet styling", async () => {
+    renderAssistantRoute();
+    await openAssistant();
+
+    expect(screen.getByLabelText("Portfolio assistant")).toHaveClass(
+      "assistant-mobile-sheet"
+    );
+  });
+
   it("shows a pending indicator while waiting for a reply", async () => {
     let resolveReply: (
       value: Awaited<ReturnType<typeof sendAssistantMessage>>
@@ -220,5 +326,32 @@ describe("assistant page", () => {
       used_tools: [],
     });
     expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();
+  });
+
+  it("keeps the sent thread visible while the saved conversation reloads", async () => {
+    let resolveReply: (
+      value: Awaited<ReturnType<typeof sendAssistantMessage>>
+    ) => void = () => undefined;
+    vi.mocked(sendAssistantMessage).mockReturnValue(
+      new Promise((resolve) => {
+        resolveReply = resolve;
+      })
+    );
+    vi.mocked(getConversation).mockReturnValue(new Promise(() => undefined));
+    renderAssistantRoute();
+    await openAssistant();
+
+    await userEvent.type(await screen.findByLabelText("Message"), "Check this");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    resolveReply({
+      conversation_id: 8,
+      title: "Check this",
+      reply: "Here is the analysis.",
+      used_tools: [],
+    });
+
+    expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();
+    expect(screen.getByText("Check this")).toBeInTheDocument();
+    expect(screen.queryByText("Loading conversation")).not.toBeInTheDocument();
   });
 });

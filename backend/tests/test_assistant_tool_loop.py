@@ -10,8 +10,13 @@ from app.data.repositories.conversations import (
     create_conversation,
     list_messages,
 )
-from app.domain.assistant import MAX_TOOL_ITERATIONS, run_assistant_turn
+from app.domain.assistant import (
+    MAX_TOOL_ITERATIONS,
+    build_system_prompt,
+    run_assistant_turn,
+)
 from app.integrations.llm import ChatCompletion, ChatMessage, ToolCall, ToolSpec
+from app.integrations.market_data import MarketPrice
 
 
 class ScriptedLlmClient:
@@ -28,6 +33,21 @@ class ScriptedLlmClient:
         if not self.completions:
             raise AssertionError("No scripted completion left")
         return self.completions.pop(0)
+
+
+class FakeMarketDataClient:
+    def __init__(self, prices: dict[str, MarketPrice | None]) -> None:
+        self.prices = prices
+        self.requests: list[tuple[str, str, str | None]] = []
+
+    def get_latest_close(
+        self,
+        symbol: str,
+        exchange: str,
+        currency_hint: str | None,
+    ) -> MarketPrice | None:
+        self.requests.append((symbol, exchange, currency_hint))
+        return self.prices.get(symbol)
 
 
 def add_profile(db_session: Session, user_id: str) -> Profile:
@@ -120,6 +140,25 @@ def tool_completion(name: str, arguments: dict[str, object]) -> ChatCompletion:
     )
 
 
+def market_price(symbol: str, close_price: str) -> MarketPrice:
+    return MarketPrice(
+        symbol=symbol,
+        exchange="NYSEARCA",
+        price_date=date(2026, 6, 8),
+        close_price=Decimal(close_price),
+        currency="USD",
+        source="fake",
+    )
+
+
+def test_system_prompt_asks_for_more_useful_but_compact_answers() -> None:
+    prompt = build_system_prompt()
+
+    assert "Reply in 4-6 plain sentences" in prompt
+    assert "include the key reason" in prompt
+    assert "price tool" in prompt
+
+
 def test_turn_without_tools_persists_user_and_assistant_messages(
     db_session: Session,
     authenticated_user: AuthenticatedUser,
@@ -140,6 +179,7 @@ def test_turn_without_tools_persists_user_and_assistant_messages(
     assert len(llm_client.calls) == 1
     assert llm_client.calls[0][1] is not None
     assert {tool.name for tool in llm_client.calls[0][1] or []} == {
+        "get_instrument_prices",
         "get_portfolio_breakdowns",
         "simulate_trades",
     }
@@ -151,6 +191,39 @@ def test_turn_without_tools_persists_user_and_assistant_messages(
         ("user", "How diversified am I?"),
         ("assistant", "You are diversified."),
     ]
+
+
+def test_final_reply_strips_inline_function_call_markup(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    llm_client = ScriptedLlmClient(
+        [
+            assistant_completion(
+                "You could consider broad international ETFs. "
+                "<function=get_portfolio_breakdowns></function>"
+            )
+        ]
+    )
+
+    result = run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "What should I add?",
+        llm_client,
+    )
+
+    assert result.reply == "You could consider broad international ETFs."
+    saved_messages = [
+        (message.role, message.content)
+        for message in list_messages(db_session, conversation)
+    ]
+    assert saved_messages[-1] == (
+        "assistant",
+        "You could consider broad international ETFs.",
+    )
 
 
 def test_tool_loop_executes_simulation_and_feeds_result_back(
@@ -189,6 +262,51 @@ def test_tool_loop_executes_simulation_and_feeds_result_back(
     assert tool_messages[0].tool_call_id == "tool-call-1"
     assert "VXUS" in (tool_messages[0].content or "")
     assert "simulated" in (tool_messages[0].content or "")
+
+
+def test_tool_loop_fetches_prices_for_recommended_instruments(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    llm_client = ScriptedLlmClient(
+        [
+            tool_completion("get_instrument_prices", {"symbols": ["IEMG", "VGK"]}),
+            assistant_completion(
+                "IEMG is around $54.12 and VGK is around $71.34, so both are "
+                "priced options to compare before deciding."
+            ),
+        ]
+    )
+    market_data_client = FakeMarketDataClient(
+        {
+            "IEMG": market_price("IEMG", "54.12"),
+            "VGK": market_price("VGK", "71.34"),
+        }
+    )
+
+    result = run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "What ETFs should I consider?",
+        llm_client,
+        market_data_client,
+    )
+
+    assert result.used_tools == ["get_instrument_prices"]
+    assert market_data_client.requests == [
+        ("IEMG", "", None),
+        ("VGK", "", None),
+    ]
+    tool_messages = [
+        message for message in llm_client.calls[1][0] if message.role == "tool"
+    ]
+    assert len(tool_messages) == 1
+    assert '"symbol":"IEMG"' in (tool_messages[0].content or "")
+    assert '"close_price":"54.12"' in (tool_messages[0].content or "")
+    assert '"price_date":"2026-06-08"' in (tool_messages[0].content or "")
+    assert result.reply.startswith("IEMG is around")
 
 
 def test_tool_executors_are_user_scoped(

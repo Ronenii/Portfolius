@@ -18,6 +18,7 @@ from app.data.repositories.conversations import (
     list_messages,
 )
 from app.integrations.llm import ChatCompletion, ChatMessage, ToolSpec
+from app.integrations.market_data import MarketPrice
 from app.main import app
 from app.schemas.assistant import AssistantMessageRequest
 
@@ -37,6 +38,16 @@ class FakeLlmClient:
             message=ChatMessage(role="assistant", content=self.reply),
             tool_calls=[],
         )
+
+
+class FakeMarketDataClient:
+    def get_latest_close(
+        self,
+        symbol: str,
+        exchange: str,
+        currency_hint: str | None,
+    ) -> MarketPrice | None:
+        return None
 
 
 def add_profile(db_session: Session, user_id: str = "user-123") -> Profile:
@@ -89,6 +100,7 @@ def test_post_message_without_conversation_creates_conversation(
         authenticated_user,
         db_session,
         llm_client,
+        FakeMarketDataClient(),
     )
 
     assert response.conversation_id > 0
@@ -119,6 +131,7 @@ def test_post_message_with_existing_conversation_appends_to_it(
         authenticated_user,
         db_session,
         FakeLlmClient("New answer"),
+        FakeMarketDataClient(),
     )
 
     assert response.conversation_id == conversation.id

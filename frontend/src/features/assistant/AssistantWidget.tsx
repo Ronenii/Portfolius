@@ -18,11 +18,20 @@ function conversationMessages(
   optimisticMessages: ThreadMessage[]
 ): ThreadMessage[] {
   const real = selectedConversation?.messages ?? [];
-  const realKeys = new Set(real.map((m) => `${m.role}\0${m.content}`));
-  const deduped = optimisticMessages.filter(
-    (m) => !m.content || !realKeys.has(`${m.role}\0${m.content}`)
+  const messageKey = (message: Pick<ThreadMessage, "content" | "role">) =>
+    `${message.role}\0${message.content}`;
+  const optimisticByKey = new Map(
+    optimisticMessages.map((message) => [messageKey(message), message])
   );
-  return [...real, ...deduped];
+  const mergedReal = real.map((message) => ({
+    ...message,
+    used_tools: optimisticByKey.get(messageKey(message))?.used_tools,
+  }));
+  const realKeys = new Set(real.map(messageKey));
+  const deduped = optimisticMessages.filter(
+    (message) => !message.content || !realKeys.has(messageKey(message))
+  );
+  return [...mergedReal, ...deduped];
 }
 
 function pendingUserMessage(content: string): ThreadMessage {
@@ -93,7 +102,10 @@ export default function AssistantWidget() {
     },
     onSuccess: async (response) => {
       setSelectedConversationId(response.conversation_id);
-      setOptimisticMessages([assistantReplyMessage(response)]);
+      setOptimisticMessages((current) => [
+        ...current.filter((message) => !message.pending),
+        assistantReplyMessage(response),
+      ]);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["assistant-conversations"] }),
         queryClient.invalidateQueries({
@@ -107,6 +119,8 @@ export default function AssistantWidget() {
     () => conversationMessages(selectedConversationQuery.data, optimisticMessages),
     [optimisticMessages, selectedConversationQuery.data]
   );
+  const shouldShowConversationLoading =
+    selectedConversationQuery.isLoading && threadMessages.length === 0;
 
   function selectConversation(conversation: AssistantConversation) {
     setSelectedConversationId(conversation.id);
@@ -148,7 +162,10 @@ export default function AssistantWidget() {
   }
 
   return (
-    <section className="assistant-widget" aria-label="Portfolio assistant">
+    <section
+      className="assistant-widget assistant-mobile-sheet"
+      aria-label="Portfolio assistant"
+    >
       <header className="assistant-widget-header">
         <div className="assistant-widget-identity">
           <span className="assistant-widget-avatar" aria-hidden="true">
@@ -220,7 +237,7 @@ export default function AssistantWidget() {
               ))}
             </div>
           </div>
-        ) : selectedConversationQuery.isLoading ? (
+        ) : shouldShowConversationLoading ? (
           <div className="empty-state assistant-empty">
             <strong>Loading conversation</strong>
             <span>Reading saved messages.</span>

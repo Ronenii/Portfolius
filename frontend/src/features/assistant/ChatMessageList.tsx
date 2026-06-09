@@ -7,6 +7,20 @@ export type ThreadMessage = AssistantMessage & {
   used_tools?: string[];
 };
 
+const inlineFunctionCallPattern = /\s*<function=([^>]+)>.*?<\/function>\s*/gs;
+
+function displayContent(content: string) {
+  return content.replace(inlineFunctionCallPattern, " ").trim();
+}
+
+function inlineTools(content: string) {
+  return [...content.matchAll(inlineFunctionCallPattern)].map((match) => match[1]);
+}
+
+function messageTools(message: ThreadMessage) {
+  return [...new Set([...(message.used_tools ?? []), ...inlineTools(message.content)])];
+}
+
 function toolCopy(tools: string[] | undefined) {
   if (!tools || tools.length === 0) {
     return null;
@@ -16,6 +30,9 @@ function toolCopy(tools: string[] | undefined) {
   }
   if (tools.includes("get_portfolio_breakdowns")) {
     return "checked allocation";
+  }
+  if (tools.includes("get_instrument_prices")) {
+    return "checked prices";
   }
   return `used ${tools.length} tool${tools.length === 1 ? "" : "s"}`;
 }
@@ -37,7 +54,7 @@ export default function ChatMessageList({
   return (
     <div className="assistant-thread" role="log" aria-label="Assistant thread">
       {messages.map((message) => {
-        const tools = toolCopy(message.used_tools);
+        const tools = toolCopy(messageTools(message));
         return (
           <article
             className={`assistant-message assistant-message--${message.role}`}
@@ -46,7 +63,7 @@ export default function ChatMessageList({
             <p className="assistant-message-role">
               {message.role === "user" ? "You" : "Assistant"}
             </p>
-            <p>{message.content}</p>
+            <p>{displayContent(message.content)}</p>
             {message.pending ? <span className="assistant-pending">Thinking</span> : null}
             {tools ? (
               <span className="assistant-tool-badge">
