@@ -6,19 +6,18 @@ import {
   Clock3,
   RefreshCw,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 
 import { AllocationChart } from "../components/charts/AllocationChart";
 import { AllocationDonut } from "../components/charts/AllocationDonut";
 import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
+import { CompositionPopover } from "../features/portfolio/CompositionPopover";
 import {
-  getComposition,
   getPortfolioBreakdowns,
   getPortfolioSnapshot,
   refreshPrices,
   type AllocationRow,
-  type CompositionResponse,
   type PortfolioBreakdowns,
   type PortfolioSnapshot,
 } from "../features/portfolio/portfolio-api";
@@ -193,23 +192,6 @@ export default function DashboardPage() {
     queryKey: ["portfolio-breakdowns", accessToken],
     queryFn: () => getPortfolioBreakdowns(accessToken ?? ""),
   });
-  const compositionQuery = useQuery<CompositionResponse>({
-    enabled: Boolean(accessToken && selectedBucket),
-    queryKey: [
-      "portfolio-composition",
-      accessToken,
-      selectedBucket?.dimension,
-      selectedBucket?.label,
-      selectedBucket?.currency,
-    ],
-    queryFn: () =>
-      getComposition(
-        accessToken ?? "",
-        selectedBucket?.dimension ?? selectedDimension,
-        selectedBucket?.label ?? "",
-        selectedBucket?.currency
-      ),
-  });
   const refreshMutation = useMutation({
     mutationFn: () => refreshPrices(accessToken ?? ""),
     onSuccess: async () => {
@@ -242,6 +224,22 @@ export default function DashboardPage() {
 
   function selectBucket(row: AllocationRow) {
     setSelectedBucket(row);
+  }
+
+  function closeBucket() {
+    setSelectedBucket(null);
+  }
+
+  function handleBucketKeyDown(event: KeyboardEvent<HTMLTableRowElement>, row: AllocationRow) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectBucket(row);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      closeBucket();
+    }
   }
 
   function selectChartType(chartType: AllocationChartType) {
@@ -458,12 +456,22 @@ export default function DashboardPage() {
                 <tbody>
                   {selectedRows.map((row) => (
                     <tr
+                      aria-expanded={
+                        selectedBucketKey === `${row.dimension}-${row.label}-${row.currency}`
+                      }
+                      aria-label={`${row.label} ${row.currency} composition`}
                       className={
                         selectedBucketKey === `${row.dimension}-${row.label}-${row.currency}`
                           ? "allocation-row allocation-row--selected"
                           : "allocation-row"
                       }
                       key={`${selectedDimension}-${row.label}-${row.currency}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => selectBucket(row)}
+                      onFocus={() => selectBucket(row)}
+                      onKeyDown={(event) => handleBucketKeyDown(event, row)}
+                      onMouseEnter={() => selectBucket(row)}
                     >
                       <td data-label="Label">{row.label}</td>
                       <td className="num" data-label="Currency">
@@ -482,7 +490,10 @@ export default function DashboardPage() {
                         <button
                           className="text-button"
                           type="button"
-                          onClick={() => selectBucket(row)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            selectBucket(row);
+                          }}
                         >
                           <span aria-hidden="true">Details</span>
                           <span className="sr-only">Show composition for {row.label}</span>
@@ -496,84 +507,15 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        {selectedBucket ? (
-          <section className="composition-panel" aria-labelledby="composition-title">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">{selectedDimensionLabel} composition</p>
-                <h3 id="composition-title">{selectedBucket.label} composition</h3>
-              </div>
-              <span className="allocation-note">
-                {formatPercent(
-                  compositionQuery.data?.percent_of_portfolio ?? selectedBucket.percent
-                )}{" "}
-                of portfolio
-              </span>
-            </div>
-
-            {compositionQuery.isLoading ? (
-              <TrendLoader label="Reading child instruments" srLabel="Loading composition" />
-            ) : null}
-
-            {compositionQuery.error ? (
-              <div className="empty-state">
-                <strong>Composition unavailable</strong>
-                <span>
-                  {compositionQuery.error instanceof Error
-                    ? compositionQuery.error.message
-                    : "Composition request failed."}
-                </span>
-              </div>
-            ) : null}
-
-            {compositionQuery.data && compositionQuery.data.children.length === 0 ? (
-              <div className="empty-state">
-                <strong>No child instruments</strong>
-                <span>This bucket has no priced child rows in the selected currency.</span>
-              </div>
-            ) : null}
-
-            {compositionQuery.data && compositionQuery.data.children.length > 0 ? (
-              <div className="allocation-table-wrap">
-                <table className="allocation-table composition-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Symbol</th>
-                      <th scope="col">Name</th>
-                      <th scope="col">Currency</th>
-                      <th scope="col">Market value</th>
-                      <th scope="col">% of bucket</th>
-                      <th scope="col">% of portfolio</th>
-                      <th scope="col">Holdings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {compositionQuery.data.children.map((child) => (
-                      <tr key={`${child.instrument_id}-${child.currency}`}>
-                        <td data-label="Symbol">{child.symbol}</td>
-                        <td data-label="Name">{child.name}</td>
-                        <td className="num" data-label="Currency">
-                          {child.currency}
-                        </td>
-                        <td className="num" data-label="Market value">
-                          {formatMoney(child.market_value, child.currency)}
-                        </td>
-                        <td className="num" data-label="% of bucket">
-                          {formatPercent(child.percent_of_parent)}
-                        </td>
-                        <td className="num" data-label="% of portfolio">
-                          {formatPercent(child.percent_of_portfolio)}
-                        </td>
-                        <td className="num" data-label="Holdings">
-                          {child.holding_count}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
-          </section>
+        {accessToken && selectedBucket ? (
+          <CompositionPopover
+            accessToken={accessToken}
+            dimensionLabel={selectedDimensionLabel}
+            formatPercent={formatPercent}
+            formatValue={formatMoney}
+            selectedBucket={selectedBucket}
+            onClose={closeBucket}
+          />
         ) : null}
       </section>
 

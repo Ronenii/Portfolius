@@ -421,9 +421,8 @@ describe("DashboardPage", () => {
     );
     expect(await screen.findByRole("heading", { name: "ETF composition" })).toBeInTheDocument();
     expect(screen.getByText("62.5% of portfolio")).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "VOO" })).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "60%" })).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "37.5%" })).toBeInTheDocument();
+    expect(screen.getByText("VOO")).toBeInTheDocument();
+    expect(screen.getByText("60% of slice · 37.5% of portfolio")).toBeInTheDocument();
   });
 
   it("refreshes prices and invalidates portfolio queries", async () => {
