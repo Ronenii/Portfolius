@@ -9,12 +9,16 @@ from app.data.repositories.prices import (
     upsert_price,
 )
 from app.data.repositories.profiles import get_profile_by_user_id
-from app.domain.allocation import build_allocation_breakdowns
+from app.domain.allocation import build_allocation_breakdowns, build_composition
 from app.domain.portfolio_math import build_portfolio_snapshot
 from app.domain.simulation import apply_trades, diff_breakdowns
 from app.integrations.market_data import MarketDataClient
 from app.schemas.instruments import InstrumentSearchResult
-from app.schemas.portfolio import PortfolioBreakdowns, PortfolioSnapshot
+from app.schemas.portfolio import (
+    CompositionResponse,
+    PortfolioBreakdowns,
+    PortfolioSnapshot,
+)
 from app.schemas.simulation import SimulationResponse, TradeLeg
 
 
@@ -45,6 +49,17 @@ def build_snapshot_for_user(db: Session, user_id: str) -> PortfolioSnapshot:
 
 def build_breakdowns_for_user(db: Session, user_id: str) -> PortfolioBreakdowns:
     return build_allocation_breakdowns(build_snapshot_for_user(db, user_id))
+
+
+def build_composition_for_user(
+    db: Session,
+    user_id: str,
+    dimension: str,
+    key: str,
+    currency: str | None = None,
+) -> CompositionResponse:
+    snapshot = build_snapshot_for_user(db, user_id)
+    return build_composition(snapshot, dimension, key, currency=currency)
 
 
 def simulate_for_user(

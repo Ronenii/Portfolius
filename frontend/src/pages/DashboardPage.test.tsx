@@ -7,9 +7,11 @@ import { createQueryClient } from "../app/query-client";
 import { ApiError, fetchBackendHealth } from "../lib/api";
 import { useAuth } from "../features/auth/AuthContext";
 import {
+  getComposition,
   getPortfolioBreakdowns,
   getPortfolioSnapshot,
   refreshPrices,
+  type CompositionResponse,
   type PortfolioBreakdowns,
   type PortfolioSnapshot,
 } from "../features/portfolio/portfolio-api";
@@ -20,6 +22,7 @@ vi.mock("../features/auth/AuthContext", () => ({
 }));
 
 vi.mock("../features/portfolio/portfolio-api", () => ({
+  getComposition: vi.fn(),
   getPortfolioBreakdowns: vi.fn(),
   getPortfolioSnapshot: vi.fn(),
   refreshPrices: vi.fn(),
@@ -140,6 +143,37 @@ const pricedBreakdowns: PortfolioBreakdowns = {
   unpriced_holding_count: 0,
 };
 
+const assetClassComposition: CompositionResponse = {
+  children: [
+    {
+      currency: "USD",
+      holding_count: 1,
+      instrument_id: 10,
+      market_value: "750.00",
+      name: "Vanguard S&P 500 ETF",
+      percent_of_parent: "60",
+      percent_of_portfolio: "37.5",
+      symbol: "VOO",
+    },
+    {
+      currency: "USD",
+      holding_count: 1,
+      instrument_id: 11,
+      market_value: "500.00",
+      name: "iShares Core US Aggregate Bond ETF",
+      percent_of_parent: "40",
+      percent_of_portfolio: "25",
+      symbol: "AGG",
+    },
+  ],
+  currency: "USD",
+  dimension: "asset_class",
+  key: "ETF",
+  market_value: "1250.00",
+  percent_of_portfolio: "62.5",
+  unpriced_holding_count: 0,
+};
+
 function emptySnapshot(): PortfolioSnapshot {
   return {
     ...pricedSnapshot,
@@ -171,6 +205,7 @@ function renderDashboard() {
 describe("DashboardPage", () => {
   afterEach(() => {
     cleanup();
+    localStorage.clear();
     vi.unstubAllEnvs();
   });
 
@@ -188,6 +223,7 @@ describe("DashboardPage", () => {
     vi.mocked(fetchBackendHealth).mockResolvedValue({ status: "ok" });
     vi.mocked(getPortfolioBreakdowns).mockResolvedValue(pricedBreakdowns);
     vi.mocked(getPortfolioSnapshot).mockResolvedValue(pricedSnapshot);
+    vi.mocked(getComposition).mockResolvedValue(assetClassComposition);
     vi.mocked(refreshPrices).mockResolvedValue({
       requested: 1,
       updated: 1,
@@ -267,6 +303,78 @@ describe("DashboardPage", () => {
     expect(await screen.findByRole("cell", { name: "ETF" })).toBeInTheDocument();
   });
 
+  it("renders chart type options and defaults to the bar chart", async () => {
+    renderDashboard();
+
+    expect(await screen.findByLabelText("Allocation chart type")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bar" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Donut" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(screen.getByRole("button", { name: "Table" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    expect(await screen.findByRole("img", { name: "Asset class chart" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "ETF" })).toBeInTheDocument();
+  });
+
+  it("switches to donut and table views while keeping the allocation table visible", async () => {
+    renderDashboard();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Donut" }));
+
+    expect(screen.getByRole("button", { name: "Donut" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(
+      await screen.findByRole("img", { name: "Asset class donut chart" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "ETF" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+
+    expect(screen.getByRole("button", { name: "Table" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.queryByRole("img", { name: "Asset class chart" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Asset class donut chart" })).not.toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "ETF" })).toBeInTheDocument();
+  });
+
+  it("persists the selected chart type across dashboard remounts", async () => {
+    const firstRender = renderDashboard();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Donut" }));
+    expect(localStorage.getItem("portfolius:allocation-chart-type")).toBe("donut");
+
+    firstRender.unmount();
+    renderDashboard();
+
+    expect(await screen.findByRole("button", { name: "Donut" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(
+      await screen.findByRole("img", { name: "Asset class donut chart" })
+    ).toBeInTheDocument();
+  });
+
+  it("ignores an invalid stored chart type and falls back to bar", async () => {
+    localStorage.setItem("portfolius:allocation-chart-type", "line");
+
+    renderDashboard();
+
+    expect(await screen.findByRole("button", { name: "Bar" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(await screen.findByRole("img", { name: "Asset class chart" })).toBeInTheDocument();
+  });
+
   it("updates table labels when the breakdown dimension changes", async () => {
     renderDashboard();
 
@@ -296,6 +404,25 @@ describe("DashboardPage", () => {
     expect(await screen.findByRole("cell", { name: "$1,250.00" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "62.5%" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "1" })).toBeInTheDocument();
+  });
+
+  it("shows child composition math for a selected allocation bucket", async () => {
+    renderDashboard();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Show composition for ETF" })
+    );
+
+    expect(getComposition).toHaveBeenCalledWith(
+      "access-token",
+      "asset_class",
+      "ETF",
+      "USD"
+    );
+    expect(await screen.findByRole("heading", { name: "ETF composition" })).toBeInTheDocument();
+    expect(screen.getByText("62.5% of portfolio")).toBeInTheDocument();
+    expect(screen.getByText("VOO")).toBeInTheDocument();
+    expect(screen.getByText("60% of slice · 37.5% of portfolio")).toBeInTheDocument();
   });
 
   it("refreshes prices and invalidates portfolio queries", async () => {

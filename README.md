@@ -2,7 +2,7 @@
 
 > A long-term investor dashboard that shows you what you actually own by market exposure, sector, and asset class with an AI assistant help you rebalance against your goals.
 
-**Status:** Hobby project · M3 complete
+**Status:** Hobby project · M4 complete
 
 ## Why this exists
 
@@ -24,6 +24,7 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 - **Holdings tracking**: create, edit, list, and delete holdings with instrument search/autofill.
 - **Authenticated API**: Supabase Auth sessions are verified by the backend and scoped by user ID.
 - **Portfolio dashboard**: current values, cost basis, gain/loss, price coverage, and allocation breakdowns by instrument, asset class, sector, country, region, and currency.
+- **Allocation exploration**: drill into any allocation slice to see the instrument composition inside it, with both "% of slice" and "% of portfolio"; switch each dimension between bar, donut, and table views. The drill-down is keyboard-accessible and the dense table stays the canonical readable view.
 - **What-if simulation**: build a buy/sell basket and see before/after/delta across every breakdown dimension without committing any trades.
 - **AI assistant**: floating chat grounded in your holdings, profile goals, and live simulation results. Uses Groq's `llama-3.3-70b-versatile` model with tool-calling. Disabled gracefully when `LLM_API_KEY` is not set.
 - **Responsive**: works on desktop and phone.
@@ -118,6 +119,7 @@ SUPABASE_URL=https://<dev-project>.supabase.co
 AUTH_AUDIENCE=authenticated
 FRONTEND_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
 FMP_API_KEY=...
+ALPHA_VANTAGE_API_KEY=...
 SCHEDULER_SECRET=...
 ```
 
@@ -128,7 +130,14 @@ For backend-only migration or repository work, you can still point `DATABASE_URL
 The backend verifies Supabase access tokens through the project's JWKS discovery endpoint:
 `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`. Do not use the legacy JWT secret for M1 backend auth.
 
-M2 market data uses Financial Modeling Prep for instrument search and metadata autofill, and `yfinance` for latest daily close prices. `FMP_API_KEY` enables provider-backed search; without it, the backend returns an empty search result rather than breaking the holdings form. `SCHEDULER_SECRET` protects scheduler-triggered refreshes.
+M2 market data uses Financial Modeling Prep for instrument search and basic metadata autofill, Alpha Vantage for ETF exposure metadata when `ALPHA_VANTAGE_API_KEY` is set, and `yfinance` for latest daily close prices. `FMP_API_KEY` enables provider-backed search; without it, the backend returns an empty search result rather than breaking the holdings form. `SCHEDULER_SECRET` protects scheduler-triggered refreshes.
+
+Existing ETF instrument metadata can be refreshed by the signed-in user as a one-time cleanup action. This scans ETF instruments in that user's holdings, refreshes provider metadata, and returns `requested`, `updated`, `skipped`, and `failed` counts.
+
+```text
+POST $PORTFOLIUS_API_URL/api/v1/jobs/refresh-etf-metadata
+Authorization: Bearer <supabase-access-token>
+```
 
 M2 does not do FX conversion. Portfolio-wide summary totals include priced holdings in the profile base currency, while holdings and allocation rows retain their instrument currency.
 
@@ -206,7 +215,7 @@ PORTFOLIUS_SCHEDULER_SECRET=<same value as backend SCHEDULER_SECRET>
 
 1. Push the repo to GitHub.
 2. In Render: **New → Blueprint**, point at the repo. It picks up `backend/render.yaml` and creates the web service.
-3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, `SCHEDULER_SECRET`, and `LLM_API_KEY`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available. `LLM_MODEL` is pre-set in `render.yaml`; override it in the dashboard if you want a different model.
+3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `SCHEDULER_SECRET`, and `LLM_API_KEY`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available. `LLM_MODEL` is pre-set in `render.yaml`; override it in the dashboard if you want a different model.
 4. Take the resulting `https://<service>.onrender.com` URL and set it as `VITE_API_URL` in Vercel.
 
 For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example:
@@ -229,7 +238,7 @@ For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example
 - [x] M1 — Profile wizard + manual holdings CRUD
 - [x] M2 — Asset autocomplete + daily price refresh + multi-dimensional breakdowns
 - [x] M3 — AI assistant grounded in portfolio context + portfolio simulation (what-if buy/sell)
-- [ ] M4 — Allocation exploration (composition drill-downs + selectable chart types)
+- [x] M4 — Allocation exploration (composition drill-downs + selectable chart types)
 - [ ] M5 — Transactions log, goal projection, PWA install, CSV import
 - [ ] M6 — Profile intelligence, dark mode, suggested interest/avoid tags, and automatic typo cleanup
 

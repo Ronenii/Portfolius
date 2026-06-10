@@ -197,6 +197,55 @@ def test_creating_existing_complete_instrument_skips_profile_lookup(
     assert response.instrument.region == "Asia"
 
 
+def test_creating_existing_complete_etf_refreshes_profile_metadata(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    db_session.add(
+        Instrument(
+            symbol="IXC",
+            name="iShares Global Energy ETF",
+            exchange="NYSEARCA",
+            currency="USD",
+            asset_class="ETF",
+            sector="Financial Services",
+            country="US",
+            region="North America",
+        )
+    )
+    db_session.commit()
+    lookup_client = FakeInstrumentLookupClient(
+        profile_result(
+            symbol="IXC",
+            name="iShares Global Energy ETF",
+            exchange="NYSEARCA",
+            currency="USD",
+            asset_class="ETF",
+            sector="Energy",
+            country="US",
+            region="Global",
+            source="fmp+alphavantage",
+        )
+    )
+
+    response = save_holding(
+        holding_payload(
+            symbol="IXC",
+            name=None,
+            sector=None,
+            country=None,
+            region=None,
+        ),
+        authenticated_user,
+        db_session,
+        lookup_client,
+    )
+
+    assert lookup_client.profile_symbols == ["IXC"]
+    assert response.instrument.sector == "Energy"
+    assert response.instrument.region == "Global"
+
+
 def test_creating_existing_incomplete_instrument_enriches_once(
     authenticated_user: AuthenticatedUser,
     db_session: Session,

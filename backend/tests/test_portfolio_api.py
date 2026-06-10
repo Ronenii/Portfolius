@@ -5,13 +5,14 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.v1.jobs import refresh_prices
+from app.api.v1.jobs import refresh_etf_metadata, refresh_prices
 from app.api.v1.portfolio import read_portfolio_breakdowns, read_portfolio_snapshot
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.config import Settings
 from app.data.models import Holding, Instrument, Price, Profile
 from app.integrations.market_data import MarketPrice
 from app.main import app
+from app.schemas.instruments import InstrumentSearchResult
 
 
 class FakeMarketDataClient:
@@ -33,6 +34,23 @@ class FakeMarketDataClient:
             currency=currency_hint or "UNKNOWN",
             source="fake",
         )
+
+
+class FakeInstrumentLookupClient:
+    def __init__(
+        self,
+        profiles: dict[str, InstrumentSearchResult | None],
+        failing_symbols: set[str] | None = None,
+    ) -> None:
+        self.profiles = profiles
+        self.failing_symbols = failing_symbols or set()
+        self.requests: list[str] = []
+
+    def profile(self, symbol: str) -> InstrumentSearchResult | None:
+        self.requests.append(symbol)
+        if symbol in self.failing_symbols:
+            raise RuntimeError("provider failed")
+        return self.profiles.get(symbol)
 
 
 def add_profile(db_session: Session, user_id: str = "user-123") -> Profile:
@@ -214,6 +232,116 @@ def test_scheduler_secret_refreshes_all_users(
         ("VOO", "NYSEARCA", "USD"),
         ("BND", "NYSEARCA", "USD"),
     }
+
+
+def test_etf_metadata_refresh_route_is_registered() -> None:
+    routes = [
+        route
+        for route in app.routes
+        if getattr(route, "path", None) == "/api/v1/jobs/refresh-etf-metadata"
+    ]
+
+    assert len(routes) == 1
+    dependency_calls = {
+        dependency.call for dependency in routes[0].dependant.dependencies
+    }
+    assert get_current_user in dependency_calls
+
+
+def test_authenticated_user_refreshes_existing_etf_metadata(
+    authenticated_user: AuthenticatedUser,
+    second_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    add_profile(db_session, authenticated_user.user_id)
+    add_profile(db_session, second_user.user_id)
+    ixc_holding = add_holding(db_session, authenticated_user.user_id, "IXC")
+    ixc_holding.instrument.name = "iShares Global Energy ETF"
+    ixc_holding.instrument.sector = "Financial Services"
+    ixc_holding.instrument.region = "North America"
+    other_holding = add_holding(db_session, second_user.user_id, "IEUR")
+    stock = Instrument(
+        symbol="AAPL",
+        name="Apple Inc.",
+        exchange="NASDAQ",
+        currency="USD",
+        asset_class="Stock",
+        sector="Technology",
+        country="United States",
+        region="North America",
+    )
+    db_session.add(stock)
+    db_session.commit()
+    lookup_client = FakeInstrumentLookupClient(
+        {
+            "IXC": InstrumentSearchResult(
+                symbol="IXC",
+                name="iShares Global Energy ETF",
+                exchange="NYSEARCA",
+                currency="USD",
+                asset_class="ETF",
+                sector="Energy",
+                country=None,
+                region="Global",
+                source="alphavantage",
+            ),
+            "IEUR": InstrumentSearchResult(
+                symbol="IEUR",
+                name="iShares Core MSCI Europe ETF",
+                exchange="NYSEARCA",
+                currency="USD",
+                asset_class="ETF",
+                sector="Diversified ETF",
+                country=None,
+                region="Europe",
+                source="alphavantage",
+            ),
+        }
+    )
+
+    response = refresh_etf_metadata(
+        authenticated_user,
+        db_session,
+        lookup_client,
+    )
+
+    db_session.refresh(ixc_holding.instrument)
+    db_session.refresh(other_holding.instrument)
+    assert response.requested == 1
+    assert response.updated == 1
+    assert response.skipped == 0
+    assert response.failed == 0
+    assert lookup_client.requests == ["IXC"]
+    assert ixc_holding.instrument.sector == "Energy"
+    assert ixc_holding.instrument.region == "Global"
+    assert other_holding.instrument.sector == "Broad Market"
+    assert other_holding.instrument.region == "North America"
+    assert stock.sector == "Technology"
+
+
+def test_authenticated_etf_metadata_refresh_counts_provider_misses_and_failures(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    add_profile(db_session, authenticated_user.user_id)
+    add_holding(db_session, authenticated_user.user_id, "IXC")
+    add_holding(db_session, authenticated_user.user_id, "BUG")
+    lookup_client = FakeInstrumentLookupClient(
+        profiles={"IXC": None},
+        failing_symbols={"BUG"},
+    )
+
+    response = refresh_etf_metadata(
+        authenticated_user,
+        db_session,
+        lookup_client,
+    )
+
+    assert response.requested == 2
+    assert response.updated == 0
+    assert response.skipped == 1
+    assert response.failed == 1
+    assert lookup_client.requests == ["BUG", "IXC"]
 
 
 def test_scheduler_refresh_skips_when_us_market_is_closed(

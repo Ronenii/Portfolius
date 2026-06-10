@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
@@ -36,6 +38,30 @@ def instrument_has_useful_metadata(instrument: Instrument) -> bool:
             instrument.region,
         ]
     )
+
+
+def refresh_instrument_metadata(
+    instrument: Instrument,
+    profile: InstrumentSearchResult,
+) -> bool:
+    changed = False
+    for field in (
+        "name",
+        "exchange",
+        "currency",
+        "asset_class",
+        "sector",
+        "country",
+        "region",
+    ):
+        value = getattr(profile, field)
+        if value is not None and getattr(instrument, field) != value:
+            setattr(instrument, field, value)
+            changed = True
+
+    if changed:
+        instrument.metadata_updated_at = datetime.now(UTC)
+    return changed
 
 
 def search_local_instruments(

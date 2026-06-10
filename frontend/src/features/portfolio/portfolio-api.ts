@@ -54,6 +54,27 @@ export type PortfolioBreakdowns = {
   unpriced_holding_count: number;
 };
 
+export type CompositionRow = {
+  instrument_id: number;
+  symbol: string;
+  name: string;
+  currency: string;
+  market_value: string;
+  holding_count: number;
+  percent_of_parent: string;
+  percent_of_portfolio: string;
+};
+
+export type CompositionResponse = {
+  dimension: string;
+  key: string;
+  currency: string;
+  market_value: string;
+  percent_of_portfolio: string;
+  children: CompositionRow[];
+  unpriced_holding_count: number;
+};
+
 export type TradeLeg = {
   instrument_id?: number | null;
   symbol?: string | null;
@@ -93,6 +114,21 @@ export function getPortfolioSnapshot(accessToken: string) {
 
 export function getPortfolioBreakdowns(accessToken: string) {
   return apiRequest<PortfolioBreakdowns>("/api/v1/portfolio/breakdowns", {
+    accessToken,
+  });
+}
+
+export function getComposition(
+  accessToken: string,
+  dimension: string,
+  key: string,
+  currency?: string
+) {
+  const path = `/api/v1/portfolio/breakdowns/${encodeURIComponent(
+    dimension
+  )}/${encodeURIComponent(key)}/composition`;
+  const query = currency ? `?currency=${encodeURIComponent(currency)}` : "";
+  return apiRequest<CompositionResponse>(`${path}${query}`, {
     accessToken,
   });
 }

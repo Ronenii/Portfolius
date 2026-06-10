@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.data.models import Holding, Instrument
@@ -70,6 +70,24 @@ def list_instruments_for_user_holdings(
             select(Instrument)
             .join(Holding)
             .where(Holding.user_id == user_id)
+            .distinct()
+            .order_by(Instrument.symbol, Instrument.exchange)
+        )
+    )
+
+
+def list_etf_instruments_for_user_holdings(
+    db: Session,
+    user_id: str,
+) -> list[Instrument]:
+    return list(
+        db.scalars(
+            select(Instrument)
+            .join(Holding)
+            .where(
+                Holding.user_id == user_id,
+                func.lower(Instrument.asset_class) == "etf",
+            )
             .distinct()
             .order_by(Instrument.symbol, Instrument.exchange)
         )

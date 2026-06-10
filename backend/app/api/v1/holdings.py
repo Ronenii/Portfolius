@@ -22,7 +22,9 @@ from app.data.repositories.instruments import (
     get_instrument_for_payload,
     instrument_has_useful_metadata,
     instrument_to_search_result,
+    refresh_instrument_metadata,
 )
+from app.integrations.instrument_lookup import is_etf
 from app.schemas.holdings import HoldingRequest, HoldingResponse
 from app.schemas.instruments import InstrumentSearchResult
 
@@ -47,10 +49,17 @@ def enrich_holding_payload(
     lookup_client: InstrumentLookupClient,
 ) -> HoldingRequest:
     instrument = get_instrument_for_payload(db, payload)
-    if instrument is not None and instrument_has_useful_metadata(instrument):
+    existing_profile = (
+        instrument_to_search_result(instrument) if instrument is not None else None
+    )
+    if (
+        instrument is not None
+        and instrument_has_useful_metadata(instrument)
+        and not is_etf(existing_profile)
+    ):
         return merge_profile_into_payload(
             payload,
-            instrument_to_search_result(instrument),
+            existing_profile,
         )
 
     try:
@@ -61,6 +70,9 @@ def enrich_holding_payload(
 
     if profile is None:
         return payload
+
+    if instrument is not None and is_etf(existing_profile):
+        refresh_instrument_metadata(instrument, profile)
 
     return merge_profile_into_payload(payload, profile, instrument)
 

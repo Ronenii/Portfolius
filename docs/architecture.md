@@ -225,7 +225,7 @@ GET/POST /api/v1/holdings
 GET/PUT/DELETE /api/v1/holdings/{holding_id}
 GET /api/v1/portfolio/snapshot
 GET /api/v1/portfolio/breakdowns
-POST /api/v1/portfolio/simulate
+GET /api/v1/portfolio/breakdowns/{dimension}/{key}/composition
 POST /api/v1/portfolio/simulate
 POST /api/v1/assistant/messages
 GET  /api/v1/assistant/conversations
@@ -330,19 +330,23 @@ The dashboard reads a `VITE_PROD_MODE` flag (truthy values: `1`, `true`, `yes`, 
 
 ## Allocation Exploration (M4)
 
-Allocation breakdowns should support progressive disclosure: a user can start with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspect what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row should show the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
+Allocation breakdowns support progressive disclosure: a user starts with a high-level dimension such as asset class, sector, region, country, currency, or instrument, then inspects what makes up a selected allocation row without leaving the dashboard. For example, if `ETF` is 62% of the portfolio, hovering or focusing that row shows the instrument composition inside that slice, such as `VOO` at 30%, `IXC` at 5%, and the remaining ETF holdings by their contribution.
 
-The backend should remain the source of truth for the math. Future breakdown responses can include child composition rows per parent row, or expose a dedicated drill-down endpoint such as:
+The backend remains the source of truth for the math. Composition is a new, pure, in-memory transform over the existing M2 snapshot pipeline — `build_composition(snapshot, dimension, key, *, currency=None)` in `domain/allocation.py` — exposed through a dedicated, lazily-fetched endpoint so the existing `PortfolioBreakdowns` contract (which the simulation diff and the assistant `get_portfolio_breakdowns` tool both consume) stays untouched:
 
 ```text
 GET /api/v1/portfolio/breakdowns/{dimension}/{key}/composition
 ```
 
-The composition payload should include the child instrument label, currency, market value, holding count where relevant, percent of the selected parent slice, and percent of the whole portfolio. This distinction matters because a tooltip may need to say both "VOO is 30% of the portfolio" and "VOO is 48% of the ETF slice." Missing-price holdings remain excluded from allocation percentages and should be surfaced separately, just as the M2 breakdowns do.
+- `dimension` is one of `asset_class`, `sector`, `country`, `region`, `currency`, `instrument`; an unknown dimension returns `404`. The optional `currency` query parameter disambiguates a label present in more than one currency, defaulting to the first matching currency.
+- The route is authenticated and user-scoped exactly like the other portfolio routes: `401` without a token, `404` when the user has no profile, and `200` with an empty child list (not an error) for an unknown-but-valid key.
+- `build_composition` reuses the M2 `label_for` mappers and `percent_of`, so composition labels and percentages match the breakdowns exactly, including `Unclassified` and the `(currency, label)` keying. It collapses repeated lots of one instrument into a single child row with `holding_count` accumulated.
 
-The frontend can render the same allocation data through multiple chart types. The user should be able to switch between chart views such as column/bar, pie or donut, and table-first views. Line charts should be reserved for time-series data after a later milestone adds historical prices or allocation history; they should not imply trend data from a single current snapshot. Chart type selection is a presentation preference and should not change the backend math or the table rows used for accessibility and precise reading.
+The `CompositionResponse` payload carries the parent slice (`dimension`, `key`, `currency`, `market_value`, `percent_of_portfolio`), an `unpriced_holding_count`, and `children` rows. Each `CompositionRow` includes the child `instrument_id`, `symbol`, `name`, `currency`, `market_value`, `holding_count`, `percent_of_parent`, and `percent_of_portfolio`, with decimals serialized as strings like the other portfolio contracts. The two percentages are distinct on purpose: a tooltip needs to say both "VOO is 30% of the portfolio" and "VOO is 48% of the ETF slice." `percent_of_parent` is the child's value over the slice total; `percent_of_portfolio` is over the per-currency portfolio total. Missing-price holdings are excluded from the percentages and surfaced via `unpriced_holding_count`, just as the M2 breakdowns do.
 
-Hover-only drill-downs must have keyboard-accessible equivalents. The table row, chart segment, or column should expose the same composition popover on focus or selection, and the dense table should remain the canonical readable view for screen readers, tests, and users who prefer exact numbers.
+The frontend renders the same allocation data through user-selectable chart types: bar, donut, or table. The selection is a presentation preference persisted client-side to `localStorage` under `portfolius:allocation-chart-type` (mirroring the terminal-mode pattern), defaulting to bar; it never changes the backend math or the table rows used for accessibility and precise reading. `bar` and `donut` render the chart alongside the dense table; `table` hides the chart and shows the table full-width. No line charts: a single current snapshot is not time-series data, so trend visualizations are deferred until a later milestone adds price or allocation history.
+
+The drill-down is not hover-only. Each allocation table row is focusable (`role="button"`, `aria-expanded`) and opens the composition popover (`CompositionPopover`, which lazily fetches via TanStack Query) on hover, focus, and `Enter`/`Space`, closing on blur/`Escape`; chart segments open the same popover on click as an enhancement. Only one slice is open at a time. The popover shows the same data regardless of trigger and handles loading, empty, and error states, so screen-reader users reading the dense table get the identical composition — the table remains the canonical readable view.
 
 ## Portfolio Simulation (M3)
 
@@ -434,7 +438,7 @@ To enable Google OAuth:
 - M2: instrument search/autofill, price refresh, and allocation breakdowns. **Done.**
 - M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios). **Done.**
 - M3.x: design language, terminal mode, mobile layout, and assistant price tool. **Done.**
-- M4: allocation exploration, including composition drill-downs and user-selectable chart types.
+- M4: allocation exploration, including composition drill-downs and user-selectable chart types. **Done.**
 - M5: transactions, projections, PWA install, and CSV import.
 - M6: profile intelligence and personalization, including dark mode, suggested interest/avoid tags, and automatic typo cleanup for free-form profile keywords.
 

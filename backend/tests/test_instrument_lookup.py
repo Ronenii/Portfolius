@@ -1,4 +1,10 @@
+from app.integrations.alpha_vantage import (
+    AlphaVantageEtfProfileClient,
+    classify_etf_sector,
+    infer_etf_region,
+)
 from app.integrations.fmp import FmpInstrumentLookupClient
+from app.integrations.instrument_lookup import CompositeInstrumentLookupClient
 from app.schemas.instruments import InstrumentSearchResult
 
 
@@ -62,6 +68,18 @@ class FakeHttpClient:
                 ]
             )
         raise AssertionError(f"Unexpected URL {url}")
+
+
+class FakeAlphaVantageHttpClient:
+    def __init__(self, payload: dict[str, object]) -> None:
+        self.payload = payload
+        self.requested_urls: list[str] = []
+        self.requested_params: list[dict[str, object]] = []
+
+    def get(self, url: str, params: dict[str, object]) -> FakeResponse:
+        self.requested_urls.append(url)
+        self.requested_params.append(params)
+        return FakeResponse(self.payload)
 
 
 def test_fmp_lookup_normalizes_and_enriches_search_results() -> None:
@@ -173,3 +191,90 @@ def test_fmp_profile_derives_etf_asset_class() -> None:
     )
 
     assert result.asset_class == "ETF"
+
+
+def test_alpha_vantage_profile_classifies_dominant_sector_etf() -> None:
+    http_client = FakeAlphaVantageHttpClient(
+        {
+            "sectors": [
+                {"sector": "Energy", "weight": "99.20"},
+                {"sector": "Financial Services", "weight": "0.80"},
+            ],
+            "holdings": [
+                {"symbol": "XOM", "description": "Exxon Mobil", "weight": "22.4"}
+            ],
+        }
+    )
+    client = AlphaVantageEtfProfileClient(
+        api_key="alpha-key",
+        http_client=http_client,
+    )
+
+    result = client.profile("ixc")
+
+    assert result is not None
+    assert result.symbol == "IXC"
+    assert result.asset_class == "ETF"
+    assert result.sector == "Energy"
+    assert result.source == "alphavantage"
+    assert http_client.requested_params[0] == {
+        "function": "ETF_PROFILE",
+        "symbol": "IXC",
+        "apikey": "alpha-key",
+    }
+
+
+def test_alpha_vantage_profile_marks_mixed_sector_etf_as_diversified() -> None:
+    assert classify_etf_sector(
+        [
+            {"sector": "Technology", "weight": "31.0"},
+            {"sector": "Financial Services", "weight": "18.5"},
+            {"sector": "Healthcare", "weight": "16.0"},
+        ]
+    ) == "Diversified ETF"
+
+
+def test_etf_region_can_be_inferred_from_fund_name() -> None:
+    assert infer_etf_region("iShares Core MSCI Europe ETF") == "Europe"
+    assert infer_etf_region("iShares Global Energy ETF") == "Global"
+
+
+def test_composite_lookup_overrides_etf_sector_and_region_from_alpha_vantage() -> None:
+    fmp_client = FmpInstrumentLookupClient(api_key="fmp-key")
+    alpha_client = AlphaVantageEtfProfileClient(api_key="alpha-key")
+    fmp_client.profile = lambda symbol: InstrumentSearchResult(  # type: ignore[method-assign]
+        symbol="IXC",
+        name="iShares Global Energy ETF",
+        exchange="NYSEARCA",
+        currency="USD",
+        asset_class="ETF",
+        sector="Financial Services",
+        country="US",
+        region="North America",
+        source="fmp",
+    )
+    alpha_client.profile = lambda symbol: InstrumentSearchResult(  # type: ignore[method-assign]
+        symbol="IXC",
+        name=None,
+        exchange=None,
+        currency=None,
+        asset_class="ETF",
+        sector="Energy",
+        country=None,
+        region=None,
+        source="alphavantage",
+    )
+
+    result = CompositeInstrumentLookupClient(fmp_client, alpha_client).profile("IXC")
+
+    assert result == InstrumentSearchResult(
+        symbol="IXC",
+        name="iShares Global Energy ETF",
+        exchange="NYSEARCA",
+        currency="USD",
+        asset_class="ETF",
+        sector="Energy",
+        country="US",
+        region="Global",
+        source="fmp+alphavantage",
+    )
