@@ -1,5 +1,5 @@
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.data.models import Holding, Instrument
 from app.data.repositories.instruments import get_instrument_for_payload
@@ -58,7 +58,15 @@ def create_holding(db: Session, user_id: str, payload: HoldingRequest) -> Holdin
 
 
 def list_holdings_for_user(db: Session, user_id: str) -> list[Holding]:
-    return list(db.scalars(select(Holding).where(Holding.user_id == user_id)))
+    # Eager-load the instrument: the snapshot reads holding.instrument per row,
+    # so a lazy-load would issue an N+1 query per holding.
+    return list(
+        db.scalars(
+            select(Holding)
+            .where(Holding.user_id == user_id)
+            .options(selectinload(Holding.instrument))
+        )
+    )
 
 
 def list_instruments_for_user_holdings(
