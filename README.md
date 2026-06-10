@@ -2,7 +2,7 @@
 
 > A long-term investor dashboard that shows you what you actually own by market exposure, sector, and asset class with an AI assistant help you rebalance against your goals.
 
-**Status:** Hobby project · M3 complete
+**Status:** Hobby project · M4 complete
 
 ## Why this exists
 
@@ -24,6 +24,7 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 - **Holdings tracking**: create, edit, list, and delete holdings with instrument search/autofill.
 - **Authenticated API**: Supabase Auth sessions are verified by the backend and scoped by user ID.
 - **Portfolio dashboard**: current values, cost basis, gain/loss, price coverage, and allocation breakdowns by instrument, asset class, sector, country, region, and currency.
+- **Allocation exploration**: drill into any allocation slice to see the instrument composition inside it, with both "% of slice" and "% of portfolio"; switch each dimension between bar, donut, and table views. The drill-down is keyboard-accessible and the dense table stays the canonical readable view.
 - **What-if simulation**: build a buy/sell basket and see before/after/delta across every breakdown dimension without committing any trades.
 - **AI assistant**: floating chat grounded in your holdings, profile goals, and live simulation results. Uses Groq's `llama-3.3-70b-versatile` model with tool-calling. Disabled gracefully when `LLM_API_KEY` is not set.
 - **Responsive**: works on desktop and phone.
@@ -237,7 +238,7 @@ For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example
 - [x] M1 — Profile wizard + manual holdings CRUD
 - [x] M2 — Asset autocomplete + daily price refresh + multi-dimensional breakdowns
 - [x] M3 — AI assistant grounded in portfolio context + portfolio simulation (what-if buy/sell)
-- [ ] M4 — Allocation exploration (composition drill-downs + selectable chart types)
+- [x] M4 — Allocation exploration (composition drill-downs + selectable chart types)
 - [ ] M5 — Transactions log, goal projection, PWA install, CSV import
 - [ ] M6 — Profile intelligence, dark mode, suggested interest/avoid tags, and automatic typo cleanup
 
