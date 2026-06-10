@@ -14,20 +14,26 @@ from app.schemas.jobs import MetadataRefreshResult
 logger = logging.getLogger(__name__)
 
 
-def describe_unfilled_fields(
+def describe_no_change(
     instrument: Instrument,
     profile: InstrumentSearchResult,
-) -> list[str]:
-    """List managed fields still null on the instrument and what the profile offered.
+) -> str:
+    """Explain a "no change" skip: per-field stored value vs what the profile offered.
 
-    This is the diagnostic for a "no change" skip: it shows which fields stayed
-    empty and whether the provider returned a value the refresh could have used.
+    A field is only updated when the provider offers a non-null value that differs
+    from what is stored. "No change" therefore means every offered value was either
+    None or already equal to the stored value. Logging the profile ``source`` and the
+    offered-vs-stored values reveals the common cause: when ``source`` lacks
+    ``alphavantage``, the ETF profile lookup returned nothing (missing key, rate
+    limit, or no coverage) and the composite fell back to the existing data, so wrong
+    legacy values are never corrected.
     """
-    details: list[str] = []
+    fields: list[str] = []
     for field in MANAGED_METADATA_FIELDS:
-        if getattr(instrument, field) is None:
-            details.append(f"{field}(offered={getattr(profile, field)!r})")
-    return details
+        stored = getattr(instrument, field)
+        offered = getattr(profile, field)
+        fields.append(f"{field}: stored={stored!r} offered={offered!r}")
+    return f"source={profile.source!r}; " + "; ".join(fields)
 
 
 def refresh_etf_metadata_for_user(
@@ -66,20 +72,12 @@ def refresh_etf_metadata_for_user(
             logger.info("ETF metadata refresh updated %s", instrument.symbol)
             updated += 1
         else:
-            unfilled = describe_unfilled_fields(instrument, profile)
-            if unfilled:
-                logger.info(
-                    "ETF metadata refresh skipped %s: profile present but no field "
-                    "changed; still-null fields: %s",
-                    instrument.symbol,
-                    ", ".join(unfilled),
-                )
-            else:
-                logger.info(
-                    "ETF metadata refresh skipped %s: profile present but no field "
-                    "changed; all managed fields already populated",
-                    instrument.symbol,
-                )
+            logger.info(
+                "ETF metadata refresh skipped %s: profile present but no field "
+                "changed; %s",
+                instrument.symbol,
+                describe_no_change(instrument, profile),
+            )
             skipped += 1
 
     db.commit()
