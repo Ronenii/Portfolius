@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,7 +14,27 @@ from app.api.v1.profile import router as profile_router
 from app.core.config import get_settings
 
 
+def configure_logging() -> None:
+    """Make ``app.*`` INFO logs visible under uvicorn.
+
+    uvicorn does not attach a handler to the root logger, so without this the
+    last-resort handler drops anything below WARNING and diagnostic INFO lines
+    (e.g. the per-symbol ETF metadata refresh trace) never reach the Render logs.
+    Attaching a handler directly to the ``app`` logger guarantees emission
+    regardless of how the host configures logging.
+    """
+    app_logger = logging.getLogger("app")
+    app_logger.setLevel(logging.INFO)
+    if not app_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter("%(levelname)s:     %(name)s - %(message)s")
+        )
+        app_logger.addHandler(handler)
+
+
 def create_app() -> FastAPI:
+    configure_logging()
     settings = get_settings()
     app = FastAPI(title="Portfolius API")
     app.add_middleware(

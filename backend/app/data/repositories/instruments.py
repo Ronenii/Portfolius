@@ -40,20 +40,23 @@ def instrument_has_useful_metadata(instrument: Instrument) -> bool:
     )
 
 
+MANAGED_METADATA_FIELDS = (
+    "name",
+    "exchange",
+    "currency",
+    "asset_class",
+    "sector",
+    "country",
+    "region",
+)
+
+
 def refresh_instrument_metadata(
     instrument: Instrument,
     profile: InstrumentSearchResult,
 ) -> bool:
     changed = False
-    for field in (
-        "name",
-        "exchange",
-        "currency",
-        "asset_class",
-        "sector",
-        "country",
-        "region",
-    ):
+    for field in MANAGED_METADATA_FIELDS:
         value = getattr(profile, field)
         if value is not None and getattr(instrument, field) != value:
             setattr(instrument, field, value)
