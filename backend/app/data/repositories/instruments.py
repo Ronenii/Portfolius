@@ -67,6 +67,12 @@ def refresh_instrument_metadata(
     return changed
 
 
+def list_all_instruments(db: Session) -> list[Instrument]:
+    return list(
+        db.scalars(select(Instrument).order_by(Instrument.symbol, Instrument.exchange))
+    )
+
+
 def search_local_instruments(
     db: Session,
     query: str,

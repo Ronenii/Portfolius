@@ -234,7 +234,7 @@ def test_scheduler_secret_refreshes_all_users(
     }
 
 
-def test_etf_metadata_refresh_route_is_registered() -> None:
+def test_etf_metadata_refresh_route_is_registered_as_migration_job() -> None:
     routes = [
         route
         for route in app.routes
@@ -245,10 +245,10 @@ def test_etf_metadata_refresh_route_is_registered() -> None:
     dependency_calls = {
         dependency.call for dependency in routes[0].dependant.dependencies
     }
-    assert get_current_user in dependency_calls
+    assert get_current_user not in dependency_calls
 
 
-def test_authenticated_user_refreshes_existing_etf_metadata(
+def test_migration_refreshes_metadata_for_all_instruments(
     authenticated_user: AuthenticatedUser,
     second_user: AuthenticatedUser,
     db_session: Session,
@@ -300,26 +300,28 @@ def test_authenticated_user_refreshes_existing_etf_metadata(
     )
 
     response = refresh_etf_metadata(
-        authenticated_user,
         db_session,
         lookup_client,
+        settings=Settings(scheduler_secret="secret"),
+        scheduler_secret="secret",
     )
 
     db_session.refresh(ixc_holding.instrument)
     db_session.refresh(other_holding.instrument)
-    assert response.requested == 1
-    assert response.updated == 1
-    assert response.skipped == 0
+    db_session.refresh(stock)
+    assert response.requested == 3
+    assert response.updated == 2
+    assert response.skipped == 1
     assert response.failed == 0
-    assert lookup_client.requests == ["IXC"]
+    assert lookup_client.requests == ["AAPL", "IEUR", "IXC"]
     assert ixc_holding.instrument.sector == "Energy"
     assert ixc_holding.instrument.region == "Global"
-    assert other_holding.instrument.sector == "Broad Market"
-    assert other_holding.instrument.region == "North America"
+    assert other_holding.instrument.sector == "Diversified ETF"
+    assert other_holding.instrument.region == "Europe"
     assert stock.sector == "Technology"
 
 
-def test_authenticated_etf_metadata_refresh_counts_provider_misses_and_failures(
+def test_migration_metadata_refresh_counts_provider_misses_and_failures(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
@@ -332,9 +334,10 @@ def test_authenticated_etf_metadata_refresh_counts_provider_misses_and_failures(
     )
 
     response = refresh_etf_metadata(
-        authenticated_user,
         db_session,
         lookup_client,
+        settings=Settings(scheduler_secret="secret"),
+        scheduler_secret="secret",
     )
 
     assert response.requested == 2
@@ -342,6 +345,19 @@ def test_authenticated_etf_metadata_refresh_counts_provider_misses_and_failures(
     assert response.skipped == 1
     assert response.failed == 1
     assert lookup_client.requests == ["BUG", "IXC"]
+
+
+def test_metadata_refresh_requires_scheduler_secret(
+    db_session: Session,
+) -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        refresh_etf_metadata(
+            db_session,
+            FakeInstrumentLookupClient({}),
+            settings=Settings(scheduler_secret="secret"),
+        )
+
+    assert exc_info.value.status_code == 401
 
 
 def test_scheduler_refresh_skips_when_us_market_is_closed(

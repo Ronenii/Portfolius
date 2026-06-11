@@ -3,9 +3,9 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.data.models import Instrument
-from app.data.repositories.holdings import list_etf_instruments_for_user_holdings
 from app.data.repositories.instruments import (
     MANAGED_METADATA_FIELDS,
+    list_all_instruments,
     refresh_instrument_metadata,
 )
 from app.schemas.instruments import InstrumentSearchResult
@@ -36,16 +36,14 @@ def describe_no_change(
     return f"source={profile.source!r}; " + "; ".join(fields)
 
 
-def refresh_etf_metadata_for_user(
+def refresh_instrument_metadata_for_all_instruments(
     db: Session,
-    user_id: str,
     lookup_client,
 ) -> MetadataRefreshResult:
-    instruments = list_etf_instruments_for_user_holdings(db, user_id)
+    instruments = list_all_instruments(db)
     logger.info(
-        "ETF metadata refresh: %d instrument(s) for user %s",
+        "Instrument metadata refresh: %d instrument(s)",
         len(instruments),
-        user_id,
     )
     updated = 0
     skipped = 0
@@ -55,13 +53,16 @@ def refresh_etf_metadata_for_user(
         try:
             profile = lookup_client.profile(instrument.symbol)
         except Exception:
-            logger.exception("ETF metadata refresh failed for %s", instrument.symbol)
+            logger.exception(
+                "Instrument metadata refresh failed for %s",
+                instrument.symbol,
+            )
             failed += 1
             continue
 
         if profile is None:
             logger.info(
-                "ETF metadata refresh skipped %s: provider returned no profile "
+                "Instrument metadata refresh skipped %s: provider returned no profile "
                 "(both primary and ETF lookups were empty)",
                 instrument.symbol,
             )
@@ -69,11 +70,11 @@ def refresh_etf_metadata_for_user(
             continue
 
         if refresh_instrument_metadata(instrument, profile):
-            logger.info("ETF metadata refresh updated %s", instrument.symbol)
+            logger.info("Instrument metadata refresh updated %s", instrument.symbol)
             updated += 1
         else:
             logger.info(
-                "ETF metadata refresh skipped %s: profile present but no field "
+                "Instrument metadata refresh skipped %s: profile present but no field "
                 "changed; %s",
                 instrument.symbol,
                 describe_no_change(instrument, profile),
@@ -82,7 +83,8 @@ def refresh_etf_metadata_for_user(
 
     db.commit()
     logger.info(
-        "ETF metadata refresh complete: requested=%d updated=%d skipped=%d failed=%d",
+        "Instrument metadata refresh complete: "
+        "requested=%d updated=%d skipped=%d failed=%d",
         len(instruments),
         updated,
         skipped,

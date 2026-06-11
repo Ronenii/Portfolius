@@ -9,13 +9,12 @@ from app.core.auth import (
     AuthenticatedUser,
     bearer_scheme,
     decode_supabase_jwt,
-    get_current_user,
     unauthorized,
 )
 from app.core.config import Settings, get_settings
 from app.data.database import get_db
 from app.domain.market_hours import is_us_market_open
-from app.domain.metadata_refresh import refresh_etf_metadata_for_user
+from app.domain.metadata_refresh import refresh_instrument_metadata_for_all_instruments
 from app.domain.price_refresh import (
     PriceRefreshResult,
     refresh_prices_for_all_users,
@@ -101,14 +100,17 @@ def refresh_prices(
     response_model=MetadataRefreshResult,
 )
 def refresh_etf_metadata(
-    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
     lookup_client: Annotated[
         CompositeInstrumentLookupClient,
         Depends(get_instrument_lookup_client),
     ],
+    settings: Annotated[Settings, Depends(get_settings)],
+    scheduler_secret: Annotated[str | None, Header(alias="X-Scheduler-Secret")] = None,
 ) -> MetadataRefreshResult:
-    return refresh_etf_metadata_for_user(db, current_user.user_id, lookup_client)
+    if not validate_scheduler_secret(settings, scheduler_secret):
+        raise unauthorized()
+    return refresh_instrument_metadata_for_all_instruments(db, lookup_client)
 
 
 def validate_scheduler_secret(
