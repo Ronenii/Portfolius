@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.integrations.market_data import MarketPrice
@@ -74,12 +74,28 @@ def latest_non_null_close(history: Any) -> tuple[date, Decimal] | None:
     indexes = history.index
 
     for raw_date, raw_close in reversed(list(zip(indexes, closes, strict=False))):
-        if raw_close is None:
+        close_price = parse_finite_decimal(raw_close)
+        if close_price is None:
             continue
 
-        return normalize_date(raw_date), Decimal(str(raw_close))
+        return normalize_date(raw_date), close_price
 
     return None
+
+
+def parse_finite_decimal(value: Any) -> Decimal | None:
+    if value is None:
+        return None
+
+    try:
+        decimal_value = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+
+    if not decimal_value.is_finite():
+        return None
+
+    return decimal_value
 
 
 def normalize_date(value: Any) -> date:

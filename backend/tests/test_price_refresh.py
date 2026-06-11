@@ -41,6 +41,18 @@ class FakeHistory:
         return [498.12, None, 500.25]
 
 
+class NanLatestHistory:
+    empty = False
+
+    @property
+    def index(self) -> list[date]:
+        return [date(2026, 6, 3), date(2026, 6, 4), date(2026, 6, 5)]
+
+    def __getitem__(self, column_name: str) -> list[float | None]:
+        assert column_name == "Close"
+        return [498.12, 500.25, float("nan")]
+
+
 class EmptyHistory:
     empty = True
 
@@ -54,6 +66,17 @@ class FakeTicker:
     def history(self, period: str) -> FakeHistory:
         assert period == "7d"
         return FakeHistory()
+
+
+class NanLatestTicker:
+    fast_info = {"currency": "usd"}
+
+    def __init__(self, symbol: str) -> None:
+        self.symbol = symbol
+
+    def history(self, period: str) -> NanLatestHistory:
+        assert period == "7d"
+        return NanLatestHistory()
 
 
 class EmptyTicker:
@@ -181,6 +204,18 @@ def test_yfinance_adapter_parses_latest_non_null_close() -> None:
         currency="USD",
         source="yfinance",
     )
+
+
+def test_yfinance_adapter_skips_nan_close_values() -> None:
+    client = YFinanceMarketDataClient(
+        yfinance_module=SimpleNamespace(Ticker=NanLatestTicker),
+    )
+
+    price = client.get_latest_close("voo", "nysearca", "USD")
+
+    assert price is not None
+    assert price.price_date == date(2026, 6, 4)
+    assert price.close_price == Decimal("500.25")
 
 
 def test_yfinance_adapter_returns_none_for_empty_history() -> None:
@@ -337,3 +372,26 @@ def test_refresh_counts_missing_and_failed_provider_results(
     assert result.skipped == 1
     assert result.failed == 1
     assert db_session.scalar(select(func.count()).select_from(Price)) == 1
+
+
+def test_refresh_skips_non_finite_provider_prices(
+    db_session: Session,
+) -> None:
+    voo = instrument("VOO")
+    db_session.add(voo)
+    db_session.flush()
+    add_holding(db_session, "user-123", voo)
+    db_session.commit()
+    client = ScriptedMarketDataClient(
+        {
+            "VOO": market_price("VOO", close_price="NaN"),
+        }
+    )
+
+    result = refresh_prices_for_user(db_session, "user-123", client)
+
+    assert result.requested == 1
+    assert result.updated == 0
+    assert result.skipped == 1
+    assert result.failed == 0
+    assert db_session.scalar(select(func.count()).select_from(Price)) == 0

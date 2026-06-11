@@ -347,6 +347,44 @@ def test_migration_metadata_refresh_counts_provider_misses_and_failures(
     assert lookup_client.requests == ["BUG", "IXC"]
 
 
+def test_metadata_refresh_force_updates_rows_with_unchanged_provider_profile(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    add_profile(db_session, authenticated_user.user_id)
+    holding = add_holding(db_session, authenticated_user.user_id, "IXC")
+    lookup_client = FakeInstrumentLookupClient(
+        {
+            "IXC": InstrumentSearchResult(
+                symbol="IXC",
+                name="IXC Fund",
+                exchange="NYSEARCA",
+                currency="USD",
+                asset_class="ETF",
+                sector="Broad Market",
+                country="United States",
+                region="North America",
+                source="fmp",
+            ),
+        }
+    )
+
+    response = refresh_etf_metadata(
+        db_session,
+        lookup_client,
+        settings=Settings(scheduler_secret="secret"),
+        scheduler_secret="secret",
+        force=True,
+    )
+
+    db_session.refresh(holding.instrument)
+    assert response.requested == 1
+    assert response.updated == 1
+    assert response.skipped == 0
+    assert response.failed == 0
+    assert holding.instrument.metadata_updated_at is not None
+
+
 def test_metadata_refresh_requires_scheduler_secret(
     db_session: Session,
 ) -> None:

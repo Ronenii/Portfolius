@@ -44,6 +44,10 @@ def _refresh_prices_for_instruments(
             skipped += 1
             continue
 
+        if not market_price.close_price.is_finite():
+            skipped += 1
+            continue
+
         upsert_price(db, instrument, market_price)
         updated += 1
 

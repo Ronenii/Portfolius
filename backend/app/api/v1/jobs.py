@@ -107,10 +107,15 @@ def refresh_etf_metadata(
     ],
     settings: Annotated[Settings, Depends(get_settings)],
     scheduler_secret: Annotated[str | None, Header(alias="X-Scheduler-Secret")] = None,
+    force: bool = False,
 ) -> MetadataRefreshResult:
     if not validate_scheduler_secret(settings, scheduler_secret):
         raise unauthorized()
-    return refresh_instrument_metadata_for_all_instruments(db, lookup_client)
+    return refresh_instrument_metadata_for_all_instruments(
+        db,
+        lookup_client,
+        force=force,
+    )
 
 
 def validate_scheduler_secret(

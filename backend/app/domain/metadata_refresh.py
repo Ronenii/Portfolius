@@ -39,6 +39,7 @@ def describe_no_change(
 def refresh_instrument_metadata_for_all_instruments(
     db: Session,
     lookup_client,
+    force: bool = False,
 ) -> MetadataRefreshResult:
     instruments = list_all_instruments(db)
     logger.info(
@@ -69,7 +70,7 @@ def refresh_instrument_metadata_for_all_instruments(
             skipped += 1
             continue
 
-        if refresh_instrument_metadata(instrument, profile):
+        if refresh_instrument_metadata(instrument, profile, force=force):
             logger.info("Instrument metadata refresh updated %s", instrument.symbol)
             updated += 1
         else:

@@ -105,6 +105,25 @@ def test_missing_price_is_excluded_from_priced_totals() -> None:
     assert snapshot.summary.missing_price_holdings == 1
 
 
+def test_non_finite_price_is_treated_as_missing() -> None:
+    voo = instrument("VOO")
+    saved_holding = holding(1, voo, quantity="2", average_cost="400")
+
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        [saved_holding],
+        {voo.id: price(voo, "NaN")},
+    )
+
+    holding_snapshot = snapshot.holdings[0]
+    assert holding_snapshot.market_value is None
+    assert holding_snapshot.unrealized_gain is None
+    assert holding_snapshot.price_status == "missing_price"
+    assert snapshot.summary.total_market_value == Decimal("0")
+    assert snapshot.summary.priced_holdings == 0
+    assert snapshot.summary.missing_price_holdings == 1
+
+
 def test_base_currency_totals_exclude_other_currencies() -> None:
     voo = instrument("VOO", currency="USD")
     eur = instrument("EUNA", currency="EUR", exchange="XETRA")

@@ -31,7 +31,7 @@ def build_portfolio_snapshot(
         unrealized_gain_percent: Decimal | None = None
         price_status = "missing_price"
 
-        if latest_price is None:
+        if latest_price is None or not latest_price.close_price.is_finite():
             missing_price_holdings += 1
         else:
             priced_holdings += 1
