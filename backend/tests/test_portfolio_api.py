@@ -347,7 +347,7 @@ def test_migration_metadata_refresh_counts_provider_misses_and_failures(
     assert lookup_client.requests == ["BUG", "IXC"]
 
 
-def test_metadata_refresh_force_updates_rows_with_unchanged_provider_profile(
+def test_metadata_refresh_always_updates_and_stamps_updated_at(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
 ) -> None:
@@ -374,7 +374,6 @@ def test_metadata_refresh_force_updates_rows_with_unchanged_provider_profile(
         lookup_client,
         settings=Settings(scheduler_secret="secret"),
         scheduler_secret="secret",
-        force=True,
     )
 
     db_session.refresh(holding.instrument)

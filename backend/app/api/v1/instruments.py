@@ -8,9 +8,9 @@ from app.core.auth import AuthenticatedUser, get_current_user, unauthorized
 from app.core.config import Settings, get_settings
 from app.data.database import get_db
 from app.data.repositories.instruments import search_local_instruments
-from app.integrations.alpha_vantage import AlphaVantageEtfProfileClient
 from app.integrations.fmp import FmpInstrumentLookupClient
 from app.integrations.instrument_lookup import CompositeInstrumentLookupClient
+from app.integrations.yfinance_etf_profile import YFinanceEtfProfileClient
 from app.schemas.instruments import InstrumentSearchResult
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def get_instrument_lookup_client(
 ) -> InstrumentLookupClient:
     return CompositeInstrumentLookupClient(
         FmpInstrumentLookupClient(api_key=settings.fmp_api_key),
-        AlphaVantageEtfProfileClient(api_key=settings.alpha_vantage_api_key),
+        YFinanceEtfProfileClient(),
     )
 
 
