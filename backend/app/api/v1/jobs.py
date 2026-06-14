@@ -20,11 +20,11 @@ from app.domain.price_refresh import (
     refresh_prices_for_all_users,
     refresh_prices_for_user,
 )
-from app.integrations.alpha_vantage import AlphaVantageEtfProfileClient
 from app.integrations.fmp import FmpInstrumentLookupClient
 from app.integrations.instrument_lookup import CompositeInstrumentLookupClient
 from app.integrations.market_data import MarketDataClient
 from app.integrations.yfinance_client import YFinanceMarketDataClient
+from app.integrations.yfinance_etf_profile import YFinanceEtfProfileClient
 from app.schemas.jobs import MetadataRefreshResult
 
 router = APIRouter(tags=["jobs"])
@@ -39,7 +39,7 @@ def get_instrument_lookup_client(
 ) -> CompositeInstrumentLookupClient:
     return CompositeInstrumentLookupClient(
         FmpInstrumentLookupClient(settings.fmp_api_key),
-        AlphaVantageEtfProfileClient(settings.alpha_vantage_api_key),
+        YFinanceEtfProfileClient(),
     )
 
 
@@ -107,15 +107,10 @@ def refresh_etf_metadata(
     ],
     settings: Annotated[Settings, Depends(get_settings)],
     scheduler_secret: Annotated[str | None, Header(alias="X-Scheduler-Secret")] = None,
-    force: bool = False,
 ) -> MetadataRefreshResult:
     if not validate_scheduler_secret(settings, scheduler_secret):
         raise unauthorized()
-    return refresh_instrument_metadata_for_all_instruments(
-        db,
-        lookup_client,
-        force=force,
-    )
+    return refresh_instrument_metadata_for_all_instruments(db, lookup_client)
 
 
 def validate_scheduler_secret(

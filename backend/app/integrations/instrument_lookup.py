@@ -1,4 +1,4 @@
-from app.integrations.alpha_vantage import infer_etf_region
+from app.integrations.etf_classification import infer_etf_region
 from app.schemas.instruments import InstrumentSearchResult
 
 

@@ -2,18 +2,13 @@ from typing import Any
 
 import httpx
 
+from app.integrations.etf_classification import (  # noqa: F401 (re-exported)
+    REGION_KEYWORDS,
+    infer_etf_region,
+)
 from app.schemas.instruments import InstrumentSearchResult
 
 DOMINANT_SECTOR_THRESHOLD = 60.0
-
-REGION_KEYWORDS = [
-    ("Global", ("global", "world", "acwi")),
-    ("Europe", ("europe", "eurozone", "euro stoxx", "msci europe")),
-    ("Asia", ("asia", "asia pacific", "pacific ex-japan")),
-    ("Emerging Markets", ("emerging markets", "emerging market")),
-    ("North America", ("north america", "s&p 500", "russell", "nasdaq")),
-    ("United States", ("u.s.", "us ", "usa", "united states")),
-]
 
 
 def optional_text(value: object) -> str | None:
@@ -67,17 +62,6 @@ def classify_etf_sector(sectors: list[dict[str, object]]) -> str | None:
     if dominant_weight >= DOMINANT_SECTOR_THRESHOLD:
         return dominant_sector
     return "Diversified ETF"
-
-
-def infer_etf_region(name: str | None) -> str | None:
-    normalized_name = f" {name.lower()} " if name else ""
-    if not normalized_name:
-        return None
-
-    for region, keywords in REGION_KEYWORDS:
-        if any(keyword in normalized_name for keyword in keywords):
-            return region
-    return None
 
 
 def etf_sectors(payload: dict[str, object]) -> list[dict[str, object]]:

@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +34,14 @@ def configure_logging() -> None:
         app_logger.addHandler(handler)
 
 
+def suppress_third_party_warnings() -> None:
+    # yfinance uses pd.Timestamp.utcnow() which is deprecated in pandas 2.x;
+    # nothing we can do until yfinance fixes it upstream.
+    warnings.filterwarnings("ignore", message=".*utcnow.*", module="yfinance")
+
+
 def create_app() -> FastAPI:
+    suppress_third_party_warnings()
     configure_logging()
     settings = get_settings()
     app = FastAPI(title="Portfolius API")

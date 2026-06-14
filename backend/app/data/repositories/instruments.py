@@ -54,18 +54,12 @@ MANAGED_METADATA_FIELDS = (
 def refresh_instrument_metadata(
     instrument: Instrument,
     profile: InstrumentSearchResult,
-    force: bool = False,
-) -> bool:
-    changed = False
+) -> None:
     for field in MANAGED_METADATA_FIELDS:
         value = getattr(profile, field)
-        if value is not None and getattr(instrument, field) != value:
+        if value is not None:
             setattr(instrument, field, value)
-            changed = True
-
-    if changed or force:
-        instrument.metadata_updated_at = datetime.now(UTC)
-    return changed or force
+    instrument.metadata_updated_at = datetime.now(UTC)
 
 
 def list_all_instruments(db: Session) -> list[Instrument]:
