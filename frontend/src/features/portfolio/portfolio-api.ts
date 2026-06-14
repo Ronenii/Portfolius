@@ -20,6 +20,7 @@ export type PortfolioSummary = {
   total_unrealized_gain: string;
   priced_holdings: number;
   missing_price_holdings: number;
+  latest_price_date: string | null;
 };
 
 export type CurrencyTotal = {

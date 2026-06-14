@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from pydantic import BaseModel, field_serializer
@@ -37,6 +38,7 @@ class PortfolioSummary(BaseModel):
     total_unrealized_gain: Decimal
     priced_holdings: int
     missing_price_holdings: int
+    latest_price_date: date | None
 
     @field_serializer(
         "total_market_value",

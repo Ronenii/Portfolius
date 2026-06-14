@@ -45,6 +45,7 @@ const pricedSnapshot: PortfolioSnapshot = {
     total_unrealized_gain: "250.00",
     priced_holdings: 1,
     missing_price_holdings: 0,
+    latest_price_date: "2026-06-05",
   },
   holdings: [
     {
@@ -184,6 +185,7 @@ function emptySnapshot(): PortfolioSnapshot {
       total_unrealized_gain: "0",
       priced_holdings: 0,
       missing_price_holdings: 0,
+      latest_price_date: null,
     },
     holdings: [],
     currency_totals: {},
@@ -281,6 +283,7 @@ describe("DashboardPage", () => {
     expect(within(summary).getByText("$1,000.00")).toBeInTheDocument();
     expect(within(summary).getByText("$250.00")).toBeInTheDocument();
     expect(within(summary).getByText("1 priced / 0 missing")).toBeInTheDocument();
+    expect(within(summary).getByText("Latest price date: Jun 5, 2026")).toBeInTheDocument();
   });
 
   it("hides backend status in prod mode", async () => {

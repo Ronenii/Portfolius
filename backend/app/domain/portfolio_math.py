@@ -22,6 +22,7 @@ def build_portfolio_snapshot(
     total_unrealized_gain = Decimal("0")
     priced_holdings = 0
     missing_price_holdings = 0
+    latest_price_date = None
 
     for holding in holdings:
         latest_price = latest_prices.get(holding.instrument_id)
@@ -36,6 +37,8 @@ def build_portfolio_snapshot(
         else:
             priced_holdings += 1
             price_status = "priced"
+            if latest_price_date is None or latest_price.price_date > latest_price_date:
+                latest_price_date = latest_price.price_date
             market_value = holding.quantity * latest_price.close_price
             unrealized_gain = market_value - cost_basis
             if cost_basis > 0:
@@ -79,6 +82,7 @@ def build_portfolio_snapshot(
             total_unrealized_gain=total_unrealized_gain,
             priced_holdings=priced_holdings,
             missing_price_holdings=missing_price_holdings,
+            latest_price_date=latest_price_date,
         ),
         holdings=holding_snapshots,
         currency_totals=currency_totals,

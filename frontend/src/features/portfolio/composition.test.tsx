@@ -49,6 +49,7 @@ const snapshot: PortfolioSnapshot = {
   holdings: [],
   summary: {
     base_currency: "USD",
+    latest_price_date: "2026-06-05",
     missing_price_holdings: 0,
     priced_holdings: 2,
     total_cost_basis: "1000.00",

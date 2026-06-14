@@ -87,6 +87,29 @@ def test_priced_holding_returns_value_cost_and_gain_math() -> None:
     assert snapshot.summary.missing_price_holdings == 0
 
 
+def test_summary_reports_latest_valid_price_date() -> None:
+    voo = instrument("VOO")
+    vxus = instrument("VXUS")
+    agg = instrument("AGGZZ")
+    holdings = [
+        holding(1, voo, quantity="2", average_cost="400"),
+        holding(2, vxus, quantity="3", average_cost="50"),
+        holding(3, agg, quantity="1", average_cost="300"),
+    ]
+
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        holdings,
+        {
+            voo.id: price(voo, "500", price_date=date(2026, 6, 5)),
+            vxus.id: price(vxus, "60", price_date=date(2026, 6, 7)),
+            agg.id: price(agg, "NaN", price_date=date(2026, 6, 8)),
+        },
+    )
+
+    assert snapshot.summary.latest_price_date == date(2026, 6, 7)
+
+
 def test_missing_price_is_excluded_from_priced_totals() -> None:
     voo = instrument("VOO")
     saved_holding = holding(1, voo, quantity="2", average_cost="400")

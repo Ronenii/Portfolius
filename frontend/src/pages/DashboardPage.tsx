@@ -123,6 +123,23 @@ function formatPercent(value: string | null | undefined) {
   }).format(Number.isFinite(numericValue) ? numericValue : 0)}%`;
 }
 
+function formatPriceDate(value: string | null | undefined) {
+  if (!value) {
+    return "Not reported";
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return "Not reported";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 function summaryState(snapshot: PortfolioSnapshot | undefined) {
   if (!snapshot) {
     return null;
@@ -319,7 +336,10 @@ export default function DashboardPage() {
                   {snapshotQuery.data.summary.priced_holdings} priced /{" "}
                   {snapshotQuery.data.summary.missing_price_holdings} missing
                 </strong>
-                <span>Latest price date: Not reported</span>
+                <span>
+                  Latest price date:{" "}
+                  {formatPriceDate(snapshotQuery.data.summary.latest_price_date)}
+                </span>
               </article>
             </div>
             {summaryState(snapshotQuery.data) ? (
