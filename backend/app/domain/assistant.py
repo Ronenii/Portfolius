@@ -13,11 +13,16 @@ from app.data.models import Conversation, Instrument, Profile
 from app.data.repositories.conversations import append_message, list_messages
 from app.data.repositories.prices import get_latest_prices_for_instruments
 from app.data.repositories.profiles import get_profile_by_user_id
-from app.domain.portfolio_service import build_breakdowns_for_user, simulate_for_user
+from app.domain.portfolio_service import (
+    InstrumentLookupClient,
+    build_breakdowns_for_user,
+    simulate_for_user,
+)
 from app.integrations.llm import (
     ChatCompletion,
     ChatMessage,
     LlmClient,
+    LlmRateLimitError,
     ToolCall,
     ToolSpec,
 )
@@ -25,7 +30,7 @@ from app.integrations.market_data import MarketDataClient, MarketPrice
 from app.schemas.portfolio import AllocationRow, PortfolioBreakdowns
 from app.schemas.simulation import SimulationRequest
 
-MAX_TOOL_ITERATIONS = 4
+MAX_TOOL_ITERATIONS = 6
 INLINE_FUNCTION_CALL_RE = re.compile(
     r"\s*<function=[^>]+>.*?</function>\s*",
     re.DOTALL,
@@ -102,12 +107,32 @@ def build_system_prompt() -> str:
         "looks like, what would happen if trades were made, or what an instrument "
         "currently costs. Use the price tool before naming specific buy ideas or "
         "comparing recommended instruments. "
+        "You can only SIMULATE trades — you cannot execute them and you have no way to "
+        "buy, sell, or change anything the user owns. Never say or imply that a trade "
+        "has been placed, sold, bought, or done. Always describe simulated trades as "
+        "hypothetical, e.g. 'if you sold 0.5 shares of IVV, your US share would drop "
+        "to about 40%'. The user makes any real trades themselves in the app. "
+        "When the user asks to rebalance or asks a what-if (e.g. 'cut my US holdings "
+        "to 40%'), build a concrete plan: first call get_portfolio_breakdowns for the "
+        "current numbers, then get_instrument_prices for every instrument involved, "
+        "then turn the goal into specific simulate_trades legs (work out the share or "
+        "dollar amounts), then call simulate_trades and read the resulting delta and "
+        "simulated numbers. If the result misses the target, adjust the legs and "
+        "simulate again before answering. "
+        "There is no currency-conversion tool and the portfolio is valued in the base "
+        "currency. If the user gives cash in another currency (e.g. '3,000 ILS to "
+        "convert to USD'), ask for the approximate converted amount in the base "
+        "currency, or say you will plan in the base currency — never invent an "
+        "exchange rate. "
         "You are not a financial advisor; only mention risks or limitations when they "
         "are directly relevant to what was asked. "
-        "Reply in 4-6 plain sentences for conversational questions: include the key "
-        "reason, the most relevant number or price when available, and one practical "
-        "next step. Only give a longer answer when the user asks for detail. Lead with "
-        "the direct answer — never open with a preamble or restate the question."
+        "Lead with the direct answer — never open with a preamble or restate the "
+        "question. For conversational questions, reply in 4-6 plain sentences with the "
+        "key reason, the most relevant number or price when available, and one "
+        "practical next step. When the user asks for a plan or steps, give a short "
+        "ordered list of the concrete trades to make — what to sell and what to buy, "
+        "with the approximate shares or amounts at the quoted price — and show the "
+        "before and after numbers from your simulation."
     )
 
 
@@ -192,6 +217,16 @@ def summarize_breakdowns(breakdowns: PortfolioBreakdowns) -> dict[str, Any]:
     }
 
 
+def round_for_tool(value: Decimal, places: str = "0.01") -> str:
+    """Round a Decimal to two places for compact, LLM-facing tool output.
+
+    Raw breakdown Decimals carry ~28 significant digits. The model needs none of
+    that precision, and these payloads are re-sent on every later tool-loop call,
+    so trimming them meaningfully lowers per-turn token use.
+    """
+    return str(value.quantize(Decimal(places)))
+
+
 def summarize_dimension(
     rows: list[AllocationRow],
     limit: int = 8,
@@ -200,8 +235,8 @@ def summarize_dimension(
         {
             "label": row.label,
             "currency": row.currency,
-            "percent": str(row.percent),
-            "market_value": str(row.market_value),
+            "percent": round_for_tool(row.percent),
+            "market_value": round_for_tool(row.market_value),
             "holding_count": row.holding_count,
         }
         for row in rows[:limit]
@@ -309,6 +344,7 @@ def execute_tool(
     user_id: str,
     tool_call: ToolCall,
     market_data_client: MarketDataClient | None = None,
+    lookup_client: InstrumentLookupClient | None = None,
 ) -> str:
     if tool_call.name == "get_portfolio_breakdowns":
         breakdowns = build_breakdowns_for_user(db, user_id)
@@ -316,22 +352,39 @@ def execute_tool(
 
     if tool_call.name == "simulate_trades":
         request = SimulationRequest.model_validate(tool_call.arguments)
-        response = simulate_for_user(db, user_id, request.legs)
+        # Pass the same clients the Simulation tab uses so instruments without a
+        # cached local price are priced (and unknown ones resolved) instead of
+        # silently valued at $0 — otherwise the assistant's numbers diverge from
+        # the Simulation tab for exactly the rebalancing case (buying new ETFs).
+        response = simulate_for_user(
+            db,
+            user_id,
+            request.legs,
+            lookup_client,
+            market_data_client,
+        )
         db.rollback()
+        # Keep this payload small: it is re-sent on every later tool-loop call and
+        # the turn shares Groq's per-minute token budget. ``current`` is omitted
+        # because the before-state is already in each delta's ``percent_before``
+        # (and the model fetches get_portfolio_breakdowns earlier in the turn).
+        top_deltas = sorted(
+            response.delta,
+            key=lambda delta: abs(delta.percent_change),
+            reverse=True,
+        )[:8]
         return compact_json(
             {
-                "current": summarize_breakdowns(response.current),
                 "simulated": summarize_breakdowns(response.simulated),
                 "delta": [
                     {
                         "dimension": delta.dimension,
                         "label": delta.label,
-                        "currency": delta.currency,
-                        "percent_before": str(delta.percent_before),
-                        "percent_after": str(delta.percent_after),
-                        "percent_change": str(delta.percent_change),
+                        "percent_before": round_for_tool(delta.percent_before),
+                        "percent_after": round_for_tool(delta.percent_after),
+                        "percent_change": round_for_tool(delta.percent_change),
                     }
-                    for delta in response.delta[:20]
+                    for delta in top_deltas
                 ],
                 "warnings": response.warnings,
             }
@@ -365,9 +418,31 @@ def build_initial_messages(
     return messages
 
 
+EMPTY_REPLY_FALLBACK = (
+    "I wasn't able to put together an answer for that. Could you rephrase or ask "
+    "a more specific question about your portfolio?"
+)
+TRUNCATED_REPLY_FALLBACK = (
+    "My answer ran longer than I had room for. Could you ask for a shorter answer "
+    "or narrow the question (for example, one region or one trade at a time)?"
+)
+RATE_LIMITED_REPLY = (
+    "I've used up my AI token budget for this minute. Please wait about a minute "
+    "and send your message again to continue."
+)
+
+
 def final_reply_from_completion(completion: ChatCompletion) -> str:
     content = completion.message.content or ""
-    return INLINE_FUNCTION_CALL_RE.sub(" ", content).strip()
+    reply = INLINE_FUNCTION_CALL_RE.sub(" ", content).strip()
+    if reply:
+        return reply
+    # Reasoning models sometimes return HTTP 200 with empty content (all tokens
+    # spent on hidden reasoning, or truncated by the token budget). Never persist
+    # a blank reply — it surfaces as an empty chat bubble with only a tool badge.
+    if completion.finish_reason == "length":
+        return TRUNCATED_REPLY_FALLBACK
+    return EMPTY_REPLY_FALLBACK
 
 
 def run_assistant_turn(
@@ -377,6 +452,7 @@ def run_assistant_turn(
     user_message: str,
     llm_client: LlmClient,
     market_data_client: MarketDataClient | None = None,
+    lookup_client: InstrumentLookupClient | None = None,
 ) -> AssistantTurnResult:
     append_message(db, conversation, "user", user_message)
     messages = build_initial_messages(db, user_id, conversation)
@@ -384,7 +460,13 @@ def run_assistant_turn(
     used_tools: list[str] = []
 
     for _index in range(MAX_TOOL_ITERATIONS):
-        completion = llm_client.complete(messages, tools)
+        try:
+            completion = llm_client.complete(messages, tools)
+        except LlmRateLimitError:
+            # Free-tier tokens-per-minute exhausted mid-turn. Surface a clear
+            # retry notice instead of a 500 or a blank bubble.
+            append_message(db, conversation, "assistant", RATE_LIMITED_REPLY)
+            return AssistantTurnResult(reply=RATE_LIMITED_REPLY, used_tools=used_tools)
         if not completion.tool_calls:
             reply = final_reply_from_completion(completion)
             append_message(db, conversation, "assistant", reply)
@@ -401,6 +483,7 @@ def run_assistant_turn(
                         user_id,
                         tool_call,
                         market_data_client,
+                        lookup_client,
                     ),
                     tool_call_id=tool_call.id,
                 )

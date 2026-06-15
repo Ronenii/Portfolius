@@ -16,8 +16,9 @@ class Settings(BaseSettings):
     scheduler_secret: str | None = None
     llm_api_key: str | None = None
     llm_base_url: str = "https://api.groq.com/openai/v1"
-    llm_model: str = "llama-3.3-70b-versatile"
-    llm_max_tokens: int = 1024
+    llm_model: str = "openai/gpt-oss-120b"
+    llm_max_tokens: int = 3072
+    llm_reasoning_effort: str | None = "low"
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),

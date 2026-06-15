@@ -1,7 +1,11 @@
 from decimal import Decimal
 
 from app.data.models import Profile
-from app.domain.assistant import build_assistant_context, build_system_prompt
+from app.domain.assistant import (
+    build_assistant_context,
+    build_system_prompt,
+    summarize_dimension,
+)
 from app.schemas.portfolio import AllocationRow, PortfolioBreakdowns
 
 
@@ -63,6 +67,29 @@ def test_context_summary_includes_goals_and_allocation_percentages() -> None:
     assert "Ronen" not in context
     assert "holding_id" not in context
     assert "access_token" not in context
+
+
+def test_summarize_dimension_rounds_numbers_for_compact_tool_output() -> None:
+    """Full 28-digit Decimals waste tokens; the model only needs ~2 decimals.
+
+    These tool outputs are re-sent on every later tool-loop call, so trimming
+    precision directly lowers the per-turn token use that drives Groq 429s.
+    """
+    rows = [
+        AllocationRow(
+            currency="USD",
+            dimension="region",
+            holding_count=1,
+            label="North America",
+            market_value=Decimal("2004.250000000001"),
+            percent=Decimal("55.88518085889753721767298961"),
+        )
+    ]
+
+    out = summarize_dimension(rows)
+
+    assert out[0]["percent"] == "55.89"
+    assert out[0]["market_value"] == "2004.25"
 
 
 def test_system_prompt_sets_educational_guardrail_and_tool_expectation() -> None:

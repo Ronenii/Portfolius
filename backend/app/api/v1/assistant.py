@@ -14,9 +14,12 @@ from app.data.repositories.conversations import (
     list_messages,
 )
 from app.domain.assistant import run_assistant_turn
+from app.integrations.fmp import FmpInstrumentLookupClient
+from app.integrations.instrument_lookup import CompositeInstrumentLookupClient
 from app.integrations.llm import GroqLlmClient, LlmClient, is_llm_configured
 from app.integrations.market_data import MarketDataClient
 from app.integrations.yfinance_client import YFinanceMarketDataClient
+from app.integrations.yfinance_etf_profile import YFinanceEtfProfileClient
 from app.schemas.assistant import (
     AssistantMessageRequest,
     AssistantMessageResponse,
@@ -41,6 +44,15 @@ def get_llm_client(
 
 def get_market_data_client() -> MarketDataClient:
     return YFinanceMarketDataClient()
+
+
+def get_instrument_lookup_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> CompositeInstrumentLookupClient:
+    return CompositeInstrumentLookupClient(
+        FmpInstrumentLookupClient(api_key=settings.fmp_api_key),
+        YFinanceEtfProfileClient(),
+    )
 
 
 def assistant_not_found() -> HTTPException:
@@ -83,6 +95,10 @@ def post_assistant_message(
         MarketDataClient,
         Depends(get_market_data_client),
     ],
+    lookup_client: Annotated[
+        CompositeInstrumentLookupClient,
+        Depends(get_instrument_lookup_client),
+    ],
 ) -> AssistantMessageResponse:
     if payload.conversation_id is None:
         conversation = create_conversation(
@@ -106,6 +122,7 @@ def post_assistant_message(
         payload.message,
         llm_client,
         market_data_client,
+        lookup_client,
     )
     return AssistantMessageResponse(
         conversation_id=conversation.id,

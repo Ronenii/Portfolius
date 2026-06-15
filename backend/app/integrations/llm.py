@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
+import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -8,9 +10,23 @@ import httpx
 
 from app.core.config import Settings
 
+INLINE_FUNCTION_CALL_RE = re.compile(
+    r"<function=([^>\s]+)\s*>(.*?)</function>",
+    re.DOTALL,
+)
+
 
 class LlmError(RuntimeError):
     pass
+
+
+class LlmRateLimitError(LlmError):
+    """Raised when the provider rate-limits us and retries are exhausted.
+
+    Distinct from LlmError so callers can show a "try again in a minute" notice
+    instead of treating it as a hard failure (Groq's free tier caps tokens per
+    minute, and each assistant turn makes several calls).
+    """
 
 
 @dataclass(frozen=True)
@@ -39,6 +55,7 @@ class ToolSpec:
 class ChatCompletion:
     message: ChatMessage
     tool_calls: list[ToolCall]
+    finish_reason: str | None = None
 
 
 class LlmClient(Protocol):
@@ -128,6 +145,37 @@ def parse_tool_calls(raw_tool_calls: object) -> list[ToolCall]:
     return tool_calls
 
 
+def parse_inline_tool_calls(content: str) -> tuple[list[ToolCall], str]:
+    """Recover tool calls some models emit as inline ``<function=...>`` text.
+
+    Certain Groq-hosted models (e.g. Llama) sometimes write tool calls into the
+    reply ``content`` instead of the structured ``tool_calls`` field. Without
+    this fallback those calls are silently treated as a final answer and never
+    executed, so the model narrates an outcome that never happened.
+
+    Returns the recovered calls and the content with the markup removed.
+    """
+    tool_calls: list[ToolCall] = []
+    for index, match in enumerate(INLINE_FUNCTION_CALL_RE.finditer(content)):
+        name = match.group(1).strip()
+        if not name:
+            continue
+        raw_arguments = match.group(2).strip()
+        try:
+            arguments = parse_arguments(raw_arguments)
+        except LlmError:
+            arguments = {}
+        tool_calls.append(
+            ToolCall(
+                id=f"inline-call-{index}",
+                name=name,
+                arguments=arguments,
+            )
+        )
+    cleaned_content = INLINE_FUNCTION_CALL_RE.sub(" ", content).strip()
+    return tool_calls, cleaned_content
+
+
 def parse_completion(payload: object) -> ChatCompletion:
     if not isinstance(payload, dict):
         raise LlmError("LLM provider returned an invalid response")
@@ -136,7 +184,12 @@ def parse_completion(payload: object) -> ChatCompletion:
     if not isinstance(raw_choices, list) or not raw_choices:
         raise LlmError("LLM provider returned no choices")
 
-    raw_message = raw_choices[0].get("message")
+    raw_choice = raw_choices[0]
+    finish_reason = raw_choice.get("finish_reason")
+    if not isinstance(finish_reason, str):
+        finish_reason = None
+
+    raw_message = raw_choice.get("message")
     if not isinstance(raw_message, dict):
         raise LlmError("LLM provider returned no assistant message")
 
@@ -148,13 +201,23 @@ def parse_completion(payload: object) -> ChatCompletion:
         raise LlmError("LLM provider returned invalid message content")
 
     tool_calls = parse_tool_calls(raw_message.get("tool_calls"))
+    if not tool_calls and content:
+        inline_calls, cleaned_content = parse_inline_tool_calls(content)
+        if inline_calls:
+            tool_calls = inline_calls
+            content = cleaned_content
+
     return ChatCompletion(
         message=ChatMessage(role=role, content=content, tool_calls=tool_calls),
         tool_calls=tool_calls,
+        finish_reason=finish_reason,
     )
 
 
 class GroqLlmClient:
+    MAX_RETRIES = 3
+    RETRY_BASE_DELAY = 2.0  # seconds; doubles each attempt
+
     def __init__(
         self,
         api_key: str,
@@ -162,12 +225,14 @@ class GroqLlmClient:
         http_client: httpx.Client | None = None,
         max_tokens: int = 1024,
         model: str = "llama-3.3-70b-versatile",
+        reasoning_effort: str | None = None,
     ) -> None:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.http_client = http_client or httpx.Client(timeout=20.0)
         self.max_tokens = max_tokens
         self.model = model
+        self.reasoning_effort = reasoning_effort
 
     @classmethod
     def from_settings(
@@ -183,6 +248,7 @@ class GroqLlmClient:
             http_client=http_client,
             max_tokens=settings.llm_max_tokens,
             model=settings.llm_model,
+            reasoning_effort=settings.llm_reasoning_effort,
         )
 
     def complete(
@@ -195,19 +261,41 @@ class GroqLlmClient:
             "messages": [serialize_message(message) for message in messages],
             "max_tokens": self.max_tokens,
         }
+        if self.reasoning_effort is not None:
+            body["reasoning_effort"] = self.reasoning_effort
         if tools is not None:
             body["tools"] = [serialize_tool(tool) for tool in tools]
 
-        try:
-            response = self.http_client.post(
-                f"{self.base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                json=body,
-            )
-            response.raise_for_status()
-        except httpx.TimeoutException as exc:
-            raise LlmError("LLM provider timed out") from exc
-        except httpx.HTTPError as exc:
-            raise LlmError("LLM provider request failed") from exc
+        last_exc: Exception | None = None
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                response = self.http_client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    json=body,
+                )
+                if response.status_code == 429:
+                    retry_after = float(
+                        response.headers.get("retry-after", self.RETRY_BASE_DELAY * (2**attempt))
+                    )
+                    if attempt < self.MAX_RETRIES - 1:
+                        time.sleep(retry_after)
+                        continue
+                    raise LlmRateLimitError(
+                        "LLM provider rate-limited; try again in a moment"
+                    )
+                response.raise_for_status()
+            except httpx.TimeoutException as exc:
+                raise LlmError("LLM provider timed out") from exc
+            except httpx.HTTPStatusError as exc:
+                raise LlmError("LLM provider request failed") from exc
+            except httpx.HTTPError as exc:
+                last_exc = exc
+                if attempt < self.MAX_RETRIES - 1:
+                    time.sleep(self.RETRY_BASE_DELAY * (2**attempt))
+                    continue
+                raise LlmError("LLM provider request failed") from exc
+            else:
+                return parse_completion(response.json())
 
-        return parse_completion(response.json())
+        raise LlmError("LLM provider request failed") from last_exc
