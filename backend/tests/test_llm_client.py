@@ -226,7 +226,9 @@ def test_groq_client_retries_on_429_and_succeeds() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(1)
         if len(calls) < 2:
-            return httpx.Response(429, headers={"retry-after": "0"}, text="rate limited")
+            return httpx.Response(
+                429, headers={"retry-after": "0"}, text="rate limited"
+            )
         return httpx.Response(
             200, json={"choices": [{"message": {"role": "assistant", "content": "OK"}}]}
         )

@@ -109,5 +109,6 @@ def test_system_prompt_instructs_lightweight_markdown_formatting() -> None:
     prompt = build_system_prompt()
 
     assert "**bold**" in prompt or "bold" in prompt.lower()
-    assert "bullet" in prompt.lower() or "numbered" in prompt.lower() or "list" in prompt.lower()
+    lowered = prompt.lower()
+    assert "bullet" in lowered or "numbered" in lowered or "list" in lowered
     assert "table" in prompt.lower()

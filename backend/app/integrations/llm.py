@@ -276,7 +276,9 @@ class GroqLlmClient:
                 )
                 if response.status_code == 429:
                     retry_after = float(
-                        response.headers.get("retry-after", self.RETRY_BASE_DELAY * (2**attempt))
+                        response.headers.get(
+                            "retry-after", self.RETRY_BASE_DELAY * (2**attempt)
+                        )
                     )
                     if attempt < self.MAX_RETRIES - 1:
                         time.sleep(retry_after)
