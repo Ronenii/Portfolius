@@ -98,3 +98,16 @@ def test_system_prompt_sets_educational_guardrail_and_tool_expectation() -> None
     assert "not a financial advisor" in prompt.lower()
     assert "use tools" in prompt.lower()
     assert "real numbers" in prompt.lower()
+
+
+def test_system_prompt_instructs_lightweight_markdown_formatting() -> None:
+    """The model must be told to use light Markdown (bold, lists) not heavy tables.
+
+    This steers it toward cheaper output that fits the free-tier token budget
+    while still rendering nicely now that the frontend renders Markdown.
+    """
+    prompt = build_system_prompt()
+
+    assert "**bold**" in prompt or "bold" in prompt.lower()
+    assert "bullet" in prompt.lower() or "numbered" in prompt.lower() or "list" in prompt.lower()
+    assert "table" in prompt.lower()
