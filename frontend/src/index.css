@@ -609,6 +609,17 @@ a {
   background: var(--ink-950);
 }
 
+.mode-terminal .assistant-message--assistant th,
+.mode-terminal .assistant-message--assistant td {
+  border-color: var(--ink-700);
+}
+.mode-terminal .assistant-message--assistant th {
+  background: var(--ink-800);
+}
+.mode-terminal .assistant-message--assistant code {
+  background: var(--ink-800);
+}
+
 .mode-terminal .assistant-composer textarea {
   border-color: var(--ink-700);
   background: var(--ink-900);
