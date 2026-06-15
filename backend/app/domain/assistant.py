@@ -132,7 +132,11 @@ def build_system_prompt() -> str:
         "practical next step. When the user asks for a plan or steps, give a short "
         "ordered list of the concrete trades to make — what to sell and what to buy, "
         "with the approximate shares or amounts at the quoted price — and show the "
-        "before and after numbers from your simulation."
+        "before and after numbers from your simulation. "
+        "Format your replies using light Markdown: use **bold** for key figures and "
+        "instrument names, and numbered or bulleted lists for steps or comparisons. "
+        "Use a compact table only when showing several before/after numbers side by "
+        "side — otherwise prefer lists. Do not use large tables for single-step plans."
     )
 
 
