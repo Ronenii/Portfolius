@@ -358,6 +358,10 @@ describe("assistant page", () => {
 });
 
 describe("ChatMessageList markdown rendering", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   function msg(content: string): ThreadMessage {
     return { id: 1, role: "assistant", content, created_at: "2026-06-15T00:00:00Z" };
   }
@@ -377,7 +381,7 @@ describe("ChatMessageList markdown rendering", () => {
       />
     );
     const items = document.querySelectorAll("li");
-    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(items).toHaveLength(2);
     expect(items[0].textContent).toBe("Buy VWO");
     expect(items[1].textContent).toBe("Buy IEUR");
   });
@@ -390,7 +394,8 @@ describe("ChatMessageList markdown rendering", () => {
         ]}
       />
     );
-    expect(document.querySelector("p")?.textContent).not.toContain("<function=");
-    expect(screen.getByText("Checking your mix.")).toBeInTheDocument();
+    const text = screen.getByText("Checking your mix.");
+    expect(text).toBeInTheDocument();
+    expect(text.textContent).not.toContain("<function=");
   });
 });
