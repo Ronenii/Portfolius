@@ -609,6 +609,11 @@ a {
   background: var(--ink-950);
 }
 
+.mode-terminal .assistant-thread,
+.mode-terminal .assistant-history {
+  scrollbar-color: var(--ink-700) var(--ink-900);
+}
+
 .mode-terminal .assistant-message--assistant th,
 .mode-terminal .assistant-message--assistant td {
   border-color: var(--ink-700);
