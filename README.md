@@ -26,7 +26,7 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 - **Portfolio dashboard**: current values, cost basis, gain/loss, price coverage, and allocation breakdowns by instrument, asset class, sector, country, region, and currency.
 - **Allocation exploration**: drill into any allocation slice to see the instrument composition inside it, with both "% of slice" and "% of portfolio"; switch each dimension between bar, donut, and table views. The drill-down is keyboard-accessible and the dense table stays the canonical readable view.
 - **What-if simulation**: build a buy/sell basket and see before/after/delta across every breakdown dimension without committing any trades.
-- **AI assistant**: floating chat grounded in your holdings, profile goals, and live simulation results. Uses Groq's `llama-3.3-70b-versatile` model with tool-calling. Disabled gracefully when `LLM_API_KEY` is not set.
+- **AI assistant**: floating chat grounded in your holdings, profile goals, and live simulation results. Uses Groq's `openai/gpt-oss-120b` reasoning model with tool-calling, and renders replies as Markdown (bold figures, lists, and compact before/after tables). Disabled gracefully when `LLM_API_KEY` is not set; when the free-tier per-minute token budget is exhausted mid-conversation it returns a clear "try again in a minute" message rather than failing.
 - **Responsive**: works on desktop and phone.
 
 ## Tech stack
@@ -37,7 +37,7 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 | Backend | FastAPI (Python 3.11+), SQLAlchemy 2.0, Alembic |
 | Database + Auth | Supabase (Postgres + Google OAuth or magic-link auth) |
 | Market data | Financial Modeling Prep for instrument search, yfinance for daily close prices |
-| LLM | Groq (`llama-3.3-70b-versatile`), OpenAI-compatible, configurable |
+| LLM | Groq (`openai/gpt-oss-120b` reasoning model), OpenAI-compatible, configurable |
 | Frontend hosting | Vercel |
 | Backend hosting | Render (free web service) |
 | Cron (price refresh) | GitHub Actions |
@@ -74,7 +74,7 @@ portfolius/
 ├── .github/workflows/
 │   ├── ci.yml                 # lint + test on PR
 │   └── refresh-prices.yml     # market-hours price refresh
-├── CLAUDE.md                  # instructions for Claude Code
+├── AGENTS.md                  # build/test/conventions guidance for AI coding agents
 └── README.md
 ```
 
@@ -146,11 +146,14 @@ M2 does not do FX conversion. Portfolio-wide summary totals include priced holdi
 ```
 LLM_API_KEY=<your-groq-api-key>      # get one at console.groq.com — free tier
 LLM_BASE_URL=https://api.groq.com/openai/v1  # default; override to use a different OpenAI-compatible provider
-LLM_MODEL=llama-3.3-70b-versatile    # default; override as needed
-LLM_MAX_TOKENS=1024                  # default
+LLM_MODEL=openai/gpt-oss-120b        # default; override as needed
+LLM_MAX_TOKENS=3072                  # default
+LLM_REASONING_EFFORT=low             # gpt-oss reasoning effort: low | medium | high (unset to omit for non-reasoning models)
 ```
 
-Without `LLM_API_KEY` the assistant endpoints return `503 "Assistant is not configured"`. The simulation endpoint (`POST /api/v1/portfolio/simulate`) works without an LLM key. The simulated snapshot is non-mutating — hypothetical buy/sell legs are never persisted as holdings — but simulating a buy of an instrument you don't yet hold will resolve and cache its metadata (via FMP) and refresh its latest price (via yfinance) as a side effect.
+`LLM_REASONING_EFFORT` is only valid for reasoning models such as `openai/gpt-oss-120b`, where Groq accepts exactly `low`, `medium`, or `high`. If you point `LLM_MODEL` at a non-reasoning model (e.g. `llama-3.3-70b-versatile`), leave `LLM_REASONING_EFFORT` unset, or the request is rejected with HTTP 400.
+
+Without `LLM_API_KEY` the assistant endpoints return `503 "Assistant is not configured"`. The simulation endpoint (`POST /api/v1/portfolio/simulate`) works without an LLM key. The simulated snapshot is non-mutating — hypothetical buy/sell legs are never persisted as holdings — but simulating a buy of an instrument you don't yet hold will resolve and cache its metadata (via FMP) and refresh its latest price (via yfinance) as a side effect. The assistant's `simulate_trades` tool runs through the same pipeline with the same clients, so its before/after numbers match the Simulation tab exactly.
 
 **Frontend (`frontend/.env.local`):**
 
@@ -215,7 +218,7 @@ PORTFOLIUS_SCHEDULER_SECRET=<same value as backend SCHEDULER_SECRET>
 
 1. Push the repo to GitHub.
 2. In Render: **New → Blueprint**, point at the repo. It picks up `backend/render.yaml` and creates the web service.
-3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `SCHEDULER_SECRET`, and `LLM_API_KEY`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available. `LLM_MODEL` is pre-set in `render.yaml`; override it in the dashboard if you want a different model.
+3. Add environment variables (`DATABASE_URL`, `SUPABASE_URL`, `AUTH_AUDIENCE`, `FRONTEND_ORIGINS`, `FMP_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `SCHEDULER_SECRET`, and `LLM_API_KEY`) in the service dashboard. Mark `DATABASE_URL`, provider keys, and scheduler secrets as secret where available. `LLM_MODEL` is pre-set in `render.yaml`; override it in the dashboard if you want a different model. **Keep `LLM_MODEL` and `LLM_REASONING_EFFORT` consistent**: a reasoning model (`openai/gpt-oss-120b`) needs `LLM_REASONING_EFFORT` set to `low`/`medium`/`high`, while a non-reasoning model (`llama-3.3-70b-versatile`) requires it unset — a mismatch causes every assistant request to fail with HTTP 400.
 4. Take the resulting `https://<service>.onrender.com` URL and set it as `VITE_API_URL` in Vercel.
 
 For `FRONTEND_ORIGINS`, use a JSON list of allowed frontend origins, for example:
