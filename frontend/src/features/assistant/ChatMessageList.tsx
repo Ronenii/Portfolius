@@ -12,7 +12,7 @@ export type ThreadMessage = AssistantMessage & {
 const inlineFunctionCallPattern = /\s*<function=([^>]+)>.*?<\/function>\s*/gs;
 
 function displayContent(content: string) {
-  return content.replace(inlineFunctionCallPattern, " ").trim();
+  return content.replace(inlineFunctionCallPattern, "").trim();
 }
 
 function inlineTools(content: string) {

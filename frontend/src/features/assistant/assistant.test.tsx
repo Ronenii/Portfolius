@@ -368,8 +368,11 @@ describe("ChatMessageList markdown rendering", () => {
 
   it("renders **bold** as <strong>, not literal asterisks", () => {
     render(<ChatMessageList messages={[msg("North America is **66%** of your portfolio.")]} />);
-    expect(screen.getByText(/66%/)).toBeInTheDocument();
-    const strong = document.querySelector("strong");
+    // No literal asterisks should appear in the rendered output
+    expect(document.body.textContent).not.toContain("**");
+    // The <strong> must exist inside the assistant bubble
+    const bubble = document.querySelector(".assistant-message--assistant");
+    const strong = bubble?.querySelector("strong");
     expect(strong).not.toBeNull();
     expect(strong?.textContent).toBe("66%");
   });
