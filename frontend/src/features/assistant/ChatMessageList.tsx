@@ -1,4 +1,6 @@
 import { Wrench } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import type { AssistantMessage } from "./assistant-api";
 
@@ -55,6 +57,7 @@ export default function ChatMessageList({
     <div className="assistant-thread" role="log" aria-label="Assistant thread">
       {messages.map((message) => {
         const tools = toolCopy(messageTools(message));
+        const cleaned = displayContent(message.content);
         return (
           <article
             className={`assistant-message assistant-message--${message.role}`}
@@ -63,7 +66,11 @@ export default function ChatMessageList({
             <p className="assistant-message-role">
               {message.role === "user" ? "You" : "Assistant"}
             </p>
-            <p>{displayContent(message.content)}</p>
+            {message.role === "assistant" ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>
+            ) : (
+              <p>{cleaned}</p>
+            )}
             {message.pending ? <span className="assistant-pending">Thinking</span> : null}
             {tools ? (
               <span className="assistant-tool-badge">
