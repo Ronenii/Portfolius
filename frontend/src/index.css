@@ -1537,6 +1537,44 @@ h1 {
   height: 13px;
 }
 
+/* Markdown rendered inside assistant bubbles */
+.assistant-message--assistant p {
+  margin: 0 0 0.5em;
+}
+.assistant-message--assistant p:last-child {
+  margin-bottom: 0;
+}
+.assistant-message--assistant ul,
+.assistant-message--assistant ol {
+  margin: 0.25em 0 0.5em;
+  padding-left: 1.5em;
+}
+.assistant-message--assistant li {
+  margin-bottom: 0.2em;
+}
+.assistant-message--assistant table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+  margin: 0.5em 0;
+}
+.assistant-message--assistant th,
+.assistant-message--assistant td {
+  border: 1px solid var(--ink-200, #d1d5db);
+  padding: 4px 8px;
+  text-align: left;
+}
+.assistant-message--assistant th {
+  background: var(--ink-100, #f3f4f6);
+  font-weight: 600;
+}
+.assistant-message--assistant code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: var(--ink-100, #f3f4f6);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
 .assistant-composer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
