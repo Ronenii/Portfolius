@@ -17,6 +17,7 @@ import {
   type AssistantConversation,
   type AssistantConversationDetail,
 } from "./assistant-api";
+import ChatMessageList, { type ThreadMessage } from "./ChatMessageList";
 
 vi.mock("../../lib/supabase", () => ({
   supabase: {
@@ -353,5 +354,43 @@ describe("assistant page", () => {
     expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();
     expect(screen.getByText("Check this")).toBeInTheDocument();
     expect(screen.queryByText("Loading conversation")).not.toBeInTheDocument();
+  });
+});
+
+describe("ChatMessageList markdown rendering", () => {
+  function msg(content: string): ThreadMessage {
+    return { id: 1, role: "assistant", content, created_at: "2026-06-15T00:00:00Z" };
+  }
+
+  it("renders **bold** as <strong>, not literal asterisks", () => {
+    render(<ChatMessageList messages={[msg("North America is **66%** of your portfolio.")]} />);
+    expect(screen.getByText(/66%/)).toBeInTheDocument();
+    const strong = document.querySelector("strong");
+    expect(strong).not.toBeNull();
+    expect(strong?.textContent).toBe("66%");
+  });
+
+  it("renders a bullet list as <li> elements, not raw hyphens", () => {
+    render(
+      <ChatMessageList
+        messages={[msg("Steps:\n- Buy VWO\n- Buy IEUR")]}
+      />
+    );
+    const items = document.querySelectorAll("li");
+    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(items[0].textContent).toBe("Buy VWO");
+    expect(items[1].textContent).toBe("Buy IEUR");
+  });
+
+  it("strips <function=...> markup before markdown rendering", () => {
+    render(
+      <ChatMessageList
+        messages={[
+          msg("Checking your mix. <function=get_portfolio_breakdowns></function>"),
+        ]}
+      />
+    );
+    expect(document.querySelector("p")?.textContent).not.toContain("<function=");
+    expect(screen.getByText("Checking your mix.")).toBeInTheDocument();
   });
 });
