@@ -239,7 +239,7 @@ M3 assistant endpoints:
 - `GET /api/v1/assistant/conversations` — list the authenticated user's conversations, newest first.
 - `GET /api/v1/assistant/conversations/{conversation_id}` — return the conversation and its ordered messages. Returns `404` for another user's conversation.
 
-The assistant tool-call loop exposes two tools to the model: `get_portfolio_breakdowns()` and `simulate_trades(legs)`. Both execute the same user-scoped domain functions used by the REST endpoints, so the model reasons over identical numbers. The loop is capped at 4 iterations.
+The assistant tool-call loop exposes three tools to the model: `get_portfolio_breakdowns()`, `get_instrument_prices(symbols)`, and `simulate_trades(legs)`. All execute the same user-scoped domain functions used by the REST endpoints, so the model reasons over identical numbers. The loop is capped at 6 iterations (see "Assistant Reliability & Formatting" below for why it was raised from 4, and the token-budget tradeoffs that come with multi-step turns).
 
 Implemented M2 job endpoint behavior:
 
@@ -391,6 +391,44 @@ The endpoint uses POST because the input is a structured basket. The simulated r
 
 The assistant invokes the same `simulate` pipeline to ground rebalancing suggestions in a concrete before/after delta rather than vague advice. As with all assistant context, it receives summarized simulated allocation, not raw holdings or secrets.
 
+## Assistant Reliability & Formatting (M4.x)
+
+This phase hardened the assistant against three classes of failure (provider rejection, empty answers, and rate limits), brought the assistant's simulation numbers in line with the Simulation tab, and made replies render as Markdown. The default LLM also moved from `llama-3.3-70b-versatile` to Groq's `openai/gpt-oss-120b` **reasoning model**.
+
+### Reasoning model and `reasoning_effort`
+
+`GroqLlmClient` and `Settings` gained an `llm_reasoning_effort` option (`LLM_REASONING_EFFORT`, default `low`). Groq's gpt-oss models accept exactly `low`, `medium`, or `high`; any other value (the parameter is sent verbatim) is rejected with HTTP 400. The setting is omitted from the request body when unset, so a non-reasoning model can still be configured by clearing it. `reasoning_effort` is kept low by default because reasoning tokens are billed against the same budget as the answer (see below).
+
+### Free-tier token budget
+
+Groq's free tier caps **tokens per minute (TPM)** at 8,000, and the per-call check counts the reserved `max_tokens` (3,072) in addition to the prompt — so a single multi-step tool-loop turn can approach the ceiling on its own, and a burst of turns will exceed it. The design accepts this limit rather than engineering around it, but several measures keep a normal turn within budget:
+
+- The `simulate_trades` tool result is trimmed aggressively because it is re-sent on every subsequent loop call: the redundant `current` breakdown is dropped (the before-state survives in each delta's `percent_before`, and the model already fetched `get_portfolio_breakdowns`), deltas are capped to the 8 largest absolute changes, and all percentages/values are rounded to two decimals (`round_for_tool`) instead of carrying ~28-digit Decimals.
+- `reasoning_effort` defaults to `low`.
+- The system prompt steers the model toward lightweight Markdown (bold + short lists) and discourages large tables, which are token-heavy and persist in the conversation history.
+
+`MAX_TOOL_ITERATIONS` was raised from 4 to 6 to give multi-step rebalancing turns (breakdowns → prices → simulate → adjust → answer) room to complete; this trades more potential token use for fewer truncated plans.
+
+### Rate-limit handling
+
+`GroqLlmClient.complete` retries on HTTP 429 with `Retry-After`-aware backoff. When retries are exhausted it raises `LlmRateLimitError` (a subclass of `LlmError`). `run_assistant_turn` catches it and returns a clear, user-facing message ("I've used up my AI token budget for this minute … try again") persisted as the assistant reply, rather than surfacing a 500 or a blank bubble.
+
+### Empty-reply and truncation guard
+
+Reasoning models can return HTTP 200 with empty `content` — either because all output went to the hidden reasoning channel or because the token budget truncated the answer (`finish_reason == "length"`). `ChatCompletion` now carries `finish_reason`, and `final_reply_from_completion` never persists an empty reply: it returns a generic "couldn't produce an answer, please rephrase" fallback, or a "answer ran too long, ask for something shorter" message when the cause was truncation. This fixed blank assistant bubbles that previously showed only a tool badge.
+
+### Inline tool-call recovery
+
+Some Groq-hosted models emit tool calls as inline `<function=name>{json}</function>` text in the message `content` instead of the structured `tool_calls` field. `parse_inline_tool_calls` (in `integrations/llm.py`) recovers these into real `ToolCall`s so they are executed, and strips the markup from the visible content. This complements the existing stripping in `final_reply_from_completion` and the frontend's `displayContent`.
+
+### Simulation client parity
+
+The assistant's `simulate_trades` tool previously called `simulate_for_user` **without** the instrument-lookup and market-data clients, so any instrument the user did not already hold (or that lacked a cached local price) was silently valued at $0 — producing allocation numbers that diverged from the Simulation tab for exactly the rebalancing case (buying a new ETF). `execute_tool` and `run_assistant_turn` now thread both clients (wired from the assistant endpoint via `get_instrument_lookup_client` / `get_market_data_client`) into `simulate_for_user`, so the assistant and the `POST /api/v1/portfolio/simulate` endpoint price and resolve instruments identically and report the same before/after numbers.
+
+### Markdown rendering
+
+Assistant replies render as Markdown. The frontend uses `react-markdown` + `remark-gfm` in `ChatMessageList` for assistant messages only (user messages stay plain `<p>`); `<function=…>` markup is stripped before rendering, and `rehype-raw` is deliberately omitted so any literal HTML in model output renders as inert text (no XSS surface). Scoped styles under `.assistant-message--assistant` cover paragraphs, lists, tables, and inline code, with `.mode-terminal` overrides so tables and code blocks use dark surfaces and the chat scrollbars track the terminal theme. The system prompt asks for lightweight Markdown to keep this readable without inflating the token budget.
+
 ## Authentication Strategy
 
 Authentication is handled entirely by Supabase Auth. The frontend never handles passwords or stores credentials.
@@ -439,6 +477,7 @@ To enable Google OAuth:
 - M3: AI assistant grounded in portfolio context, and portfolio simulation (what-if buy/sell scenarios). **Done.**
 - M3.x: design language, terminal mode, mobile layout, and assistant price tool. **Done.**
 - M4: allocation exploration, including composition drill-downs and user-selectable chart types. **Done.**
+- M4.x: assistant reliability hardening (reasoning model + `reasoning_effort`, free-tier token budgeting, rate-limit and empty-reply handling, inline tool-call recovery), assistant/Simulation-tab pricing parity, and Markdown-rendered replies. **Done.**
 - M5: transactions, projections, PWA install, and CSV import.
 - M6: profile intelligence and personalization, including dark mode, suggested interest/avoid tags, and automatic typo cleanup for free-form profile keywords.
 

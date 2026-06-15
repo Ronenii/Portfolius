@@ -101,6 +101,7 @@ def test_post_message_without_conversation_creates_conversation(
         db_session,
         llm_client,
         FakeMarketDataClient(),
+        None,
     )
 
     assert response.conversation_id > 0
@@ -132,6 +133,7 @@ def test_post_message_with_existing_conversation_appends_to_it(
         db_session,
         FakeLlmClient("New answer"),
         FakeMarketDataClient(),
+        None,
     )
 
     assert response.conversation_id == conversation.id

@@ -609,6 +609,22 @@ a {
   background: var(--ink-950);
 }
 
+.mode-terminal .assistant-thread,
+.mode-terminal .assistant-history {
+  scrollbar-color: var(--ink-700) var(--ink-900);
+}
+
+.mode-terminal .assistant-message--assistant th,
+.mode-terminal .assistant-message--assistant td {
+  border-color: var(--ink-700);
+}
+.mode-terminal .assistant-message--assistant th {
+  background: var(--ink-800);
+}
+.mode-terminal .assistant-message--assistant code {
+  background: var(--ink-800);
+}
+
 .mode-terminal .assistant-composer textarea {
   border-color: var(--ink-700);
   background: var(--ink-900);
@@ -1535,6 +1551,49 @@ h1 {
 .assistant-tool-badge svg {
   width: 13px;
   height: 13px;
+}
+
+/* Markdown rendered inside assistant bubbles */
+.assistant-message--assistant p {
+  margin: 0 0 0.5em;
+}
+.assistant-message--assistant p:last-child {
+  margin-bottom: 0;
+}
+.assistant-message--assistant ul,
+.assistant-message--assistant ol {
+  margin: 0.25em 0 0.5em;
+  padding-left: 1.5em;
+}
+.assistant-message--assistant li {
+  margin-bottom: 0.2em;
+}
+.assistant-message--assistant table {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  margin: 0.5em 0;
+}
+.assistant-message--assistant th,
+.assistant-message--assistant td {
+  border: 1px solid var(--ink-200, #d1d5db);
+  padding: 4px 8px;
+  text-align: left;
+}
+.assistant-message--assistant th {
+  background: var(--ink-100, #f3f4f6);
+  font-weight: 600;
+}
+.assistant-message--assistant code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: var(--ink-100, #f3f4f6);
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
 .assistant-composer {

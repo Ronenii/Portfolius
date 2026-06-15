@@ -15,7 +15,14 @@ from app.domain.assistant import (
     build_system_prompt,
     run_assistant_turn,
 )
-from app.integrations.llm import ChatCompletion, ChatMessage, ToolCall, ToolSpec
+from app.integrations.llm import (
+    ChatCompletion,
+    ChatMessage,
+    LlmRateLimitError,
+    ToolCall,
+    ToolSpec,
+    parse_completion,
+)
 from app.integrations.market_data import MarketPrice
 
 
@@ -140,6 +147,22 @@ def tool_completion(name: str, arguments: dict[str, object]) -> ChatCompletion:
     )
 
 
+def empty_completion(finish_reason: str | None = None) -> ChatCompletion:
+    """A completion with no tool calls and no content — the blank-bubble case."""
+    return ChatCompletion(
+        message=ChatMessage(role="assistant", content=""),
+        tool_calls=[],
+        finish_reason=finish_reason,
+    )
+
+
+def inline_completion(content: str) -> ChatCompletion:
+    """Build a completion the way GroqLlmClient would for inline tool markup."""
+    return parse_completion(
+        {"choices": [{"message": {"role": "assistant", "content": content}}]}
+    )
+
+
 def market_price(symbol: str, close_price: str) -> MarketPrice:
     return MarketPrice(
         symbol=symbol,
@@ -151,11 +174,13 @@ def market_price(symbol: str, close_price: str) -> MarketPrice:
     )
 
 
-def test_system_prompt_asks_for_more_useful_but_compact_answers() -> None:
+def test_system_prompt_requires_hypothetical_framing_and_plans() -> None:
     prompt = build_system_prompt()
 
-    assert "Reply in 4-6 plain sentences" in prompt
-    assert "include the key reason" in prompt
+    assert "only SIMULATE trades" in prompt
+    assert "Never say or imply that a trade" in prompt
+    assert "ordered list of the concrete trades" in prompt
+    assert "never invent an" in prompt
     assert "price tool" in prompt
 
 
@@ -191,6 +216,93 @@ def test_turn_without_tools_persists_user_and_assistant_messages(
         ("user", "How diversified am I?"),
         ("assistant", "You are diversified."),
     ]
+
+
+def test_empty_final_content_does_not_persist_blank_reply(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    """A model turn that returns no content must not be stored as an empty bubble.
+
+    Regression: reasoning-model turns sometimes return HTTP 200 with empty
+    ``content`` and no tool calls; the loop used to persist ``""`` and the UI
+    showed a blank message with only a "ran a simulation" badge.
+    """
+    llm_client = ScriptedLlmClient([empty_completion()])
+
+    result = run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "Plan a rebalance for me.",
+        llm_client,
+    )
+
+    assert result.reply.strip() != ""
+    saved_messages = [
+        (message.role, message.content)
+        for message in list_messages(db_session, conversation)
+    ]
+    assert saved_messages[-1][0] == "assistant"
+    assert (saved_messages[-1][1] or "").strip() != ""
+
+
+def test_truncated_final_content_explains_it_was_cut_off(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    llm_client = ScriptedLlmClient([empty_completion(finish_reason="length")])
+
+    result = run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "Plan a rebalance for me.",
+        llm_client,
+    )
+
+    assert "shorter" in result.reply.lower() or "cut off" in result.reply.lower()
+
+
+class RateLimitedLlmClient:
+    """Raises a rate-limit error the way GroqLlmClient does after retries."""
+
+    def complete(
+        self,
+        messages: list[ChatMessage],
+        tools: list[ToolSpec] | None = None,
+    ) -> ChatCompletion:
+        raise LlmRateLimitError("LLM provider rate-limited; try again in a moment")
+
+
+def test_rate_limit_returns_friendly_retry_message_not_an_error(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    """Free-tier TPM exhaustion must surface a clear 'try again' notice.
+
+    The user accepted the free-tier limit but asked for a message telling them
+    the per-minute token budget is used up and to retry in a minute, rather than
+    a 500 or a blank bubble.
+    """
+    result = run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "Plan a rebalance for me.",
+        RateLimitedLlmClient(),
+    )
+
+    assert "minute" in result.reply.lower()
+    saved_messages = [
+        (message.role, message.content)
+        for message in list_messages(db_session, conversation)
+    ]
+    assert saved_messages[-1][0] == "assistant"
+    assert (saved_messages[-1][1] or "").strip() != ""
 
 
 def test_final_reply_strips_inline_function_call_markup(
@@ -261,6 +373,99 @@ def test_tool_loop_executes_simulation_and_feeds_result_back(
     assert len(tool_messages) == 1
     assert tool_messages[0].tool_call_id == "tool-call-1"
     assert "VXUS" in (tool_messages[0].content or "")
+    assert "simulated" in (tool_messages[0].content or "")
+
+
+def test_simulation_prices_instruments_via_market_data_client(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    """simulate_trades must price instruments that lack a local DB price.
+
+    Regression: run_assistant_turn called simulate_for_user without the
+    market-data client, so any instrument without a cached local price was
+    valued at $0. Buying e.g. VWO then under-counted the trade, and the
+    assistant's numbers diverged from the Simulation tab (which passes the
+    client and prices the instrument live).
+    """
+    voo = add_instrument(db_session, "VOO", "500")
+    add_holding(db_session, authenticated_user.user_id, voo, quantity="10")
+    # EEM exists locally but has NO price row — only the market client can price it.
+    eem = Instrument(
+        symbol="EEM",
+        name="EEM Fund",
+        exchange="NYSEARCA",
+        currency="USD",
+        asset_class="ETF",
+        sector="Broad Market",
+        country="China",
+        region="Emerging Markets",
+    )
+    db_session.add(eem)
+    db_session.commit()
+    market = FakeMarketDataClient({"EEM": market_price("EEM", "50")})
+    llm_client = ScriptedLlmClient(
+        [
+            tool_completion(
+                "simulate_trades",
+                {"legs": [{"symbol": "EEM", "action": "buy", "quantity": "20"}]},
+            ),
+            assistant_completion("Done."),
+        ]
+    )
+
+    run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "What if I buy EEM?",
+        llm_client,
+        market,
+    )
+
+    tool_messages = [
+        message for message in llm_client.calls[1][0] if message.role == "tool"
+    ]
+    content = tool_messages[0].content or ""
+    assert "simulated holding is unpriced" not in content.lower()
+    assert "Emerging Markets" in content
+
+
+def test_tool_loop_recovers_inline_function_call(
+    db_session: Session,
+    authenticated_user: AuthenticatedUser,
+    conversation: Conversation,
+) -> None:
+    voo = add_instrument(db_session, "VOO", "500")
+    add_instrument(db_session, "VXUS", "100", sector="International")
+    add_holding(db_session, authenticated_user.user_id, voo, quantity="2")
+    llm_client = ScriptedLlmClient(
+        [
+            inline_completion(
+                "Let me check that. "
+                "<function=simulate_trades>"
+                '{"legs":[{"symbol":"VXUS","action":"buy","quantity":"5"}]}'
+                "</function>"
+            ),
+            assistant_completion("Buying VXUS would add international exposure."),
+        ]
+    )
+
+    result = run_assistant_turn(
+        db_session,
+        authenticated_user.user_id,
+        conversation,
+        "What if I buy VXUS?",
+        llm_client,
+    )
+
+    assert result.used_tools == ["simulate_trades"]
+    assert result.reply == "Buying VXUS would add international exposure."
+    tool_messages = [
+        message for message in llm_client.calls[1][0] if message.role == "tool"
+    ]
+    assert len(tool_messages) == 1
     assert "simulated" in (tool_messages[0].content or "")
 
 

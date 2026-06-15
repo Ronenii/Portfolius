@@ -17,6 +17,7 @@ import {
   type AssistantConversation,
   type AssistantConversationDetail,
 } from "./assistant-api";
+import ChatMessageList, { type ThreadMessage } from "./ChatMessageList";
 
 vi.mock("../../lib/supabase", () => ({
   supabase: {
@@ -353,5 +354,51 @@ describe("assistant page", () => {
     expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();
     expect(screen.getByText("Check this")).toBeInTheDocument();
     expect(screen.queryByText("Loading conversation")).not.toBeInTheDocument();
+  });
+});
+
+describe("ChatMessageList markdown rendering", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  function msg(content: string): ThreadMessage {
+    return { id: 1, role: "assistant", content, created_at: "2026-06-15T00:00:00Z" };
+  }
+
+  it("renders **bold** as <strong>, not literal asterisks", () => {
+    render(<ChatMessageList messages={[msg("North America is **66%** of your portfolio.")]} />);
+    // No literal asterisks should appear in the rendered output
+    expect(document.body.textContent).not.toContain("**");
+    // The <strong> must exist inside the assistant bubble
+    const bubble = document.querySelector(".assistant-message--assistant");
+    const strong = bubble?.querySelector("strong");
+    expect(strong).not.toBeNull();
+    expect(strong?.textContent).toBe("66%");
+  });
+
+  it("renders a bullet list as <li> elements, not raw hyphens", () => {
+    render(
+      <ChatMessageList
+        messages={[msg("Steps:\n- Buy VWO\n- Buy IEUR")]}
+      />
+    );
+    const items = document.querySelectorAll("li");
+    expect(items).toHaveLength(2);
+    expect(items[0].textContent).toBe("Buy VWO");
+    expect(items[1].textContent).toBe("Buy IEUR");
+  });
+
+  it("strips <function=...> markup before markdown rendering", () => {
+    render(
+      <ChatMessageList
+        messages={[
+          msg("Checking your mix. <function=get_portfolio_breakdowns></function>"),
+        ]}
+      />
+    );
+    const text = screen.getByText("Checking your mix.");
+    expect(text).toBeInTheDocument();
+    expect(text.textContent).not.toContain("<function=");
   });
 });
