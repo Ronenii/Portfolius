@@ -12,6 +12,7 @@ export default function LoginPage() {
   const { signInWithGoogle, signInWithMagicLink } = useAuth();
   const [email, setEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => isValidEmail(email), [email]);
 
@@ -21,8 +22,11 @@ export default function LoginPage() {
       return;
     }
     setIsSending(true);
+    setSendError(null);
     try {
       await signInWithMagicLink(email);
+    } catch {
+      setSendError("Could not send magic link. Check your email address and try again.");
     } finally {
       setIsSending(false);
     }
@@ -54,6 +58,9 @@ export default function LoginPage() {
             type="email"
             value={email}
           />
+          {sendError ? (
+            <p className="form-error" role="alert">{sendError}</p>
+          ) : null}
           <Button
             disabled={!canSubmit}
             icon={Mail}

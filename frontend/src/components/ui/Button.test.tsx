@@ -52,4 +52,9 @@ describe("Button", () => {
     const btn = screen.getByRole("button");
     expect(btn).toHaveAttribute("aria-busy", "true");
   });
+
+  it("when loading=true: button is disabled even if disabled={false} is passed", () => {
+    render(<Button loading disabled={false}>Save</Button>);
+    expect(screen.getByRole("button")).toBeDisabled();
+  });
 });

@@ -2,14 +2,13 @@ import type { ButtonHTMLAttributes, ComponentType, SVGProps } from "react";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-busy"> & {
   icon?: IconComponent;
   loading?: boolean;
   variant?: "primary" | "secondary" | "ghost";
 };
 
 export default function Button({
-  "aria-busy": _ariaBusy,   // extracted so loading state always controls aria-busy
   children,
   className = "",
   disabled,
