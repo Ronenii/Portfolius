@@ -1120,7 +1120,7 @@ h1 {
 }
 
 .allocation-table td {
-  color: var(--ink-700);
+  color: var(--fg-paper);
 }
 
 .allocation-table td:first-child {
@@ -2285,7 +2285,7 @@ h1 {
 }
 
 .holdings-table td {
-  color: var(--ink-700);
+  color: var(--fg-paper);
 }
 
 .holdings-table td strong {
