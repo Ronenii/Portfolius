@@ -9,6 +9,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export default function Button({
+  "aria-busy": _ariaBusy,   // extracted so loading state always controls aria-busy
   children,
   className = "",
   disabled,

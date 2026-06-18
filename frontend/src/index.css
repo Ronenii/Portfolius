@@ -1803,8 +1803,8 @@ h1 {
 .button__spinner {
   display: inline-block;
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border: 2px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
@@ -1814,7 +1814,8 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   .button__spinner {
     animation: none;
-    opacity: 0.5;
+    border-top-color: currentColor;
+    opacity: 0.6;
   }
 }
 

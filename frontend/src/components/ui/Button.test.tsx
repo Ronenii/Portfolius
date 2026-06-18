@@ -1,13 +1,9 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import Button from "./Button";
 
 describe("Button", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
   it("renders children normally", () => {
     render(<Button>Save</Button>);
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
@@ -48,5 +44,12 @@ describe("Button", () => {
   it("disabled prop still disables without loading", () => {
     render(<Button disabled>Save</Button>);
     expect(screen.getByRole("button")).toBeDisabled();
+  });
+
+  it("when loading=true: caller aria-busy prop cannot override loading state", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    render(<Button loading {...({ "aria-busy": "false" } as any)}>Save</Button>);
+    const btn = screen.getByRole("button");
+    expect(btn).toHaveAttribute("aria-busy", "true");
   });
 });
