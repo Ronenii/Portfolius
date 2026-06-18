@@ -96,8 +96,38 @@
 html {
   background: var(--paper-50);
   color: var(--fg-paper);
+  color-scheme: light;
   font-family: var(--font-sans);
   line-height: 1.55;
+}
+
+/* Terminal mode mirrored onto the document root (set from AppShell). Switches
+   the window scrollbar and every native control to the dark color-scheme —
+   color-scheme is inherited, so descendants pick it up without per-control CSS. */
+html.app-root--terminal {
+  background: var(--ink-950);
+  color-scheme: dark;
+  scrollbar-color: var(--ink-700) var(--ink-950);
+}
+
+/* Polished scrollbars for inner scroll areas in terminal mode (WebKit). */
+.mode-terminal ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.mode-terminal ::-webkit-scrollbar-track {
+  background: var(--ink-950);
+}
+
+.mode-terminal ::-webkit-scrollbar-thumb {
+  border: 2px solid var(--ink-950);
+  border-radius: var(--radius-full);
+  background: var(--ink-700);
+}
+
+.mode-terminal ::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-600);
 }
 
 body {
@@ -228,6 +258,18 @@ a {
 .content-rail {
   min-width: 0;
   padding: clamp(20px, 4vw, 40px);
+}
+
+/* Full-bleed loading placeholder — fills the content rail and centers content.
+   Used by AuthLoading and ProfileLoading instead of the card-style page-section. */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: calc(100dvh - 2 * clamp(20px, 4vw, 40px));
+  width: 100%;
 }
 
 .dashboard-page,
@@ -2542,6 +2584,25 @@ h1 {
   .simulation-dimension-control .segmented-button {
     flex: 0 0 auto;
     white-space: nowrap;
+  }
+
+  .composition-popover,
+  .composition-panel {
+    padding: 12px;
+  }
+
+  .composition-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .composition-row__values {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .composition-row__values .num {
+    overflow-wrap: anywhere;
   }
 
   .page-header {

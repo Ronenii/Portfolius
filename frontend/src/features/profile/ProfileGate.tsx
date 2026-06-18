@@ -8,10 +8,9 @@ import { getProfile } from "./profile-api";
 
 function ProfileLoading() {
   return (
-    <section className="page-section" aria-label="Loading profile">
-      <p className="eyebrow">Profile</p>
+    <div className="loading-screen" aria-label="Loading profile">
       <TrendLoader label="Loading your profile" srLabel="Loading profile" />
-    </section>
+    </div>
   );
 }
 
