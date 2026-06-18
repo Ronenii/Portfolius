@@ -282,8 +282,10 @@ describe("DashboardPage", () => {
     expect(await within(summary).findByText("$1,250.00")).toBeInTheDocument();
     expect(within(summary).getByText("$1,000.00")).toBeInTheDocument();
     expect(within(summary).getByText("$250.00")).toBeInTheDocument();
-    expect(within(summary).getByText("1 priced / 0 missing")).toBeInTheDocument();
-    expect(within(summary).getByText("Latest price date: Jun 5, 2026")).toBeInTheDocument();
+    expect(within(summary).getByText("1 / 0")).toBeInTheDocument();
+    expect(
+      within(summary).getByText("priced / missing · latest Jun 5, 2026")
+    ).toBeInTheDocument();
   });
 
   it("hides backend status in prod mode", async () => {

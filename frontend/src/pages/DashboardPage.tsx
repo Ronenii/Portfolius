@@ -356,11 +356,11 @@ export default function DashboardPage() {
               <article className="kpi-tile">
                 <p className="panel-label">Price coverage</p>
                 <strong>
-                  {snapshotQuery.data.summary.priced_holdings} priced /{" "}
-                  {snapshotQuery.data.summary.missing_price_holdings} missing
+                  {snapshotQuery.data.summary.priced_holdings} /{" "}
+                  {snapshotQuery.data.summary.missing_price_holdings}
                 </strong>
                 <span>
-                  Latest price date:{" "}
+                  priced / missing · latest{" "}
                   {formatPriceDate(snapshotQuery.data.summary.latest_price_date)}
                 </span>
               </article>

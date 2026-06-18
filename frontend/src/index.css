@@ -900,20 +900,14 @@ h1 {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "zero" 1;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
   overflow-wrap: anywhere;
 }
 
-.kpi-tile--primary strong {
-  font-size: 28px;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-}
-
-.kpi-tile span {
+.kpi-tile > span {
   color: var(--ink-600);
   font-size: 13px;
 }
@@ -928,7 +922,7 @@ h1 {
   color: var(--fg-terminal);
 }
 
-.mode-terminal .kpi-tile span {
+.mode-terminal .kpi-tile > span {
   color: var(--ink-300);
 }
 
