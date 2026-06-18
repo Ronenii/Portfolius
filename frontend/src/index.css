@@ -253,6 +253,7 @@ a {
   border-color: transparent;
   background: var(--accent-100);
   color: var(--accent-900);
+  box-shadow: inset 3px 0 0 var(--accent-500);
 }
 
 .content-rail {
@@ -330,6 +331,7 @@ a {
   background: color-mix(in srgb, var(--accent-300) 16%, transparent);
   color: var(--accent-300);
   border-color: transparent;
+  box-shadow: inset 3px 0 0 var(--accent-300);
 }
 
 .mode-terminal .content-rail {
@@ -429,7 +431,7 @@ a {
 .mode-terminal .field legend,
 .mode-terminal .choice-group legend,
 .mode-terminal .keyword-label-row {
-  color: var(--ink-300);
+  color: var(--ink-200);
 }
 
 .mode-terminal .field input,
@@ -869,7 +871,7 @@ h1 {
 }
 
 .kpi-tile span {
-  color: var(--ink-500);
+  color: var(--ink-600);
   font-size: 13px;
 }
 
@@ -1128,8 +1130,17 @@ h1 {
   font-weight: 700;
 }
 
-.allocation-row--selected td {
+.allocation-row td {
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.allocation-row:not(.allocation-row--selected):hover td {
   background: var(--accent-50);
+  cursor: pointer;
+}
+
+.allocation-row--selected td {
+  background: var(--accent-100);
 }
 
 .composition-panel,
@@ -1200,8 +1211,12 @@ h1 {
   min-width: 760px;
 }
 
+.mode-terminal .allocation-row:not(.allocation-row--selected):hover td {
+  background: color-mix(in srgb, var(--accent-300) 8%, transparent);
+}
+
 .mode-terminal .allocation-row--selected td {
-  background: rgb(113 168 171 / 12%);
+  background: color-mix(in srgb, var(--accent-300) 16%, transparent);
 }
 
 .mode-terminal .composition-panel,
@@ -1866,7 +1881,7 @@ h1 {
 }
 
 .magic-link-form label {
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1924,7 +1939,7 @@ h1 {
 }
 
 .field label {
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1986,7 +2001,7 @@ h1 {
 
 .choice-group legend {
   margin-bottom: 9px;
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -2024,7 +2039,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -2253,7 +2268,7 @@ h1 {
 }
 
 .empty-state span {
-  color: var(--ink-500);
+  color: var(--ink-600);
   font-size: 14px;
 }
 
