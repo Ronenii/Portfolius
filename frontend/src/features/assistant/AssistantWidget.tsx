@@ -173,7 +173,9 @@ export default function AssistantWidget() {
           </span>
           <div>
             <p className="assistant-widget-title">Portfolio chat</p>
-            <p className="assistant-widget-subtitle">Grounded in your holdings</p>
+            <p className="assistant-widget-subtitle">
+              {sendMutation.isPending ? "Typing…" : "Grounded in your holdings"}
+            </p>
           </div>
         </div>
         <div className="assistant-widget-actions">

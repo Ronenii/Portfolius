@@ -96,8 +96,38 @@
 html {
   background: var(--paper-50);
   color: var(--fg-paper);
+  color-scheme: light;
   font-family: var(--font-sans);
   line-height: 1.55;
+}
+
+/* Terminal mode mirrored onto the document root (set from AppShell). Switches
+   the window scrollbar and every native control to the dark color-scheme —
+   color-scheme is inherited, so descendants pick it up without per-control CSS. */
+html.app-root--terminal {
+  background: var(--ink-950);
+  color-scheme: dark;
+  scrollbar-color: var(--ink-700) var(--ink-950);
+}
+
+/* Polished scrollbars for inner scroll areas in terminal mode (WebKit). */
+.mode-terminal ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.mode-terminal ::-webkit-scrollbar-track {
+  background: var(--ink-950);
+}
+
+.mode-terminal ::-webkit-scrollbar-thumb {
+  border: 2px solid var(--ink-950);
+  border-radius: var(--radius-full);
+  background: var(--ink-700);
+}
+
+.mode-terminal ::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-600);
 }
 
 body {
@@ -223,11 +253,24 @@ a {
   border-color: transparent;
   background: var(--accent-100);
   color: var(--accent-900);
+  box-shadow: inset 3px 0 0 var(--accent-500);
 }
 
 .content-rail {
   min-width: 0;
   padding: clamp(20px, 4vw, 40px);
+}
+
+/* Full-bleed loading placeholder — fills the content rail and centers content.
+   Used by AuthLoading and ProfileLoading instead of the card-style page-section. */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: calc(100dvh - 2 * clamp(20px, 4vw, 40px));
+  width: 100%;
 }
 
 .dashboard-page,
@@ -288,6 +331,7 @@ a {
   background: color-mix(in srgb, var(--accent-300) 16%, transparent);
   color: var(--accent-300);
   border-color: transparent;
+  box-shadow: inset 3px 0 0 var(--accent-300);
 }
 
 .mode-terminal .content-rail {
@@ -387,7 +431,7 @@ a {
 .mode-terminal .field legend,
 .mode-terminal .choice-group legend,
 .mode-terminal .keyword-label-row {
-  color: var(--ink-300);
+  color: var(--ink-200);
 }
 
 .mode-terminal .field input,
@@ -807,27 +851,65 @@ h1 {
   border-top: 2px solid var(--accent-500);
 }
 
+/* ---- Entrance motion ---------------------------------------------------- */
+/* Surfaces fade and rise a few pixels on mount. KPI tiles stagger for a gentle
+   cascade; numerics count up at the same time (see AnimatedNumber). */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.kpi-tile {
+  animation: rise-in var(--dur-slow) var(--ease-out) both;
+}
+
+.kpi-grid .kpi-tile:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.kpi-grid .kpi-tile:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.kpi-grid .kpi-tile:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.allocation-panel,
+.simulation-panel,
+.holdings-panel,
+.composition-popover {
+  animation: rise-in var(--dur-slow) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-tile,
+  .allocation-panel,
+  .simulation-panel,
+  .holdings-panel,
+  .composition-popover,
+  .assistant-message {
+    animation: none;
+  }
+}
+
 .kpi-tile strong {
   display: block;
   color: var(--fg-paper);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "zero" 1;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
   overflow-wrap: anywhere;
 }
 
-.kpi-tile--primary strong {
-  font-size: 28px;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-}
-
-.kpi-tile span {
-  color: var(--ink-500);
+.kpi-tile > span {
+  color: var(--ink-600);
   font-size: 13px;
 }
 
@@ -841,7 +923,7 @@ h1 {
   color: var(--fg-terminal);
 }
 
-.mode-terminal .kpi-tile span {
+.mode-terminal .kpi-tile > span {
   color: var(--ink-300);
 }
 
@@ -1078,7 +1160,7 @@ h1 {
 }
 
 .allocation-table td {
-  color: var(--ink-700);
+  color: var(--fg-paper);
 }
 
 .allocation-table td:first-child {
@@ -1086,8 +1168,17 @@ h1 {
   font-weight: 700;
 }
 
-.allocation-row--selected td {
+.allocation-row td {
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.allocation-row:not(.allocation-row--selected):hover td {
   background: var(--accent-50);
+  cursor: pointer;
+}
+
+.allocation-row--selected td {
+  background: var(--accent-100);
 }
 
 .composition-panel,
@@ -1158,8 +1249,12 @@ h1 {
   min-width: 760px;
 }
 
+.mode-terminal .allocation-row:not(.allocation-row--selected):hover td {
+  background: color-mix(in srgb, var(--accent-300) 8%, transparent);
+}
+
 .mode-terminal .allocation-row--selected td {
-  background: rgb(113 168 171 / 12%);
+  background: color-mix(in srgb, var(--accent-300) 16%, transparent);
 }
 
 .mode-terminal .composition-panel,
@@ -1197,6 +1292,13 @@ h1 {
 .mode-terminal .simulation-panel {
   border-color: var(--ink-800);
   background: var(--ink-900);
+}
+
+.mode-terminal .simulation-warnings {
+  border-color: color-mix(in srgb, var(--accent-300) 28%, transparent);
+  border-left-color: var(--accent-300);
+  background: color-mix(in srgb, var(--accent-300) 10%, transparent);
+  color: var(--ink-200);
 }
 
 .simulation-leg-editor {
@@ -1498,6 +1600,7 @@ h1 {
 .assistant-message {
   display: grid;
   gap: 6px;
+  animation: rise-in var(--dur-base) var(--ease-out) both;
   max-width: min(76ch, 88%);
   padding: 12px 14px;
   border: 1px solid var(--rule);
@@ -1527,6 +1630,52 @@ h1 {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* ---- Typing indicator (three bouncing dots) ----------------------------- */
+@keyframes typing-dot {
+  0%, 60%, 100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+}
+
+.typing-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  animation: typing-dot 1.2s var(--ease-standard) infinite;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+.mode-terminal .typing-dots span {
+  background: var(--accent-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots span {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 .assistant-pending,
@@ -1753,6 +1902,30 @@ h1 {
   color: var(--fg-terminal);
 }
 
+/* ---- Button loading spinner -------------------------------------------- */
+@keyframes button-spin {
+  to { transform: rotate(360deg); }
+}
+
+.button__spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: button-spin 0.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button__spinner {
+    animation: none;
+    border-top-color: currentColor;
+    opacity: 0.6;
+  }
+}
+
 .login-page {
   grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
   align-items: start;
@@ -1793,7 +1966,7 @@ h1 {
 }
 
 .magic-link-form label {
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1851,7 +2024,7 @@ h1 {
 }
 
 .field label {
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1913,7 +2086,7 @@ h1 {
 
 .choice-group legend {
   margin-bottom: 9px;
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1951,7 +2124,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--ink-500);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -2180,7 +2353,7 @@ h1 {
 }
 
 .empty-state span {
-  color: var(--ink-500);
+  color: var(--ink-600);
   font-size: 14px;
 }
 
@@ -2212,7 +2385,7 @@ h1 {
 }
 
 .holdings-table td {
-  color: var(--ink-700);
+  color: var(--fg-paper);
 }
 
 .holdings-table td strong {
@@ -2411,6 +2584,15 @@ h1 {
     grid-column: 2;
     justify-content: start;
   }
+
+  .allocation-controls {
+    align-items: flex-start;
+  }
+
+  .page-header {
+    align-items: start;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2542,6 +2724,25 @@ h1 {
   .simulation-dimension-control .segmented-button {
     flex: 0 0 auto;
     white-space: nowrap;
+  }
+
+  .composition-popover,
+  .composition-panel {
+    padding: 12px;
+  }
+
+  .composition-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .composition-row__values {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .composition-row__values .num {
+    overflow-wrap: anywhere;
   }
 
   .page-header {

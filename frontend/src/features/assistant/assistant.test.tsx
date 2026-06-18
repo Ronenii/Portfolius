@@ -1,6 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -319,12 +319,14 @@ describe("assistant page", () => {
     await userEvent.type(await screen.findByLabelText("Message"), "Check this");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(screen.getByText("Thinking")).toBeInTheDocument();
-    resolveReply({
-      conversation_id: 8,
-      title: "Check this",
-      reply: "Here is the analysis.",
-      used_tools: [],
+    expect(screen.getByRole("status", { name: "Thinking" })).toBeInTheDocument();
+    await act(async () => {
+      resolveReply({
+        conversation_id: 8,
+        title: "Check this",
+        reply: "Here is the analysis.",
+        used_tools: [],
+      });
     });
     expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();
   });
@@ -344,11 +346,13 @@ describe("assistant page", () => {
 
     await userEvent.type(await screen.findByLabelText("Message"), "Check this");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
-    resolveReply({
-      conversation_id: 8,
-      title: "Check this",
-      reply: "Here is the analysis.",
-      used_tools: [],
+    await act(async () => {
+      resolveReply({
+        conversation_id: 8,
+        title: "Check this",
+        reply: "Here is the analysis.",
+        used_tools: [],
+      });
     });
 
     expect(await screen.findByText("Here is the analysis.")).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import { LayoutDashboard, Landmark, UserRound, Monitor, Sun } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import AssistantWidget from "../../features/assistant/AssistantWidget";
@@ -16,6 +16,17 @@ export default function AppShell() {
   const [isTerminal, setIsTerminal] = useState(
     () => localStorage.getItem(MODE_KEY) === "true"
   );
+
+  // Mirror terminal mode onto the document root so native controls (scrollbars,
+  // number spin buttons, select arrows) and the window scrollbar pick up the
+  // dark color-scheme — color-scheme is inherited, so the root sets it for all.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("app-root--terminal", isTerminal);
+    return () => {
+      root.classList.remove("app-root--terminal");
+    };
+  }, [isTerminal]);
 
   function toggleMode() {
     setIsTerminal((prev) => {

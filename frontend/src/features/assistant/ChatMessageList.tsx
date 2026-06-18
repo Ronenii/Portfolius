@@ -1,7 +1,8 @@
 import { Wrench } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useEffect, useRef } from "react";
 
+import { TypewriterText } from "../../components/ui/TypewriterText";
+import { TypingDots } from "../../components/ui/TypingDots";
 import type { AssistantMessage } from "./assistant-api";
 
 export type ThreadMessage = AssistantMessage & {
@@ -44,6 +45,13 @@ export default function ChatMessageList({
 }: {
   messages: ThreadMessage[];
 }) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the latest message whenever a new one is appended.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
   if (messages.length === 0) {
     return (
       <div className="empty-state assistant-empty">
@@ -58,6 +66,7 @@ export default function ChatMessageList({
       {messages.map((message) => {
         const tools = toolCopy(messageTools(message));
         const cleaned = displayContent(message.content);
+
         return (
           <article
             className={`assistant-message assistant-message--${message.role}`}
@@ -66,12 +75,18 @@ export default function ChatMessageList({
             <p className="assistant-message-role">
               {message.role === "user" ? "You" : "Assistant"}
             </p>
-            {message.role === "assistant" ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>
+
+            {message.pending ? (
+              <TypingDots />
+            ) : message.role === "assistant" ? (
+              // TypewriterText animates once on mount (empty useEffect deps) and
+              // then shows full text forever. Key stability via message.id means
+              // it only re-mounts when a distinct message arrives.
+              <TypewriterText text={cleaned} />
             ) : (
               <p>{cleaned}</p>
             )}
-            {message.pending ? <span className="assistant-pending">Thinking</span> : null}
+
             {tools ? (
               <span className="assistant-tool-badge">
                 <Wrench aria-hidden="true" />
@@ -81,6 +96,7 @@ export default function ChatMessageList({
           </article>
         );
       })}
+      <div ref={bottomRef} aria-hidden="true" />
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 
 import { AllocationChart } from "../components/charts/AllocationChart";
 import { AllocationDonut } from "../components/charts/AllocationDonut";
+import { AnimatedNumber } from "../components/ui/AnimatedNumber";
+import Button from "../components/ui/Button";
 import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
 import { CompositionPopover } from "../features/portfolio/CompositionPopover";
@@ -192,7 +194,10 @@ export default function DashboardPage() {
   const [selectedChartType, setSelectedChartType] = useState<AllocationChartType>(
     readAllocationChartType
   );
-  const [selectedBucket, setSelectedBucket] = useState<AllocationRow | null>(null);
+  const [hoveredBucket, setHoveredBucket] = useState<AllocationRow | null>(null);
+  const [pinnedBucket, setPinnedBucket] = useState<AllocationRow | null>(null);
+  // Pinned (click) takes precedence over hovered (mouseenter/focus).
+  const selectedBucket = pinnedBucket ?? hoveredBucket;
   const showBackendStatus = !isProdMode();
   const healthQuery = useQuery({
     enabled: showBackendStatus,
@@ -229,6 +234,9 @@ export default function DashboardPage() {
   const selectedDimensionLabel =
     breakdownDimensions.find((dimension) => dimension.key === selectedDimension)?.label ??
     "Allocation";
+  const baseCurrency = snapshotQuery.data?.summary.base_currency;
+  const formatBaseCurrency = (amount: number) =>
+    formatMoney(String(amount), baseCurrency);
   const selectedRows = breakdownRows(breakdownsQuery.data, selectedDimension);
   const selectedBucketKey = selectedBucket
     ? `${selectedBucket.dimension}-${selectedBucket.label}-${selectedBucket.currency}`
@@ -236,21 +244,36 @@ export default function DashboardPage() {
 
   function selectDimension(dimension: BreakdownDimension) {
     setSelectedDimension(dimension);
-    setSelectedBucket(null);
+    setPinnedBucket(null);
+    setHoveredBucket(null);
   }
 
-  function selectBucket(row: AllocationRow) {
-    setSelectedBucket(row);
+  // Preview on hover/focus — only takes effect when nothing is pinned.
+  function hoverBucket(row: AllocationRow) {
+    setHoveredBucket(row);
+  }
+
+  // Click pins the composition; clicking the same row again unpins.
+  function pinBucket(row: AllocationRow) {
+    setPinnedBucket((prev) =>
+      prev?.dimension === row.dimension &&
+      prev?.label === row.label &&
+      prev?.currency === row.currency
+        ? null
+        : row
+    );
+    setHoveredBucket(row);
   }
 
   function closeBucket() {
-    setSelectedBucket(null);
+    setPinnedBucket(null);
+    setHoveredBucket(null);
   }
 
   function handleBucketKeyDown(event: KeyboardEvent<HTMLTableRowElement>, row: AllocationRow) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      selectBucket(row);
+      pinBucket(row);
       return;
     }
 
@@ -271,15 +294,15 @@ export default function DashboardPage() {
           <p className="eyebrow">Portfolio overview</p>
           <h1 id="dashboard-title">Dashboard</h1>
         </div>
-        <button
-          className="button button--primary"
-          disabled={!accessToken || refreshMutation.isPending}
+        <Button
+          disabled={!accessToken}
+          icon={RefreshCw}
+          loading={refreshMutation.isPending}
           type="button"
           onClick={() => refreshMutation.mutate()}
         >
-          <RefreshCw aria-hidden="true" />
           {refreshMutation.isPending ? "Refreshing" : "Refresh prices"}
-        </button>
+        </Button>
       </header>
 
       <section className="dashboard-summary" aria-label="Portfolio summary">
@@ -303,41 +326,41 @@ export default function DashboardPage() {
               <article className="kpi-tile kpi-tile--primary">
                 <p className="panel-label">Priced value</p>
                 <strong>
-                  {formatMoney(
-                    snapshotQuery.data.summary.total_market_value,
-                    snapshotQuery.data.summary.base_currency
-                  )}
+                  <AnimatedNumber
+                    format={formatBaseCurrency}
+                    value={Number(snapshotQuery.data.summary.total_market_value)}
+                  />
                 </strong>
                 <span>{snapshotQuery.data.summary.base_currency} priced holdings</span>
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Cost basis</p>
                 <strong>
-                  {formatMoney(
-                    snapshotQuery.data.summary.total_cost_basis,
-                    snapshotQuery.data.summary.base_currency
-                  )}
+                  <AnimatedNumber
+                    format={formatBaseCurrency}
+                    value={Number(snapshotQuery.data.summary.total_cost_basis)}
+                  />
                 </strong>
                 <span>Base-currency holdings only</span>
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Unrealized gain</p>
                 <strong>
-                  {formatMoney(
-                    snapshotQuery.data.summary.total_unrealized_gain,
-                    snapshotQuery.data.summary.base_currency
-                  )}
+                  <AnimatedNumber
+                    format={formatBaseCurrency}
+                    value={Number(snapshotQuery.data.summary.total_unrealized_gain)}
+                  />
                 </strong>
                 <span>Based on latest stored close</span>
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Price coverage</p>
                 <strong>
-                  {snapshotQuery.data.summary.priced_holdings} priced /{" "}
-                  {snapshotQuery.data.summary.missing_price_holdings} missing
+                  {snapshotQuery.data.summary.priced_holdings} /{" "}
+                  {snapshotQuery.data.summary.missing_price_holdings}
                 </strong>
                 <span>
-                  Latest price date:{" "}
+                  priced / missing · latest{" "}
                   {formatPriceDate(snapshotQuery.data.summary.latest_price_date)}
                 </span>
               </article>
@@ -447,7 +470,7 @@ export default function DashboardPage() {
               <AllocationChart
                 formatPercent={formatPercent}
                 formatValue={formatMoney}
-                onSelectRow={selectBucket}
+                onSelectRow={pinBucket}
                 rows={selectedRows}
                 title={selectedDimensionLabel}
               />
@@ -456,7 +479,7 @@ export default function DashboardPage() {
               <AllocationDonut
                 formatPercent={formatPercent}
                 formatValue={formatMoney}
-                onSelectRow={selectBucket}
+                onSelectRow={pinBucket}
                 rows={selectedRows}
                 title={selectedDimensionLabel}
               />
@@ -470,7 +493,6 @@ export default function DashboardPage() {
                     <th scope="col">Market value</th>
                     <th scope="col">Percent</th>
                     <th scope="col">Holdings</th>
-                    <th scope="col">Composition</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -488,10 +510,10 @@ export default function DashboardPage() {
                       key={`${selectedDimension}-${row.label}-${row.currency}`}
                       role="button"
                       tabIndex={0}
-                      onClick={() => selectBucket(row)}
-                      onFocus={() => selectBucket(row)}
+                      onClick={() => pinBucket(row)}
+                      onFocus={() => hoverBucket(row)}
                       onKeyDown={(event) => handleBucketKeyDown(event, row)}
-                      onMouseEnter={() => selectBucket(row)}
+                      onMouseEnter={() => hoverBucket(row)}
                     >
                       <td data-label="Label">{row.label}</td>
                       <td className="num" data-label="Currency">
@@ -505,19 +527,6 @@ export default function DashboardPage() {
                       </td>
                       <td className="num" data-label="Holdings">
                         {row.holding_count}
-                      </td>
-                      <td className="row-actions" data-label="Composition">
-                        <button
-                          className="text-button"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            selectBucket(row);
-                          }}
-                        >
-                          <span aria-hidden="true">Details</span>
-                          <span className="sr-only">Show composition for {row.label}</span>
-                        </button>
                       </td>
                     </tr>
                   ))}
