@@ -9,6 +9,7 @@ type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-busy"> & 
 };
 
 export default function Button({
+  "aria-busy": _ariaBusy,
   children,
   className = "",
   disabled,
@@ -17,7 +18,7 @@ export default function Button({
   type = "button",
   variant = "primary",
   ...props
-}: ButtonProps) {
+}: ButtonProps & { "aria-busy"?: never }) {
   return (
     <button
       aria-busy={loading ? true : undefined}
