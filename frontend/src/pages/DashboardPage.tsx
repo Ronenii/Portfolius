@@ -193,7 +193,10 @@ export default function DashboardPage() {
   const [selectedChartType, setSelectedChartType] = useState<AllocationChartType>(
     readAllocationChartType
   );
-  const [selectedBucket, setSelectedBucket] = useState<AllocationRow | null>(null);
+  const [hoveredBucket, setHoveredBucket] = useState<AllocationRow | null>(null);
+  const [pinnedBucket, setPinnedBucket] = useState<AllocationRow | null>(null);
+  // Pinned (click) takes precedence over hovered (mouseenter/focus).
+  const selectedBucket = pinnedBucket ?? hoveredBucket;
   const showBackendStatus = !isProdMode();
   const healthQuery = useQuery({
     enabled: showBackendStatus,
@@ -237,21 +240,36 @@ export default function DashboardPage() {
 
   function selectDimension(dimension: BreakdownDimension) {
     setSelectedDimension(dimension);
-    setSelectedBucket(null);
+    setPinnedBucket(null);
+    setHoveredBucket(null);
   }
 
-  function selectBucket(row: AllocationRow) {
-    setSelectedBucket(row);
+  // Preview on hover/focus — only takes effect when nothing is pinned.
+  function hoverBucket(row: AllocationRow) {
+    setHoveredBucket(row);
+  }
+
+  // Click pins the composition; clicking the same row again unpins.
+  function pinBucket(row: AllocationRow) {
+    setPinnedBucket((prev) =>
+      prev?.dimension === row.dimension &&
+      prev?.label === row.label &&
+      prev?.currency === row.currency
+        ? null
+        : row
+    );
+    setHoveredBucket(row);
   }
 
   function closeBucket() {
-    setSelectedBucket(null);
+    setPinnedBucket(null);
+    setHoveredBucket(null);
   }
 
   function handleBucketKeyDown(event: KeyboardEvent<HTMLTableRowElement>, row: AllocationRow) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      selectBucket(row);
+      pinBucket(row);
       return;
     }
 
@@ -448,7 +466,7 @@ export default function DashboardPage() {
               <AllocationChart
                 formatPercent={formatPercent}
                 formatValue={formatMoney}
-                onSelectRow={selectBucket}
+                onSelectRow={pinBucket}
                 rows={selectedRows}
                 title={selectedDimensionLabel}
               />
@@ -457,7 +475,7 @@ export default function DashboardPage() {
               <AllocationDonut
                 formatPercent={formatPercent}
                 formatValue={formatMoney}
-                onSelectRow={selectBucket}
+                onSelectRow={pinBucket}
                 rows={selectedRows}
                 title={selectedDimensionLabel}
               />
@@ -471,7 +489,6 @@ export default function DashboardPage() {
                     <th scope="col">Market value</th>
                     <th scope="col">Percent</th>
                     <th scope="col">Holdings</th>
-                    <th scope="col">Composition</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -489,10 +506,10 @@ export default function DashboardPage() {
                       key={`${selectedDimension}-${row.label}-${row.currency}`}
                       role="button"
                       tabIndex={0}
-                      onClick={() => selectBucket(row)}
-                      onFocus={() => selectBucket(row)}
+                      onClick={() => pinBucket(row)}
+                      onFocus={() => hoverBucket(row)}
                       onKeyDown={(event) => handleBucketKeyDown(event, row)}
-                      onMouseEnter={() => selectBucket(row)}
+                      onMouseEnter={() => hoverBucket(row)}
                     >
                       <td data-label="Label">{row.label}</td>
                       <td className="num" data-label="Currency">
@@ -506,19 +523,6 @@ export default function DashboardPage() {
                       </td>
                       <td className="num" data-label="Holdings">
                         {row.holding_count}
-                      </td>
-                      <td className="row-actions" data-label="Composition">
-                        <button
-                          className="text-button"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            selectBucket(row);
-                          }}
-                        >
-                          <span aria-hidden="true">Details</span>
-                          <span className="sr-only">Show composition for {row.label}</span>
-                        </button>
                       </td>
                     </tr>
                   ))}

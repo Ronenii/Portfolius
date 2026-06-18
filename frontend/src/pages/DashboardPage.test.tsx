@@ -413,7 +413,7 @@ describe("DashboardPage", () => {
     renderDashboard();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Show composition for ETF" })
+      await screen.findByRole("button", { name: /ETF USD composition/i })
     );
 
     expect(getComposition).toHaveBeenCalledWith(

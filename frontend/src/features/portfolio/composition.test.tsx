@@ -208,7 +208,7 @@ describe("allocation composition drill-down", () => {
 
     renderDashboard();
 
-    await user.click(await screen.findByRole("button", { name: /Show composition for ETF/i }));
+    await user.click(await screen.findByRole("button", { name: /ETF USD composition/i }));
     expect(await screen.findByText("Composition failed")).toBeInTheDocument();
   });
 
@@ -219,7 +219,7 @@ describe("allocation composition drill-down", () => {
     renderDashboard();
 
     await user.click(
-      await screen.findByRole("button", { name: /Show composition for Alternatives/i })
+      await screen.findByRole("button", { name: /Alternatives USD composition/i })
     );
     expect(await screen.findByText("No child instruments")).toBeInTheDocument();
   });
@@ -232,10 +232,10 @@ describe("allocation composition drill-down", () => {
 
     renderDashboard();
 
-    await user.click(await screen.findByRole("button", { name: /Show composition for ETF/i }));
+    await user.click(await screen.findByRole("button", { name: /ETF USD composition/i }));
     expect(await screen.findByRole("dialog", { name: "ETF composition" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Show composition for Alternatives/i }));
+    await user.click(screen.getByRole("button", { name: /Alternatives USD composition/i }));
     expect(
       await screen.findByRole("dialog", { name: "Alternatives composition" })
     ).toBeInTheDocument();
