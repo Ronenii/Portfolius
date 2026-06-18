@@ -2484,6 +2484,15 @@ h1 {
     grid-column: 2;
     justify-content: start;
   }
+
+  .allocation-controls {
+    align-items: flex-start;
+  }
+
+  .page-header {
+    align-items: start;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 560px) {
