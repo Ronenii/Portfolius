@@ -889,7 +889,8 @@ h1 {
   .allocation-panel,
   .simulation-panel,
   .holdings-panel,
-  .composition-popover {
+  .composition-popover,
+  .assistant-message {
     animation: none;
   }
 }
@@ -1599,6 +1600,7 @@ h1 {
 .assistant-message {
   display: grid;
   gap: 6px;
+  animation: rise-in var(--dur-base) var(--ease-out) both;
   max-width: min(76ch, 88%);
   padding: 12px 14px;
   border: 1px solid var(--rule);
@@ -1628,6 +1630,52 @@ h1 {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* ---- Typing indicator (three bouncing dots) ----------------------------- */
+@keyframes typing-dot {
+  0%, 60%, 100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+}
+
+.typing-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  animation: typing-dot 1.2s var(--ease-standard) infinite;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+.mode-terminal .typing-dots span {
+  background: var(--accent-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots span {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 .assistant-pending,
