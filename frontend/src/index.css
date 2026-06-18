@@ -1795,6 +1795,29 @@ h1 {
   color: var(--fg-terminal);
 }
 
+/* ---- Button loading spinner -------------------------------------------- */
+@keyframes button-spin {
+  to { transform: rotate(360deg); }
+}
+
+.button__spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: button-spin 0.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button__spinner {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 .login-page {
   grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
   align-items: start;

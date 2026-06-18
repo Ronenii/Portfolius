@@ -4,24 +4,33 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: IconComponent;
+  loading?: boolean;
   variant?: "primary" | "secondary" | "ghost";
 };
 
 export default function Button({
   children,
   className = "",
+  disabled,
   icon: Icon,
-  variant = "primary",
+  loading = false,
   type = "button",
+  variant = "primary",
   ...props
 }: ButtonProps) {
   return (
     <button
+      aria-busy={loading ? true : undefined}
       className={`button button--${variant} ${className}`.trim()}
+      disabled={disabled || loading}
       type={type}
       {...props}
     >
-      {Icon ? <Icon aria-hidden="true" /> : null}
+      {loading
+        ? <span aria-hidden="true" className="button__spinner" />
+        : Icon
+          ? <Icon aria-hidden="true" />
+          : null}
       {children}
     </button>
   );
