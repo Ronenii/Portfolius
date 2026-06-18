@@ -370,7 +370,7 @@ function ProfileEditForm({
 
       <div className="form-actions">
         <Button
-          disabled={saveMutation.isPending}
+          loading={saveMutation.isPending}
           icon={Save}
           type="submit"
           variant="primary"

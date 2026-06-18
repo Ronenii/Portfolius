@@ -180,7 +180,8 @@ export default function SimulationPanel({ accessToken }: { accessToken: string }
       )}
 
       <Button
-        disabled={legs.length === 0 || simulateMutation.isPending}
+        disabled={legs.length === 0}
+        loading={simulateMutation.isPending}
         type="button"
         variant="primary"
         onClick={() => simulateMutation.mutate(legs)}

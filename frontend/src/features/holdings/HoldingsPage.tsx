@@ -445,7 +445,7 @@ export default function HoldingsPage() {
             </div>
 
             <div className="form-actions">
-              <Button disabled={isSaving} icon={Plus} type="submit">
+              <Button icon={Plus} loading={isSaving} type="submit">
                 {isSaving ? "Saving holding" : "Save holding"}
               </Button>
             </div>

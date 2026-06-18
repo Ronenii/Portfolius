@@ -11,6 +11,7 @@ function isValidEmail(email: string) {
 export default function LoginPage() {
   const { signInWithGoogle, signInWithMagicLink } = useAuth();
   const [email, setEmail] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   const canSubmit = useMemo(() => isValidEmail(email), [email]);
 
@@ -19,8 +20,12 @@ export default function LoginPage() {
     if (!canSubmit) {
       return;
     }
-
-    await signInWithMagicLink(email);
+    setIsSending(true);
+    try {
+      await signInWithMagicLink(email);
+    } finally {
+      setIsSending(false);
+    }
   }
 
   return (
@@ -49,7 +54,13 @@ export default function LoginPage() {
             type="email"
             value={email}
           />
-          <Button disabled={!canSubmit} icon={Mail} type="submit" variant="secondary">
+          <Button
+            disabled={!canSubmit}
+            icon={Mail}
+            loading={isSending}
+            type="submit"
+            variant="secondary"
+          >
             Send magic link
           </Button>
         </form>

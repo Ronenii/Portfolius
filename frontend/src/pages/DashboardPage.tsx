@@ -10,6 +10,7 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 
 import { AllocationChart } from "../components/charts/AllocationChart";
 import { AllocationDonut } from "../components/charts/AllocationDonut";
+import Button from "../components/ui/Button";
 import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
 import { CompositionPopover } from "../features/portfolio/CompositionPopover";
@@ -271,15 +272,15 @@ export default function DashboardPage() {
           <p className="eyebrow">Portfolio overview</p>
           <h1 id="dashboard-title">Dashboard</h1>
         </div>
-        <button
-          className="button button--primary"
-          disabled={!accessToken || refreshMutation.isPending}
+        <Button
+          disabled={!accessToken}
+          icon={RefreshCw}
+          loading={refreshMutation.isPending}
           type="button"
           onClick={() => refreshMutation.mutate()}
         >
-          <RefreshCw aria-hidden="true" />
           {refreshMutation.isPending ? "Refreshing" : "Refresh prices"}
-        </button>
+        </Button>
       </header>
 
       <section className="dashboard-summary" aria-label="Portfolio summary">
