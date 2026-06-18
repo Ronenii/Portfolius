@@ -1241,6 +1241,13 @@ h1 {
   background: var(--ink-900);
 }
 
+.mode-terminal .simulation-warnings {
+  border-color: color-mix(in srgb, var(--accent-300) 28%, transparent);
+  border-left-color: var(--accent-300);
+  background: color-mix(in srgb, var(--accent-300) 10%, transparent);
+  color: var(--ink-200);
+}
+
 .simulation-leg-editor {
   display: grid;
   grid-template-columns:
