@@ -10,6 +10,7 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 
 import { AllocationChart } from "../components/charts/AllocationChart";
 import { AllocationDonut } from "../components/charts/AllocationDonut";
+import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import Button from "../components/ui/Button";
 import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
@@ -233,6 +234,9 @@ export default function DashboardPage() {
   const selectedDimensionLabel =
     breakdownDimensions.find((dimension) => dimension.key === selectedDimension)?.label ??
     "Allocation";
+  const baseCurrency = snapshotQuery.data?.summary.base_currency;
+  const formatBaseCurrency = (amount: number) =>
+    formatMoney(String(amount), baseCurrency);
   const selectedRows = breakdownRows(breakdownsQuery.data, selectedDimension);
   const selectedBucketKey = selectedBucket
     ? `${selectedBucket.dimension}-${selectedBucket.label}-${selectedBucket.currency}`
@@ -322,30 +326,30 @@ export default function DashboardPage() {
               <article className="kpi-tile kpi-tile--primary">
                 <p className="panel-label">Priced value</p>
                 <strong>
-                  {formatMoney(
-                    snapshotQuery.data.summary.total_market_value,
-                    snapshotQuery.data.summary.base_currency
-                  )}
+                  <AnimatedNumber
+                    format={formatBaseCurrency}
+                    value={Number(snapshotQuery.data.summary.total_market_value)}
+                  />
                 </strong>
                 <span>{snapshotQuery.data.summary.base_currency} priced holdings</span>
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Cost basis</p>
                 <strong>
-                  {formatMoney(
-                    snapshotQuery.data.summary.total_cost_basis,
-                    snapshotQuery.data.summary.base_currency
-                  )}
+                  <AnimatedNumber
+                    format={formatBaseCurrency}
+                    value={Number(snapshotQuery.data.summary.total_cost_basis)}
+                  />
                 </strong>
                 <span>Base-currency holdings only</span>
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Unrealized gain</p>
                 <strong>
-                  {formatMoney(
-                    snapshotQuery.data.summary.total_unrealized_gain,
-                    snapshotQuery.data.summary.base_currency
-                  )}
+                  <AnimatedNumber
+                    format={formatBaseCurrency}
+                    value={Number(snapshotQuery.data.summary.total_unrealized_gain)}
+                  />
                 </strong>
                 <span>Based on latest stored close</span>
               </article>
