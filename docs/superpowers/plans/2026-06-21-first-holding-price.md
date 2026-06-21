@@ -224,7 +224,7 @@ git commit -m "feat: price newly added holdings"
 - Modify: `frontend/src/features/holdings/HoldingsPage.tsx`
 - Modify: `frontend/src/features/holdings/holdings.test.tsx`
 
-- [ ] **Step 1: Write failing frontend tests**
+- [x] **Step 1: Write failing frontend tests**
 
 Change `renderHoldingsRoute` to return its query client. Add one test for each
 create, update, and delete success path that spies on `invalidateQueries` and
@@ -236,7 +236,7 @@ expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["portfolio-snapshot"] })
 expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["portfolio-breakdowns"] });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -247,7 +247,7 @@ npm run test -- src/features/holdings/holdings.test.tsx
 
 Expected: snapshot and breakdown invalidation assertions fail.
 
-- [ ] **Step 3: Centralize mutation invalidation**
+- [x] **Step 3: Centralize mutation invalidation**
 
 Add inside `HoldingsPage`:
 
@@ -263,7 +263,7 @@ async function invalidateHoldingQueries() {
 
 Call it from successful create, update, and delete handlers.
 
-- [ ] **Step 4: Run tests and verify GREEN**
+- [x] **Step 4: Run tests and verify GREEN**
 
 Run:
 
@@ -274,7 +274,7 @@ npm run test -- src/features/holdings/holdings.test.tsx
 
 Expected: all holdings frontend tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/features/holdings/HoldingsPage.tsx \

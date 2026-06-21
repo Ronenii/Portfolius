@@ -133,14 +133,16 @@ function mockAuthState() {
 }
 
 function renderHoldingsRoute() {
-  return render(
-    <QueryClientProvider client={createQueryClient()}>
+  const queryClient = createQueryClient();
+  const rendered = render(
+    <QueryClientProvider client={queryClient}>
       <RouterProvider
         router={createAppRouter(["/holdings"])}
         future={{ v7_startTransition: true }}
       />
     </QueryClientProvider>
   );
+  return { ...rendered, queryClient };
 }
 
 async function fillHoldingForm(symbol = "msft") {
@@ -220,7 +222,8 @@ describe("holdings page", () => {
 
   it("calls createHolding with string decimal fields", async () => {
     vi.mocked(listHoldings).mockResolvedValue([]);
-    renderHoldingsRoute();
+    const { queryClient } = renderHoldingsRoute();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     await fillHoldingForm();
     await userEvent.click(screen.getByRole("button", { name: "Save holding" }));
@@ -237,6 +240,15 @@ describe("holdings page", () => {
         region: "North America",
         quantity: "4.25",
         average_cost: "312.50",
+      });
+    });
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["holdings"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["portfolio-snapshot"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["portfolio-breakdowns"],
       });
     });
   });
@@ -269,7 +281,8 @@ describe("holdings page", () => {
   });
 
   it("calls updateHolding for the selected holding", async () => {
-    renderHoldingsRoute();
+    const { queryClient } = renderHoldingsRoute();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const row = await screen.findByRole("row", { name: /AAPL/i });
     await userEvent.click(within(row).getByRole("button", { name: "Edit AAPL" }));
@@ -288,10 +301,20 @@ describe("holdings page", () => {
         })
       );
     });
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["holdings"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["portfolio-snapshot"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["portfolio-breakdowns"],
+      });
+    });
   });
 
   it("deletes a holding only after confirmation", async () => {
-    renderHoldingsRoute();
+    const { queryClient } = renderHoldingsRoute();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     const row = await screen.findByRole("row", { name: /AAPL/i });
     await userEvent.click(within(row).getByRole("button", { name: "Delete AAPL" }));
@@ -302,6 +325,15 @@ describe("holdings page", () => {
 
     await waitFor(() => {
       expect(deleteHolding).toHaveBeenCalledWith("access-token", 1);
+    });
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["holdings"] });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["portfolio-snapshot"],
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["portfolio-breakdowns"],
+      });
     });
   });
 

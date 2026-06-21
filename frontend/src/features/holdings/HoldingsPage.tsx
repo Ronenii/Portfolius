@@ -125,7 +125,7 @@ export default function HoldingsPage() {
     mutationFn: (payload: HoldingPayload) => createHolding(accessToken ?? "", payload),
     onSuccess: async () => {
       resetForm();
-      await queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      await invalidateHoldingQueries();
     },
     onError: (error) => {
       setErrors({ form: mutationErrorMessage(error) });
@@ -142,7 +142,7 @@ export default function HoldingsPage() {
     }) => updateHolding(accessToken ?? "", holdingId, payload),
     onSuccess: async () => {
       resetForm();
-      await queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      await invalidateHoldingQueries();
     },
     onError: (error) => {
       setErrors({ form: mutationErrorMessage(error) });
@@ -153,7 +153,7 @@ export default function HoldingsPage() {
     mutationFn: (holdingId: number) => deleteHolding(accessToken ?? "", holdingId),
     onSuccess: async () => {
       setConfirmDeleteId(null);
-      await queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      await invalidateHoldingQueries();
     },
   });
 
@@ -164,6 +164,14 @@ export default function HoldingsPage() {
     setForm(emptyForm);
     setEditingHolding(null);
     setErrors({});
+  }
+
+  async function invalidateHoldingQueries() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["holdings"] }),
+      queryClient.invalidateQueries({ queryKey: ["portfolio-snapshot"] }),
+      queryClient.invalidateQueries({ queryKey: ["portfolio-breakdowns"] }),
+    ]);
   }
 
   function updateField<Key extends keyof HoldingPayload>(
