@@ -145,6 +145,45 @@ def test_yfinance_profile_tolerates_missing_funds_data() -> None:
     assert result.asset_class == "ETF"
 
 
+def test_yfinance_profile_uses_sector_name_fallback_without_weights() -> None:
+    module = FakeYFinanceModule(
+        {
+            "SOXX": FakeTicker(
+                info={
+                    "quoteType": "ETF",
+                    "longName": "iShares Semiconductor ETF",
+                    "category": "Technology",
+                },
+                sector_weightings={},
+            )
+        }
+    )
+
+    result = YFinanceEtfProfileClient(yfinance_module=module).profile("SOXX")
+
+    assert result is not None
+    assert result.sector == "Technology"
+
+
+def test_yfinance_sector_weights_override_name_fallback() -> None:
+    module = FakeYFinanceModule(
+        {
+            "MIX": FakeTicker(
+                info={
+                    "quoteType": "ETF",
+                    "longName": "Technology Leaders ETF",
+                },
+                sector_weightings={"financial_services": 0.6},
+            )
+        }
+    )
+
+    result = YFinanceEtfProfileClient(yfinance_module=module).profile("MIX")
+
+    assert result is not None
+    assert result.sector == "Financial Services"
+
+
 def test_composite_overrides_etf_sector_and_region_from_yfinance() -> None:
     fmp_client = FmpInstrumentLookupClient(api_key="fmp-key")
     module = FakeYFinanceModule(
@@ -185,3 +224,76 @@ def test_composite_overrides_etf_sector_and_region_from_yfinance() -> None:
         region="Global",
         source="fmp+yfinance",
     )
+
+
+def test_composite_classifies_india_etf_by_investment_region() -> None:
+    fmp_client = FmpInstrumentLookupClient(api_key="fmp-key")
+    module = FakeYFinanceModule(
+        {
+            "INDA": FakeTicker(
+                info={
+                    "quoteType": "ETF",
+                    "longName": "iShares MSCI India ETF",
+                    "category": "India Equity",
+                },
+                sector_weightings={"financial_services": 0.3},
+            )
+        }
+    )
+    yfinance_client = YFinanceEtfProfileClient(yfinance_module=module)
+    fmp_client.profile = lambda symbol: InstrumentSearchResult(  # type: ignore[method-assign]
+        symbol="INDA",
+        name="iShares MSCI India ETF",
+        exchange="BATS",
+        currency="USD",
+        asset_class="ETF",
+        sector="Financial Services",
+        country="US",
+        region="North America",
+        source="fmp",
+    )
+
+    result = CompositeInstrumentLookupClient(fmp_client, yfinance_client).profile(
+        "INDA"
+    )
+
+    assert result is not None
+    assert result.country == "India"
+    assert result.region == "Asia ex-Japan"
+
+
+def test_composite_classifies_cspx_by_us_exposure_not_irish_domicile() -> None:
+    fmp_client = FmpInstrumentLookupClient(api_key="fmp-key")
+    module = FakeYFinanceModule(
+        {
+            "CSPX": FakeTicker(
+                info={
+                    "quoteType": "ETF",
+                    "longName": "iShares Core S&P 500 UCITS ETF USD (Acc)",
+                    "category": "US Large-Cap Blend Equity",
+                },
+                sector_weightings={},
+            )
+        }
+    )
+    yfinance_client = YFinanceEtfProfileClient(yfinance_module=module)
+    fmp_client.profile = lambda symbol: InstrumentSearchResult(  # type: ignore[method-assign]
+        symbol="CSPX",
+        name="iShares Core S&P 500 UCITS ETF USD (Acc)",
+        exchange="LSE",
+        currency="USD",
+        asset_class="ETF",
+        sector=None,
+        country="Ireland",
+        region="Europe",
+        source="fmp",
+    )
+
+    result = CompositeInstrumentLookupClient(fmp_client, yfinance_client).profile(
+        "CSPX"
+    )
+
+    assert result is not None
+    assert result.exchange == "LSE"
+    assert result.country == "United States"
+    assert result.region == "North America"

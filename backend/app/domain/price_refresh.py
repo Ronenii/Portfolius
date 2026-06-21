@@ -2,11 +2,15 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.data.models import Instrument
 from app.data.repositories.holdings import (
     list_all_instruments_with_holdings,
     list_instruments_for_user_holdings,
 )
-from app.data.repositories.prices import upsert_price
+from app.data.repositories.prices import (
+    get_latest_prices_for_instruments,
+    upsert_price,
+)
 from app.integrations.market_data import MarketDataClient
 
 
@@ -16,6 +20,31 @@ class PriceRefreshResult:
     updated: int
     skipped: int
     failed: int
+
+
+def ensure_instrument_has_price(
+    db: Session,
+    instrument: Instrument,
+    market_data_client: MarketDataClient,
+) -> bool:
+    if get_latest_prices_for_instruments(db, [instrument.id]):
+        return False
+
+    try:
+        market_price = market_data_client.get_latest_close(
+            instrument.symbol,
+            instrument.exchange,
+            instrument.currency,
+        )
+    except Exception:
+        return False
+
+    if market_price is None or not market_price.close_price.is_finite():
+        return False
+
+    upsert_price(db, instrument, market_price)
+    db.commit()
+    return True
 
 
 def _refresh_prices_for_instruments(

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 
 from alembic import command
 from alembic.config import Config
@@ -91,4 +91,50 @@ def test_m3_assistant_tables_upgrade_and_downgrade(
     downgraded_tables = inspect(engine).get_table_names()
     assert "conversations" not in downgraded_tables
     assert "messages" not in downgraded_tables
+    get_settings.cache_clear()
+
+
+def test_etf_exposure_data_correction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'etf_exposure.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    config = alembic_config(database_url)
+
+    command.upgrade(config, "20260608_0005")
+
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO instruments (symbol, exchange, country, region)
+                VALUES
+                  ('INDA', 'BATS', 'US', 'North America'),
+                  ('INDA', 'LSE', 'India', 'Asia ex-Japan'),
+                  ('CSPX', 'LSE', 'Ireland', 'Europe')
+                """
+            )
+        )
+
+    command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                """
+                SELECT symbol, exchange, country, region
+                FROM instruments
+                ORDER BY symbol, exchange
+                """
+            )
+        ).all()
+
+    assert rows == [
+        ("CSPX", "LSE", "United States", "North America"),
+        ("INDA", "BATS", "India", "Asia ex-Japan"),
+        ("INDA", "LSE", "India", "Asia ex-Japan"),
+    ]
     get_settings.cache_clear()

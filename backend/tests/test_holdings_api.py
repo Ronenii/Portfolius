@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -16,6 +17,8 @@ from app.api.v1.holdings import (
 )
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.data.models import Holding, Instrument
+from app.data.repositories.prices import get_latest_prices_for_instruments
+from app.integrations.market_data import MarketPrice
 from app.main import app
 from app.schemas.holdings import HoldingRequest
 from app.schemas.instruments import InstrumentSearchResult
@@ -36,6 +39,42 @@ class FakeInstrumentLookupClient:
         if self.should_raise:
             raise RuntimeError("provider down")
         return self.profile_result
+
+
+class FakeMarketDataClient:
+    def __init__(
+        self,
+        price: MarketPrice | None = None,
+        should_raise: bool = False,
+    ) -> None:
+        self.price = price
+        self.should_raise = should_raise
+        self.requests: list[tuple[str, str, str | None]] = []
+
+    def get_latest_close(
+        self,
+        symbol: str,
+        exchange: str,
+        currency_hint: str | None,
+    ) -> MarketPrice | None:
+        self.requests.append((symbol, exchange, currency_hint))
+        if self.should_raise:
+            raise RuntimeError("provider down")
+        return self.price
+
+
+def market_price(
+    symbol: str,
+    close_price: str = "500.25",
+) -> MarketPrice:
+    return MarketPrice(
+        symbol=symbol,
+        exchange="NYSEARCA",
+        price_date=date(2026, 6, 5),
+        close_price=Decimal(close_price),
+        currency="USD",
+        source="fake",
+    )
 
 
 def holding_payload(**overrides: object) -> HoldingRequest:
@@ -76,12 +115,14 @@ def save_holding(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
     lookup_client: FakeInstrumentLookupClient | None = None,
+    market_data_client: FakeMarketDataClient | None = None,
 ):
     return add_holding(
         payload,
         authenticated_user,
         db_session,
         lookup_client or FakeInstrumentLookupClient(),
+        market_data_client or FakeMarketDataClient(),
     )
 
 
@@ -134,6 +175,70 @@ def test_creating_holding_inserts_and_reuses_instrument(
     assert first_response.instrument.symbol == "VOO"
     assert first_response.instrument.exchange == "NYSEARCA"
     assert first_response.instrument.currency == "USD"
+
+
+def test_creating_first_holding_fetches_instrument_price(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    client = FakeMarketDataClient(market_price("VOO"))
+
+    response = save_holding(
+        holding_payload(),
+        authenticated_user,
+        db_session,
+        market_data_client=client,
+    )
+
+    saved = get_latest_prices_for_instruments(
+        db_session,
+        [response.instrument.id],
+    )
+    assert saved[response.instrument.id].close_price == Decimal("500.25")
+    assert client.requests == [("VOO", "NYSEARCA", "USD")]
+
+
+def test_creating_later_holding_reuses_existing_instrument_price(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    client = FakeMarketDataClient(market_price("VOO"))
+
+    save_holding(
+        holding_payload(),
+        authenticated_user,
+        db_session,
+        market_data_client=client,
+    )
+    save_holding(
+        holding_payload(quantity="3"),
+        authenticated_user,
+        db_session,
+        market_data_client=client,
+    )
+
+    assert client.requests == [("VOO", "NYSEARCA", "USD")]
+
+
+def test_creating_holding_continues_when_price_lookup_fails(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    client = FakeMarketDataClient(should_raise=True)
+
+    response = save_holding(
+        holding_payload(),
+        authenticated_user,
+        db_session,
+        market_data_client=client,
+    )
+
+    assert response.instrument.symbol == "VOO"
+    assert client.requests == [("VOO", "NYSEARCA", "USD")]
+    assert get_latest_prices_for_instruments(
+        db_session,
+        [response.instrument.id],
+    ) == {}
 
 
 def test_creating_holding_enriches_missing_metadata_from_profile(

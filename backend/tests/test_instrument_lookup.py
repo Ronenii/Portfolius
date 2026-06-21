@@ -224,14 +224,38 @@ def test_alpha_vantage_profile_classifies_dominant_sector_etf() -> None:
     }
 
 
+def test_alpha_vantage_profile_infers_country_and_region_from_name() -> None:
+    client = AlphaVantageEtfProfileClient(
+        api_key="alpha-key",
+        http_client=FakeAlphaVantageHttpClient(
+            {
+                "name": "iShares MSCI India ETF",
+                "sectors": [
+                    {"sector": "Financial Services", "weight": "30.0"},
+                    {"sector": "Technology", "weight": "20.0"},
+                ],
+            }
+        ),
+    )
+
+    result = client.profile("inda")
+
+    assert result is not None
+    assert result.country == "India"
+    assert result.region == "Asia ex-Japan"
+
+
 def test_alpha_vantage_profile_marks_mixed_sector_etf_as_diversified() -> None:
-    assert classify_etf_sector(
-        [
-            {"sector": "Technology", "weight": "31.0"},
-            {"sector": "Financial Services", "weight": "18.5"},
-            {"sector": "Healthcare", "weight": "16.0"},
-        ]
-    ) == "Diversified ETF"
+    assert (
+        classify_etf_sector(
+            [
+                {"sector": "Technology", "weight": "31.0"},
+                {"sector": "Financial Services", "weight": "18.5"},
+                {"sector": "Healthcare", "weight": "16.0"},
+            ]
+        )
+        == "Diversified ETF"
+    )
 
 
 def test_etf_region_can_be_inferred_from_fund_name() -> None:
