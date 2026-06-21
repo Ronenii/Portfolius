@@ -592,7 +592,7 @@ git commit -m "fix: prefer ETF exposure geography"
 - Delete: `backend/alembic/versions/20260621_0006_fix_inda_region.py`
 - Modify: `backend/tests/test_m3_schema.py`
 
-- [ ] **Step 1: Strengthen the migration test and verify RED**
+- [x] **Step 1: Strengthen the migration test and verify RED**
 
 Seed three instruments before upgrading:
 
@@ -635,7 +635,7 @@ pytest tests/test_m3_schema.py::test_inda_region_data_correction -q
 Expected: failure because the narrow migration sets only INDA region `Asia`
 and does not correct CSPX.
 
-- [ ] **Step 2: Replace the narrow migration with ETF exposure corrections**
+- [x] **Step 2: Replace the narrow migration with ETF exposure corrections**
 
 Create `20260621_0006_fix_etf_exposure.py` with the same revision identifiers
 as the uncommitted narrow migration and delete
@@ -669,7 +669,7 @@ op.execute(
 Keep downgrade non-destructive with `pass`, because the prior country/region
 metadata cannot be reconstructed reliably.
 
-- [ ] **Step 3: Run migration tests and verify GREEN**
+- [x] **Step 3: Run migration tests and verify GREEN**
 
 Run:
 
@@ -681,7 +681,7 @@ pytest tests/test_m3_schema.py -q
 
 Expected: all schema tests pass.
 
-- [ ] **Step 4: Commit stored-data correction**
+- [x] **Step 4: Commit stored-data correction**
 
 ```bash
 git add backend/alembic/versions/20260621_0006_fix_etf_exposure.py \
