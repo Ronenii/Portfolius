@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Completed:** 2026-06-21
+
 **Goal:** Show summed owned units for instrument allocation rows and distinct instrument positions for broader allocation rows.
 
 **Architecture:** Replace the ambiguous allocation-row lot count with `position_count` and optional `unit_quantity`. The allocation domain will aggregate instrument IDs and quantities while preserving existing market-value math; frontend tables, chart tooltips, simulations, and assistant summaries will consume the explicit fields.
@@ -281,7 +283,7 @@ Expected: remaining `holding_count` references belong only to holding CRUD,
 composition rows, and unpriced holding counts; no whitespace errors; the
 untracked `PR_DESCRIPTION.md` remains untouched.
 
-- [ ] **Step 5: Commit verification updates**
+- [x] **Step 5: Commit verification updates**
 
 ```bash
 git add frontend/src/features/portfolio/simulation.test.tsx
