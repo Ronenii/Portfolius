@@ -105,11 +105,7 @@ class AlphaVantageEtfProfileClient:
         name = optional_text(payload.get("name") or payload.get("description"))
         geography = infer_etf_geography(name)
         sector = classify_etf_sector(etf_sectors(payload)) or infer_etf_sector(name)
-        if (
-            sector is None
-            and geography.country is None
-            and geography.region is None
-        ):
+        if sector is None and geography.country is None and geography.region is None:
             return None
 
         return InstrumentSearchResult(

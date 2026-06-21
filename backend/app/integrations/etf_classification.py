@@ -37,14 +37,17 @@ EXCLUSION_REGION_ALIASES = (
 )
 
 EXPLICIT_REGION_ALIASES = (
-    ("Asia Pacific", ("asia pacific",)),
+    ("Asia Pacific", ("asia pacific", "asia")),
     ("Emerging Markets", ("emerging markets", "emerging market")),
     ("Latin America", ("latin america", "latin american")),
     ("Middle East", ("middle east", "middle eastern")),
     ("Africa", ("africa", "african")),
     ("Europe", ("europe", "european", "eurozone", "euro stoxx")),
     ("North America", ("north america", "north american")),
-    ("Global", ("global", "world", "acwi")),
+    (
+        "Global",
+        ("global", "world", "acwi", "developed markets", "developed market"),
+    ),
 )
 
 COUNTRY_EXPOSURES = (
@@ -63,9 +66,9 @@ COUNTRY_EXPOSURES = (
             "russell",
         ),
     ),
-    ("Canada", "North America", ("canada", "canadian")),
+    ("Canada", "North America", ("canada", "canadian", "tsx")),
     ("Mexico", "Latin America", ("mexico", "mexican")),
-    ("Brazil", "Latin America", ("brazil", "brazilian")),
+    ("Brazil", "Latin America", ("brazil", "brazilian", "bovespa", "ibovespa")),
     ("Chile", "Latin America", ("chile", "chilean")),
     ("Colombia", "Latin America", ("colombia", "colombian")),
     ("Peru", "Latin America", ("peru", "peruvian")),
@@ -73,11 +76,11 @@ COUNTRY_EXPOSURES = (
     (
         "United Kingdom",
         "Europe",
-        ("united kingdom", "uk", "britain", "british"),
+        ("united kingdom", "uk", "britain", "british", "ftse 100"),
     ),
     ("Ireland", "Europe", ("ireland", "irish")),
-    ("France", "Europe", ("france", "french")),
-    ("Germany", "Europe", ("germany", "german")),
+    ("France", "Europe", ("france", "french", "cac 40")),
+    ("Germany", "Europe", ("germany", "german", "dax")),
     ("Italy", "Europe", ("italy", "italian")),
     ("Spain", "Europe", ("spain", "spanish")),
     ("Portugal", "Europe", ("portugal", "portuguese")),
@@ -93,7 +96,7 @@ COUNTRY_EXPOSURES = (
     ("Greece", "Europe", ("greece", "greek")),
     ("Türkiye", "Europe", ("turkiye", "turkey", "turkish")),
     ("Japan", "Japan", ("japan", "japanese", "nikkei", "topix")),
-    ("China", "Asia ex-Japan", ("china", "chinese", "msci china")),
+    ("China", "Asia ex-Japan", ("china", "chinese", "msci china", "csi 300")),
     ("India", "Asia ex-Japan", ("india", "indian", "nifty", "sensex")),
     (
         "South Korea",

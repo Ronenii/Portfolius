@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python 3.11+, dataclasses, regular expressions, FastAPI schemas, yfinance and Alpha Vantage adapters, SQLAlchemy/Alembic, pytest, Ruff.
 
+**Completed:** 2026-06-21
+
 ---
 
 ## File Map
@@ -695,7 +697,7 @@ git commit -m "fix: migrate ETF exposure metadata"
 **Files:**
 - Review all files changed in Tasks 1-4.
 
-- [ ] **Step 1: Run focused ETF tests**
+- [x] **Step 1: Run focused ETF tests**
 
 ```bash
 cd backend
@@ -708,7 +710,7 @@ pytest tests/test_etf_classification.py \
 
 Expected: all focused tests pass.
 
-- [ ] **Step 2: Run the full backend suite**
+- [x] **Step 2: Run the full backend suite**
 
 ```bash
 cd backend
@@ -718,7 +720,7 @@ pytest
 
 Expected: zero failures.
 
-- [ ] **Step 3: Run lint and formatting checks**
+- [x] **Step 3: Run lint and formatting checks**
 
 ```bash
 cd backend
@@ -738,7 +740,7 @@ ruff format --check \
 
 Expected: Ruff reports no errors and all listed files are formatted.
 
-- [ ] **Step 4: Verify the diff**
+- [x] **Step 4: Verify the diff**
 
 ```bash
 git diff --check
@@ -747,7 +749,7 @@ git status --short
 
 Expected: no whitespace errors; only planned files are modified.
 
-- [ ] **Step 5: Commit final cleanup if needed**
+- [x] **Step 5: Commit final cleanup if needed**
 
 If verification required formatting-only or test-only cleanup:
 

@@ -26,6 +26,12 @@ from app.integrations.etf_classification import (
         ("Nasdaq 100 UCITS ETF", "United States", "North America"),
         ("Russell 2000 ETF", "United States", "North America"),
         ("MSCI USA Quality ETF", "United States", "North America"),
+        ("S&P TSX 60 ETF", "Canada", "North America"),
+        ("FTSE 100 UCITS ETF", "United Kingdom", "Europe"),
+        ("DAX UCITS ETF", "Germany", "Europe"),
+        ("CAC 40 ETF", "France", "Europe"),
+        ("CSI 300 ETF", "China", "Asia ex-Japan"),
+        ("Bovespa ETF", "Brazil", "Latin America"),
     ],
 )
 def test_infers_country_focused_etf_exposure(
@@ -40,6 +46,7 @@ def test_infers_country_focused_etf_exposure(
     ("hint", "region"),
     [
         ("Asia Pacific Equity ETF", "Asia Pacific"),
+        ("Asia Equity ETF", "Asia Pacific"),
         ("Asia Pacific ex-Japan ETF", "Asia ex-Japan"),
         ("Pacific ex Japan ETF", "Asia ex-Japan"),
         ("MSCI Emerging Markets ETF", "Emerging Markets"),
@@ -50,6 +57,7 @@ def test_infers_country_focused_etf_exposure(
         ("Middle East Dividend ETF", "Middle East"),
         ("Africa Index ETF", "Africa"),
         ("World Equity ETF", "Global"),
+        ("Developed Markets ETF", "Global"),
     ],
 )
 def test_infers_multi_country_region_without_country(
