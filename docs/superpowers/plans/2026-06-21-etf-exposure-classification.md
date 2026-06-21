@@ -270,7 +270,7 @@ git commit -m "feat: infer structured ETF geography"
 - Modify: `backend/app/integrations/yfinance_etf_profile.py`
 - Modify: `backend/tests/test_yfinance_etf_profile.py`
 
-- [ ] **Step 1: Write failing sector alias tests**
+- [x] **Step 1: Write failing sector alias tests**
 
 Add table-driven tests for `infer_etf_sector`:
 
@@ -357,7 +357,7 @@ def test_yfinance_sector_weights_override_name_fallback() -> None:
     assert result.sector == "Financial Services"
 ```
 
-- [ ] **Step 2: Run sector tests and verify RED**
+- [x] **Step 2: Run sector tests and verify RED**
 
 Run:
 
@@ -372,7 +372,7 @@ pytest tests/test_etf_classification.py \
 Expected: failures because `infer_etf_sector` does not exist and yfinance has
 no name/category fallback.
 
-- [ ] **Step 3: Implement canonical sector aliases**
+- [x] **Step 3: Implement canonical sector aliases**
 
 Add `infer_etf_sector(hint)` to `etf_classification.py` using the same
 normalized complete-phrase matching. Use ordered aliases:
@@ -418,7 +418,7 @@ SECTOR_ALIASES = (
 
 Match more specific phrases before generic ones.
 
-- [ ] **Step 4: Integrate fallback into yfinance**
+- [x] **Step 4: Integrate fallback into yfinance**
 
 In `YFinanceEtfProfileClient.profile`, build one combined `profile_hint` from
 name and category. Compute:
@@ -432,7 +432,7 @@ sector = weighted_sector or infer_etf_sector(profile_hint)
 Populate `country=geography.country`, `region=geography.region`, and
 `sector=sector`.
 
-- [ ] **Step 5: Run sector and yfinance tests and verify GREEN**
+- [x] **Step 5: Run sector and yfinance tests and verify GREEN**
 
 Run:
 
@@ -444,7 +444,7 @@ pytest tests/test_etf_classification.py tests/test_yfinance_etf_profile.py -q
 
 Expected: all tests pass.
 
-- [ ] **Step 6: Commit sector fallbacks**
+- [x] **Step 6: Commit sector fallbacks**
 
 ```bash
 git add backend/app/integrations/etf_classification.py \

@@ -2,7 +2,8 @@ from typing import Any
 
 from app.integrations.etf_classification import (
     classify_yfinance_sector,
-    infer_etf_region,
+    infer_etf_geography,
+    infer_etf_sector,
 )
 from app.schemas.instruments import InstrumentSearchResult
 
@@ -67,7 +68,9 @@ class YFinanceEtfProfileClient:
 
         name = optional_text(info.get("longName") or info.get("shortName"))
         category = optional_text(info.get("category"))
-        region_hint = " ".join(part for part in (name, category) if part)
+        profile_hint = " ".join(part for part in (name, category) if part)
+        weighted_sector = classify_yfinance_sector(sector_weightings(ticker))
+        geography = infer_etf_geography(profile_hint)
 
         return InstrumentSearchResult(
             symbol=normalized_symbol,
@@ -75,8 +78,8 @@ class YFinanceEtfProfileClient:
             exchange=None,
             currency=None,
             asset_class="ETF",
-            sector=classify_yfinance_sector(sector_weightings(ticker)),
-            country=None,
-            region=infer_etf_region(region_hint),
+            sector=weighted_sector or infer_etf_sector(profile_hint),
+            country=geography.country,
+            region=geography.region,
             source="yfinance",
         )

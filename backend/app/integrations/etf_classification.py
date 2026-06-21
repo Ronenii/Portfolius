@@ -128,6 +128,75 @@ COUNTRY_EXPOSURES = (
     ("Kenya", "Africa", ("kenya", "kenyan")),
 )
 
+SECTOR_ALIASES = (
+    (
+        "Communication Services",
+        ("communication services", "telecommunications", "telecom", "media"),
+    ),
+    (
+        "Consumer Defensive",
+        ("consumer staples", "consumer defensive", "food and beverage"),
+    ),
+    (
+        "Consumer Cyclical",
+        (
+            "consumer discretionary",
+            "consumer cyclical",
+            "travel and leisure",
+            "automotive",
+            "retail",
+        ),
+    ),
+    (
+        "Basic Materials",
+        ("basic materials", "metals and mining", "materials", "mining"),
+    ),
+    (
+        "Financial Services",
+        ("financial services", "financials", "insurance", "banking", "banks"),
+    ),
+    (
+        "Healthcare",
+        (
+            "medical devices",
+            "health care",
+            "healthcare",
+            "biotechnology",
+            "biotech",
+            "pharmaceutical",
+        ),
+    ),
+    (
+        "Industrials",
+        (
+            "aerospace and defense",
+            "transportation",
+            "infrastructure",
+            "industrials",
+            "industrial",
+        ),
+    ),
+    ("Real Estate", ("real estate", "property", "reit")),
+    (
+        "Technology",
+        (
+            "information technology",
+            "artificial intelligence",
+            "cloud computing",
+            "semiconductor",
+            "cybersecurity",
+            "technology",
+            "software",
+            "robotics",
+        ),
+    ),
+    ("Utilities", ("utilities", "utility")),
+    (
+        "Energy",
+        ("oil and gas", "clean energy", "wind energy", "energy", "solar"),
+    ),
+)
+
 # Kept as a compatibility export for provider modules and older callers.
 REGION_KEYWORDS = list(EXCLUSION_REGION_ALIASES + EXPLICIT_REGION_ALIASES)
 
@@ -184,6 +253,17 @@ def infer_etf_geography(hint: str | None) -> EtfGeography:
 
 def infer_etf_region(name: str | None) -> str | None:
     return infer_etf_geography(name).region
+
+
+def infer_etf_sector(hint: str | None) -> str | None:
+    normalized_hint = normalize_hint(hint)
+    if not normalized_hint:
+        return None
+
+    for sector, aliases in SECTOR_ALIASES:
+        if any(contains_phrase(normalized_hint, alias) for alias in aliases):
+            return sector
+    return None
 
 
 def classify_yfinance_sector(
