@@ -23,7 +23,7 @@ This change will:
 - normalize inferred countries to full display names;
 - distinguish `Japan`, `Asia ex-Japan`, and `Asia Pacific`;
 - preserve higher-quality provider data such as sector holdings weights;
-- correct existing stored INDA metadata during deployment;
+- correct existing stored INDA and CSPX metadata during deployment;
 - add regression coverage for geography, precedence, sector aliases, and
   false-positive boundaries.
 
@@ -155,14 +155,14 @@ separate. This work changes ETF exposure semantics only.
 
 ## Stored Metadata Correction
 
-The existing INDA data migration will set:
+The ETF exposure data migration will set:
 
-- `country = 'India'`;
-- `region = 'Asia ex-Japan'`.
+- INDA to country `India`, region `Asia ex-Japan`;
+- CSPX to country `United States`, region `North America`.
 
-The update will target INDA rows carrying the known incorrect listing-derived
-geography. It will not overwrite unrelated symbols or arbitrary user-edited
-regions.
+The update will target rows carrying the known incorrect listing- or
+domicile-derived geography. It will not overwrite unrelated symbols or
+arbitrary user-edited regions.
 
 Future ETF refreshes will receive the corrected country and region directly
 from the classifier.
@@ -183,7 +183,7 @@ Table-driven unit tests will cover:
 - punctuation, casing, whitespace, and substring false positives;
 - composite-provider behavior where U.S. listing geography is overridden;
 - UCITS behavior where Irish domicile is overridden by U.S. exposure;
-- migration of existing INDA metadata.
+- migration of existing INDA and CSPX metadata.
 
 The backend test suite and Ruff checks must remain green.
 
