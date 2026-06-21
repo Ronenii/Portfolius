@@ -221,7 +221,7 @@ npm run test -- src/pages/DashboardPage.test.tsx
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit frontend display**
+- [x] **Step 5: Commit frontend display**
 
 ```bash
 git add frontend/src/features/portfolio/portfolio-api.ts \
@@ -237,13 +237,13 @@ git commit -m "fix: show units in instrument allocation"
 **Files:**
 - Modify: `frontend/src/features/portfolio/simulation.test.tsx`
 
-- [ ] **Step 1: Update remaining allocation fixtures**
+- [x] **Step 1: Update remaining allocation fixtures**
 
 Replace allocation-row `holding_count` values with `position_count` and
 `unit_quantity`, using a quantity string only for instrument rows and `null`
 elsewhere. Do not alter composition-row `holding_count`.
 
-- [ ] **Step 2: Run targeted backend verification**
+- [x] **Step 2: Run targeted backend verification**
 
 Run from `backend/`:
 
@@ -255,7 +255,7 @@ pytest
 
 Expected: lint clean and all backend tests pass.
 
-- [ ] **Step 3: Run targeted frontend verification**
+- [x] **Step 3: Run targeted frontend verification**
 
 Run from `frontend/`:
 
@@ -267,7 +267,7 @@ npm run build
 
 Expected: lint clean, all Vitest tests pass, and TypeScript/Vite build succeeds.
 
-- [ ] **Step 4: Review contract and diff**
+- [x] **Step 4: Review contract and diff**
 
 Run from the repository root:
 
