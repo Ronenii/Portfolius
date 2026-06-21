@@ -9,6 +9,7 @@ retain its U.S. exchange metadata while reporting the underlying exposure:
 - INDA: country `India`, region `Asia ex-Japan`
 - EWJ: country `Japan`, region `Japan`
 - MCHI: country `China`, region `Asia ex-Japan`
+- CSPX: country `United States`, region `North America`
 
 The classification must work for ETF families, not only a catalog of known
 symbols.
@@ -59,6 +60,12 @@ Representative mappings:
 | Canada | Canada | North America |
 | United Kingdom | United Kingdom | Europe |
 
+Country exposure may also be established by a country-specific index when the
+fund name does not spell out the country. For example, `S&P 500`, `Nasdaq`,
+`Russell`, and `MSCI USA` indicate United States exposure. This ensures an
+Irish-domiciled UCITS fund such as CSPX is classified by its U.S. holdings,
+not by its Irish domicile.
+
 Country inference will cover common investable markets across:
 
 - North America;
@@ -91,8 +98,8 @@ example, `Asia Pacific ex-Japan` must not become `Asia Pacific`, and `Global
 ex-US` must not become `Global`.
 
 Country-focused funds use their country-derived region even when the primary
-provider reports the U.S. listing country. Multi-country funds leave country
-unset rather than inventing one.
+provider reports a listing country or fund domicile. Multi-country funds leave
+country unset rather than inventing one.
 
 ## Matching Rules
 
@@ -102,8 +109,9 @@ whitespace. This avoids false positives such as matching `US` inside another
 word.
 
 The classifier consumes the combined ETF name and provider category. Name and
-category are treated as exposure hints; ticker symbols are not used as the
-primary classification mechanism.
+category are treated as exposure hints. Recognized country-specific benchmark
+names are also exposure hints. Ticker symbols are not used as the primary
+classification mechanism.
 
 ## Sector Fallback
 
@@ -164,6 +172,8 @@ from the classifier.
 Table-driven unit tests will cover:
 
 - representative countries in every supported broad region;
+- country-specific benchmark aliases, including `S&P 500`, `Nasdaq`,
+  `Russell`, and `MSCI USA`;
 - `Japan`, `Asia ex-Japan`, and `Asia Pacific`;
 - explicit exclusion and broad-region precedence;
 - full-name country normalization;
@@ -172,6 +182,7 @@ Table-driven unit tests will cover:
 - sector-weight precedence over name inference;
 - punctuation, casing, whitespace, and substring false positives;
 - composite-provider behavior where U.S. listing geography is overridden;
+- UCITS behavior where Irish domicile is overridden by U.S. exposure;
 - migration of existing INDA metadata.
 
 The backend test suite and Ruff checks must remain green.
