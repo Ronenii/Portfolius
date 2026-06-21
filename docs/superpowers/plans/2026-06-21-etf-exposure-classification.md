@@ -29,7 +29,7 @@
 - Create: `backend/tests/test_etf_classification.py`
 - Modify: `backend/app/integrations/etf_classification.py`
 
-- [ ] **Step 1: Write failing table-driven geography tests**
+- [x] **Step 1: Write failing table-driven geography tests**
 
 Create tests that import `EtfGeography` and `infer_etf_geography` and assert the
 following exact cases:
@@ -116,7 +116,7 @@ def test_geography_matching_does_not_use_partial_words(hint: str) -> None:
     assert infer_etf_geography(hint) == EtfGeography(None, None)
 ```
 
-- [ ] **Step 2: Run the geography tests and verify RED**
+- [x] **Step 2: Run the geography tests and verify RED**
 
 Run:
 
@@ -129,7 +129,7 @@ pytest tests/test_etf_classification.py -q
 Expected: collection fails because `EtfGeography` and
 `infer_etf_geography` do not exist.
 
-- [ ] **Step 3: Implement normalized structured geography inference**
+- [x] **Step 3: Implement normalized structured geography inference**
 
 In `backend/app/integrations/etf_classification.py`:
 
@@ -242,7 +242,7 @@ COUNTRY_EXPOSURES = (
 Ensure explicit exclusion phrases run before countries so `Asia Pacific
 ex-Japan` does not resolve to Japan or Australia.
 
-- [ ] **Step 4: Run geography tests and verify GREEN**
+- [x] **Step 4: Run geography tests and verify GREEN**
 
 Run:
 
@@ -254,7 +254,7 @@ pytest tests/test_etf_classification.py -q
 
 Expected: all geography tests pass.
 
-- [ ] **Step 5: Commit structured geography inference**
+- [x] **Step 5: Commit structured geography inference**
 
 ```bash
 git add backend/app/integrations/etf_classification.py \

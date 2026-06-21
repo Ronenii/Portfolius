@@ -1,19 +1,135 @@
-"""Provider-agnostic ETF sector/region classification helpers.
+"""Provider-agnostic ETF exposure classification helpers.
 
-``infer_etf_region`` lives here (rather than in a specific provider module) so the
-FMP, Alpha Vantage, and yfinance clients can all share one keyword table. The
-yfinance helpers expect sector weights as *fractions* (0.0-1.0), which is what the
-``Ticker.funds_data.sector_weightings`` mapping returns.
+The shared classifiers live here so FMP, Alpha Vantage, and yfinance adapters
+describe an ETF's underlying exposure consistently. The yfinance sector helper
+expects weights as fractions (0.0-1.0), matching
+``Ticker.funds_data.sector_weightings``.
 """
 
-REGION_KEYWORDS = [
-    ("Global", ("global", "world", "acwi")),
-    ("Europe", ("europe", "eurozone", "euro stoxx", "msci europe")),
-    ("Asia", ("asia", "asia pacific", "pacific ex-japan")),
+import re
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class EtfGeography:
+    country: str | None
+    region: str | None
+
+
+EXCLUSION_REGION_ALIASES = (
+    (
+        "Global ex-US",
+        (
+            "global ex us",
+            "world ex us",
+            "developed markets ex us",
+            "developed ex us",
+        ),
+    ),
+    (
+        "Asia ex-Japan",
+        (
+            "asia ex japan",
+            "asia pacific ex japan",
+            "pacific ex japan",
+        ),
+    ),
+)
+
+EXPLICIT_REGION_ALIASES = (
+    ("Asia Pacific", ("asia pacific",)),
     ("Emerging Markets", ("emerging markets", "emerging market")),
-    ("North America", ("north america", "s&p 500", "russell", "nasdaq")),
-    ("United States", ("u.s.", "us ", "usa", "united states")),
-]
+    ("Latin America", ("latin america", "latin american")),
+    ("Middle East", ("middle east", "middle eastern")),
+    ("Africa", ("africa", "african")),
+    ("Europe", ("europe", "european", "eurozone", "euro stoxx")),
+    ("North America", ("north america", "north american")),
+    ("Global", ("global", "world", "acwi")),
+)
+
+COUNTRY_EXPOSURES = (
+    (
+        "United States",
+        "North America",
+        (
+            "united states",
+            "us",
+            "u s",
+            "usa",
+            "msci usa",
+            "s&p 500",
+            "sp 500",
+            "nasdaq",
+            "russell",
+        ),
+    ),
+    ("Canada", "North America", ("canada", "canadian")),
+    ("Mexico", "Latin America", ("mexico", "mexican")),
+    ("Brazil", "Latin America", ("brazil", "brazilian")),
+    ("Chile", "Latin America", ("chile", "chilean")),
+    ("Colombia", "Latin America", ("colombia", "colombian")),
+    ("Peru", "Latin America", ("peru", "peruvian")),
+    ("Argentina", "Latin America", ("argentina", "argentinian")),
+    (
+        "United Kingdom",
+        "Europe",
+        ("united kingdom", "uk", "britain", "british"),
+    ),
+    ("Ireland", "Europe", ("ireland", "irish")),
+    ("France", "Europe", ("france", "french")),
+    ("Germany", "Europe", ("germany", "german")),
+    ("Italy", "Europe", ("italy", "italian")),
+    ("Spain", "Europe", ("spain", "spanish")),
+    ("Portugal", "Europe", ("portugal", "portuguese")),
+    ("Netherlands", "Europe", ("netherlands", "dutch")),
+    ("Belgium", "Europe", ("belgium", "belgian")),
+    ("Switzerland", "Europe", ("switzerland", "swiss")),
+    ("Austria", "Europe", ("austria", "austrian")),
+    ("Sweden", "Europe", ("sweden", "swedish")),
+    ("Norway", "Europe", ("norway", "norwegian")),
+    ("Denmark", "Europe", ("denmark", "danish")),
+    ("Finland", "Europe", ("finland", "finnish")),
+    ("Poland", "Europe", ("poland", "polish")),
+    ("Greece", "Europe", ("greece", "greek")),
+    ("Türkiye", "Europe", ("turkiye", "turkey", "turkish")),
+    ("Japan", "Japan", ("japan", "japanese", "nikkei", "topix")),
+    ("China", "Asia ex-Japan", ("china", "chinese", "msci china")),
+    ("India", "Asia ex-Japan", ("india", "indian", "nifty", "sensex")),
+    (
+        "South Korea",
+        "Asia ex-Japan",
+        ("south korea", "korea", "korean", "kospi"),
+    ),
+    ("Taiwan", "Asia ex-Japan", ("taiwan", "taiwanese")),
+    ("Hong Kong", "Asia ex-Japan", ("hong kong", "hang seng")),
+    ("Singapore", "Asia ex-Japan", ("singapore", "singaporean")),
+    ("Indonesia", "Asia ex-Japan", ("indonesia", "indonesian")),
+    ("Malaysia", "Asia ex-Japan", ("malaysia", "malaysian")),
+    ("Thailand", "Asia ex-Japan", ("thailand", "thai")),
+    ("Vietnam", "Asia ex-Japan", ("vietnam", "vietnamese")),
+    ("Philippines", "Asia ex-Japan", ("philippines", "philippine")),
+    ("Pakistan", "Asia ex-Japan", ("pakistan", "pakistani")),
+    ("Bangladesh", "Asia ex-Japan", ("bangladesh", "bangladeshi")),
+    ("Australia", "Asia Pacific", ("australia", "australian", "asx")),
+    ("New Zealand", "Asia Pacific", ("new zealand",)),
+    ("Israel", "Middle East", ("israel", "israeli")),
+    ("Saudi Arabia", "Middle East", ("saudi arabia", "saudi")),
+    (
+        "United Arab Emirates",
+        "Middle East",
+        ("united arab emirates", "uae"),
+    ),
+    ("Qatar", "Middle East", ("qatar", "qatari")),
+    ("Kuwait", "Middle East", ("kuwait", "kuwaiti")),
+    ("South Africa", "Africa", ("south africa", "south african")),
+    ("Egypt", "Africa", ("egypt", "egyptian")),
+    ("Nigeria", "Africa", ("nigeria", "nigerian")),
+    ("Morocco", "Africa", ("morocco", "moroccan")),
+    ("Kenya", "Africa", ("kenya", "kenyan")),
+)
+
+# Kept as a compatibility export for provider modules and older callers.
+REGION_KEYWORDS = list(EXCLUSION_REGION_ALIASES + EXPLICIT_REGION_ALIASES)
 
 # yfinance reports sector weights as fractions, so a "dominant" sector is one that
 # makes up at least half the fund. Below the threshold an ETF is "Diversified".
@@ -35,15 +151,39 @@ YFINANCE_SECTOR_LABELS = {
 }
 
 
-def infer_etf_region(name: str | None) -> str | None:
-    normalized_name = f" {name.lower()} " if name else ""
-    if not normalized_name:
-        return None
+def normalize_hint(value: str | None) -> str:
+    if not value:
+        return ""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", value.casefold()).split())
 
-    for region, keywords in REGION_KEYWORDS:
-        if any(keyword in normalized_name for keyword in keywords):
-            return region
-    return None
+
+def contains_phrase(normalized_hint: str, alias: str) -> bool:
+    normalized_alias = normalize_hint(alias)
+    return f" {normalized_alias} " in f" {normalized_hint} "
+
+
+def infer_etf_geography(hint: str | None) -> EtfGeography:
+    normalized_hint = normalize_hint(hint)
+    if not normalized_hint:
+        return EtfGeography(None, None)
+
+    for region, aliases in EXCLUSION_REGION_ALIASES:
+        if any(contains_phrase(normalized_hint, alias) for alias in aliases):
+            return EtfGeography(None, region)
+
+    for country, region, aliases in COUNTRY_EXPOSURES:
+        if any(contains_phrase(normalized_hint, alias) for alias in aliases):
+            return EtfGeography(country, region)
+
+    for region, aliases in EXPLICIT_REGION_ALIASES:
+        if any(contains_phrase(normalized_hint, alias) for alias in aliases):
+            return EtfGeography(None, region)
+
+    return EtfGeography(None, None)
+
+
+def infer_etf_region(name: str | None) -> str | None:
+    return infer_etf_geography(name).region
 
 
 def classify_yfinance_sector(
