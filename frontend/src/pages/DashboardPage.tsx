@@ -16,6 +16,10 @@ import { TrendLoader } from "../components/ui/TrendLoader";
 import { useAuth } from "../features/auth/AuthContext";
 import { CompositionPopover } from "../features/portfolio/CompositionPopover";
 import {
+  allocationQuantityLabel,
+  allocationQuantityValue,
+} from "../features/portfolio/allocation-display";
+import {
   getPortfolioBreakdowns,
   getPortfolioSnapshot,
   refreshPrices,
@@ -238,6 +242,9 @@ export default function DashboardPage() {
   const formatBaseCurrency = (amount: number) =>
     formatMoney(String(amount), baseCurrency);
   const selectedRows = breakdownRows(breakdownsQuery.data, selectedDimension);
+  const selectedQuantityLabel = selectedRows[0]
+    ? allocationQuantityLabel(selectedRows[0])
+    : "Positions";
   const selectedBucketKey = selectedBucket
     ? `${selectedBucket.dimension}-${selectedBucket.label}-${selectedBucket.currency}`
     : null;
@@ -492,7 +499,7 @@ export default function DashboardPage() {
                     <th scope="col">Currency</th>
                     <th scope="col">Market value</th>
                     <th scope="col">Percent</th>
-                    <th scope="col">Holdings</th>
+                    <th scope="col">{selectedQuantityLabel}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -525,8 +532,8 @@ export default function DashboardPage() {
                       <td className="num" data-label="Percent">
                         {formatPercent(row.percent)}
                       </td>
-                      <td className="num" data-label="Holdings">
-                        {row.holding_count}
+                      <td className="num" data-label={selectedQuantityLabel}>
+                        {allocationQuantityValue(row)}
                       </td>
                     </tr>
                   ))}

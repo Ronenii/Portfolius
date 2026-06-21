@@ -135,7 +135,7 @@ pytest tests/test_assistant_context.py -q
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit backend consumers**
+- [x] **Step 5: Commit backend consumers**
 
 ```bash
 git add backend/app/domain/assistant.py backend/tests/test_assistant_context.py
@@ -152,7 +152,7 @@ git commit -m "fix: expose allocation units to assistant context"
 - Modify: `frontend/src/components/charts/AllocationChart.tsx`
 - Modify: `frontend/src/components/charts/AllocationDonut.tsx`
 
-- [ ] **Step 1: Write failing dashboard tests**
+- [x] **Step 1: Write failing dashboard tests**
 
 Update breakdown fixtures to the new fields. Give the instrument row
 `position_count: 1` and `unit_quantity: "44"`. Verify the default asset-class
@@ -160,7 +160,7 @@ view has a `Positions` heading and value `1`; after selecting Instrument, verify
 the heading is `Units`, the value is `44`, and no allocation heading named
 `Holdings` remains.
 
-- [ ] **Step 2: Run dashboard tests and verify RED**
+- [x] **Step 2: Run dashboard tests and verify RED**
 
 Run from `frontend/`:
 
@@ -170,7 +170,7 @@ npm run test -- src/pages/DashboardPage.test.tsx
 
 Expected: FAIL because the table and chart tooltip still read `holding_count`.
 
-- [ ] **Step 3: Implement frontend row semantics**
+- [x] **Step 3: Implement frontend row semantics**
 
 Change the TypeScript type to:
 
@@ -211,7 +211,7 @@ Use locale formatting with a generous fractional-digit limit and no forced
 trailing zeroes. Render the selected dimension's heading and value in the table,
 and apply the same helpers in bar and donut tooltips.
 
-- [ ] **Step 4: Run dashboard tests and verify GREEN**
+- [x] **Step 4: Run dashboard tests and verify GREEN**
 
 Run:
 

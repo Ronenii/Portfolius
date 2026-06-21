@@ -9,6 +9,10 @@ import {
 } from "recharts";
 
 import type { AllocationRow } from "../../features/portfolio/portfolio-api";
+import {
+  allocationQuantityLabel,
+  allocationQuantityValue,
+} from "../../features/portfolio/allocation-display";
 
 const chartColors = ["#167c7c", "#4f6f80", "#7a8b5d", "#a56b4f", "#5b6c93", "#8b6f95"];
 
@@ -75,8 +79,8 @@ export function AllocationChart({
                       <dd>{formatPercent(row.percent)}</dd>
                     </div>
                     <div>
-                      <dt>Holdings</dt>
-                      <dd>{row.holding_count}</dd>
+                      <dt>{allocationQuantityLabel(row)}</dt>
+                      <dd>{allocationQuantityValue(row)}</dd>
                     </div>
                   </dl>
                 </div>

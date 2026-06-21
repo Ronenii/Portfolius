@@ -85,60 +85,66 @@ const pricedBreakdowns: PortfolioBreakdowns = {
     {
       currency: "USD",
       dimension: "asset_class",
-      holding_count: 1,
       label: "ETF",
       market_value: "1250.00",
       percent: "62.5",
+      position_count: 1,
+      unit_quantity: null,
     },
   ],
   country: [
     {
       currency: "USD",
       dimension: "country",
-      holding_count: 1,
       label: "United States",
       market_value: "1250.00",
       percent: "100",
+      position_count: 1,
+      unit_quantity: null,
     },
   ],
   currency: [
     {
       currency: "USD",
       dimension: "currency",
-      holding_count: 1,
       label: "USD",
       market_value: "1250.00",
       percent: "100",
+      position_count: 1,
+      unit_quantity: null,
     },
   ],
   instrument: [
     {
       currency: "USD",
       dimension: "instrument",
-      holding_count: 1,
       label: "VOO",
       market_value: "1250.00",
       percent: "100",
+      position_count: 1,
+      unit_quantity: "44",
     },
   ],
   region: [
     {
       currency: "USD",
       dimension: "region",
-      holding_count: 1,
       label: "North America",
       market_value: "1250.00",
       percent: "100",
+      position_count: 1,
+      unit_quantity: null,
     },
   ],
   sector: [
     {
       currency: "USD",
       dimension: "sector",
-      holding_count: 1,
       label: "Broad Market",
       market_value: "1250.00",
       percent: "100",
+      position_count: 1,
+      unit_quantity: null,
     },
   ],
   unpriced_holding_count: 0,
@@ -408,7 +414,19 @@ describe("DashboardPage", () => {
 
     expect(await screen.findByRole("cell", { name: "$1,250.00" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "62.5%" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Positions" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "1" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Holdings" })).not.toBeInTheDocument();
+  });
+
+  it("shows summed units for the instrument breakdown", async () => {
+    renderDashboard();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Instrument" }));
+
+    expect(screen.getByRole("columnheader", { name: "Units" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "44" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Holdings" })).not.toBeInTheDocument();
   });
 
   it("shows child composition math for a selected allocation bucket", async () => {

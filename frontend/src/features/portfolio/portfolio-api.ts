@@ -42,7 +42,8 @@ export type AllocationRow = {
   currency: string;
   market_value: string;
   percent: string;
-  holding_count: number;
+  position_count: number;
+  unit_quantity: string | null;
 };
 
 export type PortfolioBreakdowns = {
