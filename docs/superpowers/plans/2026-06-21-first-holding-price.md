@@ -138,7 +138,7 @@ git commit -m "feat: fetch first instrument price"
 - Modify: `backend/app/api/v1/holdings.py`
 - Modify: `backend/tests/test_holdings_api.py`
 
-- [ ] **Step 1: Write failing endpoint tests**
+- [x] **Step 1: Write failing endpoint tests**
 
 Add a fake market-data client and update the `save_holding` test helper to pass
 it into `add_holding`. Add tests asserting:
@@ -166,7 +166,7 @@ Also test that adding a second holding for the same instrument makes only one
 market-data request, and that a raising client still returns the created
 holding.
 
-- [ ] **Step 2: Run endpoint tests and verify RED**
+- [x] **Step 2: Run endpoint tests and verify RED**
 
 Run:
 
@@ -179,7 +179,7 @@ pytest tests/test_holdings_api.py -q
 Expected: tests fail because `add_holding` has no market-data dependency and
 does not store a price.
 
-- [ ] **Step 3: Inject and call the existing market-data client**
+- [x] **Step 3: Inject and call the existing market-data client**
 
 In `backend/app/api/v1/holdings.py`:
 
@@ -199,7 +199,7 @@ ensure_instrument_has_price(
 
 Return the holding response regardless of the helper result.
 
-- [ ] **Step 4: Run endpoint tests and verify GREEN**
+- [x] **Step 4: Run endpoint tests and verify GREEN**
 
 Run:
 
@@ -211,7 +211,7 @@ pytest tests/test_holdings_api.py tests/test_price_refresh.py -q
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/api/v1/holdings.py backend/tests/test_holdings_api.py

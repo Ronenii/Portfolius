@@ -8,6 +8,7 @@ from app.api.v1.instruments import (
     InstrumentLookupClient,
     get_instrument_lookup_client,
 )
+from app.api.v1.portfolio import get_market_data_client
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.data.database import get_db
 from app.data.models import Instrument
@@ -24,7 +25,9 @@ from app.data.repositories.instruments import (
     instrument_to_search_result,
     refresh_instrument_metadata,
 )
+from app.domain.price_refresh import ensure_instrument_has_price
 from app.integrations.instrument_lookup import is_etf
+from app.integrations.market_data import MarketDataClient
 from app.schemas.holdings import HoldingRequest, HoldingResponse
 from app.schemas.instruments import InstrumentSearchResult
 
@@ -118,9 +121,11 @@ def add_holding(
         InstrumentLookupClient,
         Depends(get_instrument_lookup_client),
     ],
+    market_data_client: Annotated[MarketDataClient, Depends(get_market_data_client)],
 ) -> HoldingResponse:
     payload = enrich_holding_payload(payload, db, lookup_client)
     holding = create_holding(db, current_user.user_id, payload)
+    ensure_instrument_has_price(db, holding.instrument, market_data_client)
     return HoldingResponse.model_validate(holding)
 
 
