@@ -829,7 +829,7 @@ Run the command from Step 2.
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit provider normalization** <!-- added 2026-06-21 -->
+- [x] **Step 5: Commit provider normalization** <!-- added 2026-06-21 -->
 
 ```bash
 git add backend/app/integrations/etf_classification.py \
@@ -847,7 +847,7 @@ git commit -m "fix: normalize provider country regions"
 - Create: `backend/alembic/versions/20260621_0007_normalize_asia_regions.py`
 - Modify: `backend/tests/test_m3_schema.py`
 
-- [ ] **Step 1: Write failing AAXJ and migration tests** <!-- added 2026-06-21 -->
+- [x] **Step 1: Write failing AAXJ and migration tests** <!-- added 2026-06-21 -->
 
 Add classifier and yfinance-profile cases for:
 
@@ -868,7 +868,7 @@ EWJ | country JP | region Asia
 After upgrading to `0007`, assert TSM is `Taiwan / Asia ex-Japan`, AAXJ is
 `NULL / Asia ex-Japan`, and EWJ is `Japan / Japan`.
 
-- [ ] **Step 2: Run tests and verify RED** <!-- added 2026-06-21 -->
+- [x] **Step 2: Run tests and verify RED** <!-- added 2026-06-21 -->
 
 Run:
 
@@ -883,7 +883,7 @@ Expected: migration test fails because revision `0007` does not exist. Any AAXJ
 classifier failure must be fixed before continuing; if it already passes, keep
 the regression test as proof of existing general inference.
 
-- [ ] **Step 3: Add general data migration** <!-- added 2026-06-21 -->
+- [x] **Step 3: Add general data migration** <!-- added 2026-06-21 -->
 
 Create revision `20260621_0007`, down revision `20260621_0006`. Use general SQL:
 
@@ -909,7 +909,7 @@ Include equivalent general updates for supported non-Japan Asian country codes
 currently mapped to broad `Asia`, and Australia/New Zealand to `Asia Pacific`.
 Keep downgrade non-destructive.
 
-- [ ] **Step 4: Run tests and verify GREEN** <!-- added 2026-06-21 -->
+- [x] **Step 4: Run tests and verify GREEN** <!-- added 2026-06-21 -->
 
 Run the command from Step 2.
 

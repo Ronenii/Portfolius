@@ -48,6 +48,7 @@ def test_infers_country_focused_etf_exposure(
     [
         ("Asia Pacific Equity ETF", "Asia Pacific"),
         ("Asia Equity ETF", "Asia Pacific"),
+        ("iShares MSCI All Country Asia ex Japan ETF", "Asia ex-Japan"),
         ("Asia Pacific ex-Japan ETF", "Asia ex-Japan"),
         ("Pacific ex Japan ETF", "Asia ex-Japan"),
         ("MSCI Emerging Markets ETF", "Emerging Markets"),
