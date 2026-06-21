@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.data.models import Holding, Instrument, Price
 from app.data.repositories.prices import get_latest_prices_for_instruments
-from app.domain.price_refresh import refresh_prices_for_user
+from app.domain.price_refresh import ensure_instrument_has_price, refresh_prices_for_user
 from app.integrations.market_data import MarketDataClient, MarketPrice
 from app.integrations.yfinance_client import YFinanceMarketDataClient
 
@@ -187,6 +187,93 @@ def test_fake_market_data_client_satisfies_protocol() -> None:
         currency="USD",
         source="fake",
     )
+
+
+def test_ensure_instrument_price_fetches_and_stores_first_price(
+    db_session: Session,
+) -> None:
+    held_instrument = instrument("INDA")
+    db_session.add(held_instrument)
+    db_session.commit()
+    client = ScriptedMarketDataClient({"INDA": market_price("INDA", "44.50")})
+
+    updated = ensure_instrument_has_price(db_session, held_instrument, client)
+
+    saved = get_latest_prices_for_instruments(
+        db_session,
+        [held_instrument.id],
+    )[held_instrument.id]
+    assert updated is True
+    assert saved.close_price == Decimal("44.50")
+    assert client.requests == [("INDA", "NYSEARCA", "USD")]
+
+
+def test_ensure_instrument_price_reuses_existing_price(
+    db_session: Session,
+) -> None:
+    held_instrument = instrument("INDA")
+    db_session.add(held_instrument)
+    db_session.flush()
+    db_session.add(
+        Price(
+            instrument=held_instrument,
+            price_date=date(2026, 6, 4),
+            close_price=Decimal("43.00"),
+            currency="USD",
+            source="fake",
+        )
+    )
+    db_session.commit()
+    client = ScriptedMarketDataClient({"INDA": market_price("INDA", "44.50")})
+
+    updated = ensure_instrument_has_price(db_session, held_instrument, client)
+
+    assert updated is False
+    assert client.requests == []
+
+
+def test_ensure_instrument_price_is_non_blocking_on_provider_failure(
+    db_session: Session,
+) -> None:
+    held_instrument = instrument("INDA")
+    db_session.add(held_instrument)
+    db_session.commit()
+    client = ScriptedMarketDataClient({}, failing_symbols={"INDA"})
+
+    updated = ensure_instrument_has_price(db_session, held_instrument, client)
+
+    assert updated is False
+    assert get_latest_prices_for_instruments(db_session, [held_instrument.id]) == {}
+
+
+def test_ensure_instrument_price_skips_missing_provider_price(
+    db_session: Session,
+) -> None:
+    held_instrument = instrument("INDA")
+    db_session.add(held_instrument)
+    db_session.commit()
+    client = ScriptedMarketDataClient({"INDA": None})
+
+    updated = ensure_instrument_has_price(db_session, held_instrument, client)
+
+    assert updated is False
+    assert get_latest_prices_for_instruments(db_session, [held_instrument.id]) == {}
+
+
+def test_ensure_instrument_price_skips_non_finite_provider_price(
+    db_session: Session,
+) -> None:
+    held_instrument = instrument("INDA")
+    db_session.add(held_instrument)
+    db_session.commit()
+    client = ScriptedMarketDataClient(
+        {"INDA": market_price("INDA", "NaN")},
+    )
+
+    updated = ensure_instrument_has_price(db_session, held_instrument, client)
+
+    assert updated is False
+    assert get_latest_prices_for_instruments(db_session, [held_instrument.id]) == {}
 
 
 def test_yfinance_adapter_parses_latest_non_null_close() -> None:

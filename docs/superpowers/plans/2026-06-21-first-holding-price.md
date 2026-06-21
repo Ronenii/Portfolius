@@ -16,7 +16,7 @@
 - Modify: `backend/app/domain/price_refresh.py`
 - Modify: `backend/tests/test_price_refresh.py`
 
-- [ ] **Step 1: Write failing helper tests**
+- [x] **Step 1: Write failing helper tests**
 
 Add tests for a new function:
 
@@ -69,7 +69,7 @@ def test_ensure_instrument_price_reuses_existing_price(
 Add parameterized non-blocking tests for provider exception, `None`, and a
 `NaN` close. Each must assert `False` and no stored price.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -81,7 +81,7 @@ pytest tests/test_price_refresh.py -q
 
 Expected: import failure because `ensure_instrument_has_price` does not exist.
 
-- [ ] **Step 3: Implement the focused helper**
+- [x] **Step 3: Implement the focused helper**
 
 In `backend/app/domain/price_refresh.py`, implement:
 
@@ -113,7 +113,7 @@ def ensure_instrument_has_price(
 
 Import `Instrument` and `get_latest_prices_for_instruments`.
 
-- [ ] **Step 4: Run tests and verify GREEN**
+- [x] **Step 4: Run tests and verify GREEN**
 
 Run:
 
@@ -125,7 +125,7 @@ pytest tests/test_price_refresh.py -q
 
 Expected: all price-refresh tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/domain/price_refresh.py backend/tests/test_price_refresh.py
