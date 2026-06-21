@@ -45,7 +45,7 @@ class CompositeInstrumentLookupClient:
                 primary_profile.asset_class,
             ),
             sector=value_or_fallback(etf_profile.sector, primary_profile.sector),
-            country=value_or_fallback(primary_profile.country, etf_profile.country),
+            country=value_or_fallback(etf_profile.country, primary_profile.country),
             region=value_or_fallback(
                 etf_profile.region or infer_etf_region(name),
                 primary_profile.region,

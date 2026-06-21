@@ -462,7 +462,7 @@ git commit -m "feat: infer ETF sector fallbacks"
 - Modify: `backend/app/integrations/instrument_lookup.py`
 - Modify: `backend/app/integrations/alpha_vantage.py`
 
-- [ ] **Step 1: Expand failing INDA and CSPX composite tests**
+- [x] **Step 1: Expand failing INDA and CSPX composite tests**
 
 Replace the current INDA regression expectation with:
 
@@ -515,7 +515,7 @@ In `test_instrument_lookup.py`, add an Alpha Vantage profile using
 `"iShares MSCI India ETF"` and assert country `India`, region
 `Asia ex-Japan`.
 
-- [ ] **Step 2: Run provider/composite regressions and verify RED**
+- [x] **Step 2: Run provider/composite regressions and verify RED**
 
 Run:
 
@@ -529,7 +529,7 @@ pytest tests/test_yfinance_etf_profile.py \
 Expected: INDA and CSPX country assertions fail because the composite currently
 prefers the primary provider country.
 
-- [ ] **Step 3: Prefer ETF exposure country and region**
+- [x] **Step 3: Prefer ETF exposure country and region**
 
 In `CompositeInstrumentLookupClient.profile`, change country composition to:
 
@@ -549,7 +549,7 @@ region=value_or_fallback(
 This preserves the primary exchange and currency while replacing only
 exposure fields.
 
-- [ ] **Step 4: Integrate structured exposure into Alpha Vantage**
+- [x] **Step 4: Integrate structured exposure into Alpha Vantage**
 
 Build a combined hint from Alpha Vantage name/description, infer geography and
 fallback sector, and return an ETF profile when at least one useful exposure
@@ -562,7 +562,7 @@ sector = classify_etf_sector(etf_sectors(payload)) or infer_etf_sector(name)
 
 Return `None` only when both `sector` and both geography fields are absent.
 
-- [ ] **Step 5: Run provider/composite regressions and verify GREEN**
+- [x] **Step 5: Run provider/composite regressions and verify GREEN**
 
 Run:
 
@@ -575,7 +575,7 @@ pytest tests/test_yfinance_etf_profile.py \
 
 Expected: all tests pass, including INDA and CSPX.
 
-- [ ] **Step 6: Commit provider composition**
+- [x] **Step 6: Commit provider composition**
 
 ```bash
 git add backend/app/integrations/instrument_lookup.py \

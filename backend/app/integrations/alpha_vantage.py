@@ -4,7 +4,9 @@ import httpx
 
 from app.integrations.etf_classification import (  # noqa: F401 (re-exported)
     REGION_KEYWORDS,
+    infer_etf_geography,
     infer_etf_region,
+    infer_etf_sector,
 )
 from app.schemas.instruments import InstrumentSearchResult
 
@@ -100,11 +102,16 @@ class AlphaVantageEtfProfileClient:
         if not isinstance(payload, dict) or "Information" in payload:
             return None
 
-        sector = classify_etf_sector(etf_sectors(payload))
-        if sector is None:
+        name = optional_text(payload.get("name") or payload.get("description"))
+        geography = infer_etf_geography(name)
+        sector = classify_etf_sector(etf_sectors(payload)) or infer_etf_sector(name)
+        if (
+            sector is None
+            and geography.country is None
+            and geography.region is None
+        ):
             return None
 
-        name = optional_text(payload.get("name") or payload.get("description"))
         return InstrumentSearchResult(
             symbol=normalized_symbol,
             name=name,
@@ -112,7 +119,7 @@ class AlphaVantageEtfProfileClient:
             currency=None,
             asset_class="ETF",
             sector=sector,
-            country=None,
-            region=infer_etf_region(name),
+            country=geography.country,
+            region=geography.region,
             source="alphavantage",
         )

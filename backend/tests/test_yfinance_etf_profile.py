@@ -258,5 +258,42 @@ def test_composite_classifies_india_etf_by_investment_region() -> None:
     )
 
     assert result is not None
-    assert result.country == "US"
+    assert result.country == "India"
     assert result.region == "Asia ex-Japan"
+
+
+def test_composite_classifies_cspx_by_us_exposure_not_irish_domicile() -> None:
+    fmp_client = FmpInstrumentLookupClient(api_key="fmp-key")
+    module = FakeYFinanceModule(
+        {
+            "CSPX": FakeTicker(
+                info={
+                    "quoteType": "ETF",
+                    "longName": "iShares Core S&P 500 UCITS ETF USD (Acc)",
+                    "category": "US Large-Cap Blend Equity",
+                },
+                sector_weightings={},
+            )
+        }
+    )
+    yfinance_client = YFinanceEtfProfileClient(yfinance_module=module)
+    fmp_client.profile = lambda symbol: InstrumentSearchResult(  # type: ignore[method-assign]
+        symbol="CSPX",
+        name="iShares Core S&P 500 UCITS ETF USD (Acc)",
+        exchange="LSE",
+        currency="USD",
+        asset_class="ETF",
+        sector=None,
+        country="Ireland",
+        region="Europe",
+        source="fmp",
+    )
+
+    result = CompositeInstrumentLookupClient(fmp_client, yfinance_client).profile(
+        "CSPX"
+    )
+
+    assert result is not None
+    assert result.exchange == "LSE"
+    assert result.country == "United States"
+    assert result.region == "North America"
