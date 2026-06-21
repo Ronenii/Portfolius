@@ -75,7 +75,7 @@ pytest tests/test_allocation.py tests/test_composition_api.py -q
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit backend contract**
+- [x] **Step 5: Commit backend contract**
 
 ```bash
 git add backend/app/domain/allocation.py backend/app/schemas/portfolio.py \
@@ -89,7 +89,7 @@ git commit -m "fix: distinguish allocation units from positions"
 - Modify: `backend/tests/test_assistant_context.py`
 - Modify: `backend/app/domain/assistant.py`
 
-- [ ] **Step 1: Write failing assistant-context expectations**
+- [x] **Step 1: Write failing assistant-context expectations**
 
 Update allocation fixture rows to use:
 
@@ -102,7 +102,7 @@ Assert compact instrument rows contain `position_count: 1` and
 `unit_quantity: "44"`; broader rows contain `position_count` and a null
 `unit_quantity`.
 
-- [ ] **Step 2: Run assistant tests and verify RED**
+- [x] **Step 2: Run assistant tests and verify RED**
 
 Run:
 
@@ -112,7 +112,7 @@ pytest tests/test_assistant_context.py -q
 
 Expected: FAIL while compact serialization still reads `row.holding_count`.
 
-- [ ] **Step 3: Update compact allocation serialization**
+- [x] **Step 3: Update compact allocation serialization**
 
 Replace the ambiguous field in the serialized row:
 
@@ -125,7 +125,7 @@ Replace the ambiguous field in the serialized row:
 
 Use the module's existing decimal-compaction convention.
 
-- [ ] **Step 4: Run assistant tests and verify GREEN**
+- [x] **Step 4: Run assistant tests and verify GREEN**
 
 Run:
 
