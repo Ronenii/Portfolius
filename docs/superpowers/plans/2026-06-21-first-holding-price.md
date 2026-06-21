@@ -8,6 +8,8 @@
 
 **Tech Stack:** FastAPI dependency injection, SQLAlchemy, yfinance market-data adapter, pytest, React, TanStack Query, Vitest, TypeScript, Ruff, ESLint.
 
+**Completed:** 2026-06-21
+
 ---
 
 ### Task 1: Fetch the First Stored Instrument Price
@@ -287,7 +289,7 @@ git commit -m "fix: refresh portfolio after holding changes"
 **Files:**
 - Review all files changed in Tasks 1-3.
 
-- [ ] **Step 1: Run backend verification**
+- [x] **Step 1: Run backend verification**
 
 ```bash
 cd backend
@@ -298,7 +300,7 @@ pytest
 
 Expected: lint clean and zero test failures.
 
-- [ ] **Step 2: Run frontend verification**
+- [x] **Step 2: Run frontend verification**
 
 ```bash
 cd frontend
@@ -309,7 +311,7 @@ npm run build
 
 Expected: lint, tests, and production build succeed.
 
-- [ ] **Step 3: Verify diff and tracking**
+- [x] **Step 3: Verify diff and tracking**
 
 ```bash
 git diff --check
@@ -318,7 +320,7 @@ git status --short
 
 Expected: no whitespace errors and only planned files are changed.
 
-- [ ] **Step 4: Commit final cleanup if needed**
+- [x] **Step 4: Commit final cleanup if needed**
 
 If verification requires formatting-only changes:
 

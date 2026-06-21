@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.data.models import Holding, Instrument, Price
 from app.data.repositories.prices import get_latest_prices_for_instruments
-from app.domain.price_refresh import ensure_instrument_has_price, refresh_prices_for_user
+from app.domain.price_refresh import (
+    ensure_instrument_has_price,
+    refresh_prices_for_user,
+)
 from app.integrations.market_data import MarketDataClient, MarketPrice
 from app.integrations.yfinance_client import YFinanceMarketDataClient
 
