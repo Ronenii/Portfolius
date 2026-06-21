@@ -166,8 +166,8 @@ def test_fmp_profile_returns_rich_instrument_metadata() -> None:
         currency="USD",
         asset_class="ADR",
         sector="Technology",
-        country="TW",
-        region="Asia",
+        country="Taiwan",
+        region="Asia ex-Japan",
         source="fmp",
     )
     assert http_client.requested_urls == [

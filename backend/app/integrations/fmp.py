@@ -2,34 +2,8 @@ from typing import Any
 
 import httpx
 
+from app.integrations.etf_classification import normalize_country_geography
 from app.schemas.instruments import InstrumentSearchResult
-
-REGIONS_BY_COUNTRY = {
-    "Canada": "North America",
-    "CA": "North America",
-    "China": "Asia",
-    "CN": "Asia",
-    "France": "Europe",
-    "FR": "Europe",
-    "Germany": "Europe",
-    "DE": "Europe",
-    "India": "Asia",
-    "IN": "Asia",
-    "Israel": "Middle East",
-    "IL": "Middle East",
-    "Japan": "Asia",
-    "JP": "Asia",
-    "Netherlands": "Europe",
-    "NL": "Europe",
-    "Switzerland": "Europe",
-    "CH": "Europe",
-    "Taiwan": "Asia",
-    "TW": "Asia",
-    "United Kingdom": "Europe",
-    "GB": "Europe",
-    "United States": "North America",
-    "US": "North America",
-}
 
 
 def optional_text(value: object) -> str | None:
@@ -144,7 +118,7 @@ class FmpInstrumentLookupClient:
         self,
         item: dict[str, object],
     ) -> InstrumentSearchResult:
-        country = optional_text(item.get("country"))
+        geography = normalize_country_geography(optional_text(item.get("country")))
 
         return InstrumentSearchResult(
             symbol=uppercase_optional(item.get("symbol")) or "",
@@ -155,7 +129,7 @@ class FmpInstrumentLookupClient:
             currency=uppercase_optional(item.get("currency")),
             asset_class=profile_asset_class(item),
             sector=optional_text(item.get("sector")),
-            country=country,
-            region=REGIONS_BY_COUNTRY.get(country or ""),
+            country=geography.country,
+            region=geography.region,
             source="fmp",
         )

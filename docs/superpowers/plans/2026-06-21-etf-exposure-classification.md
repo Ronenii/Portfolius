@@ -768,7 +768,7 @@ If no cleanup was needed, do not create an empty commit.
 - Modify: `backend/app/integrations/etf_classification.py`
 - Modify: `backend/app/integrations/fmp.py`
 
-- [ ] **Step 1: Write failing provider-normalization tests** <!-- added 2026-06-21 -->
+- [x] **Step 1: Write failing provider-normalization tests** <!-- added 2026-06-21 -->
 
 Add table-driven tests for `normalize_country_geography` covering:
 
@@ -782,7 +782,7 @@ Add table-driven tests for `normalize_country_geography` covering:
 Update the FMP TSM profile expectation from country `TW`, region `Asia` to
 country `Taiwan`, region `Asia ex-Japan`.
 
-- [ ] **Step 2: Run tests and verify RED** <!-- added 2026-06-21 -->
+- [x] **Step 2: Run tests and verify RED** <!-- added 2026-06-21 -->
 
 Run from `backend/`:
 
@@ -795,7 +795,7 @@ pytest tests/test_etf_classification.py \
 Expected: FAIL because `normalize_country_geography` does not exist and FMP
 still uses its broad region table.
 
-- [ ] **Step 3: Implement canonical normalization** <!-- added 2026-06-21 -->
+- [x] **Step 3: Implement canonical normalization** <!-- added 2026-06-21 -->
 
 Add exact provider-country aliases to `etf_classification.py`:
 
@@ -823,7 +823,7 @@ def normalize_country_geography(country: str | None) -> EtfGeography:
 Use this helper in `FmpInstrumentLookupClient.result_from_profile_payload` for
 both returned country and region, removing `REGIONS_BY_COUNTRY`.
 
-- [ ] **Step 4: Run tests and verify GREEN** <!-- added 2026-06-21 -->
+- [x] **Step 4: Run tests and verify GREEN** <!-- added 2026-06-21 -->
 
 Run the command from Step 2.
 
