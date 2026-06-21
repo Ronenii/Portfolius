@@ -27,6 +27,30 @@ This change will:
 - add regression coverage for geography, precedence, sector aliases, and
   false-positive boundaries.
 
+## Provider geography normalization
+
+Direct stocks and ADRs use the same canonical country-to-region mapping as
+country-focused ETFs. Provider country names and ISO-style country codes are
+normalized before assigning a region:
+
+- Taiwan, China, India, South Korea, Hong Kong, Singapore, and other supported
+  non-Japan Asian markets map to `Asia ex-Japan`;
+- Japan maps to `Japan`;
+- Australia and New Zealand map to `Asia Pacific`.
+
+This is a general provider normalization rule, not a ticker-specific correction.
+It keeps a Taiwan ADR such as TSM in the same regional bucket as a
+Taiwan-focused ETF.
+
+ETF name inference also recognizes common benchmark shorthand where the fund
+name itself is authoritative. In particular, `AAXJ`/`All Country Asia ex Japan`
+style names map to `Asia ex-Japan`. Ambiguous names containing only `Asia` stay
+`Asia Pacific`.
+
+Existing instruments are reclassified through a data migration using canonical
+country mappings and normalized ETF-name phrases. This repairs current TSM and
+AAXJ rows without hard-coding their symbols into ongoing lookup behavior.
+
 It will not introduce a security-master dependency, model constituent-level
 country weights, or assign a single country to genuinely multi-country funds.
 
@@ -145,13 +169,15 @@ multi-sector exposure will not be forced into a sector.
 
 ## Provider Integration
 
-`YFinanceEtfProfileClient` and `AlphaVantageEtfProfileClient` will use the
-shared structured classifier. The composite lookup will prefer inferred ETF
-exposure over primary-provider listing geography while preserving exchange,
-currency, and other listing metadata.
+`YFinanceEtfProfileClient` and `AlphaVantageEtfProfileClient` use the shared
+structured classifier. The composite lookup prefers inferred ETF exposure over
+primary-provider listing geography while preserving exchange, currency, and
+other listing metadata.
 
-The FMP country-to-region mapping for ordinary stocks and ADRs remains
-separate. This work changes ETF exposure semantics only.
+FMP profiles for ordinary stocks and ADRs use a shared canonical
+country-to-region helper rather than an independent broad-region table. This
+aligns direct securities with country-focused ETF exposure while leaving
+multi-country ETF inference in the ETF classifier.
 
 ## Stored Metadata Correction
 

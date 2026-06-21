@@ -231,6 +231,10 @@ def round_for_tool(value: Decimal, places: str = "0.01") -> str:
     return str(value.quantize(Decimal(places)))
 
 
+def compact_decimal(value: Decimal) -> str:
+    return format(value.normalize(), "f")
+
+
 def summarize_dimension(
     rows: list[AllocationRow],
     limit: int = 8,
@@ -241,7 +245,12 @@ def summarize_dimension(
             "currency": row.currency,
             "percent": round_for_tool(row.percent),
             "market_value": round_for_tool(row.market_value),
-            "holding_count": row.holding_count,
+            "position_count": row.position_count,
+            "unit_quantity": (
+                compact_decimal(row.unit_quantity)
+                if row.unit_quantity is not None
+                else None
+            ),
         }
         for row in rows[:limit]
     ]

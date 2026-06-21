@@ -113,21 +113,21 @@ def test_asset_class_composition_returns_child_instruments_with_percentages() ->
 
 
 def test_composition_collapses_multiple_lots_for_the_same_instrument() -> None:
-    voo = instrument(1, "VOO", asset_class="ETF")
+    ieur = instrument(1, "IEUR", asset_class="ETF", region="Europe")
     snapshot = snapshot_for(
         [
-            holding(1, voo, quantity="1"),
-            holding(2, voo, quantity="2"),
+            holding(1, ieur, quantity="5"),
+            holding(2, ieur, quantity="15"),
         ],
-        {voo.id: price(voo, "100")},
+        {ieur.id: price(ieur, "50")},
     )
 
-    composition = build_composition(snapshot, "asset_class", "ETF")
+    composition = build_composition(snapshot, "region", "Europe")
 
     assert len(composition.children) == 1
-    assert composition.children[0].symbol == "VOO"
-    assert composition.children[0].holding_count == 2
-    assert composition.children[0].market_value == Decimal("300")
+    assert composition.children[0].symbol == "IEUR"
+    assert composition.children[0].unit_quantity == Decimal("20")
+    assert composition.children[0].market_value == Decimal("1000")
     assert composition.children[0].percent_of_parent == Decimal("100")
 
 

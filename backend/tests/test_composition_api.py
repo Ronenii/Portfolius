@@ -200,6 +200,36 @@ def test_currency_query_parameter_scopes_multicurrency_label(
     assert response.percent_of_portfolio == Decimal("100")
 
 
+def test_composition_response_exposes_unit_quantity(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    add_profile(db_session, authenticated_user.user_id)
+    ieur = add_instrument(db_session, "IEUR", region="Europe", close_price="50")
+    add_holding(db_session, authenticated_user.user_id, ieur, quantity="5")
+    add_holding(db_session, authenticated_user.user_id, ieur, quantity="15")
+
+    response = read_portfolio_composition(
+        "region",
+        "Europe",
+        authenticated_user,
+        db_session,
+    )
+    payload = response.model_dump(mode="json")
+
+    assert set(payload["children"][0]) == {
+        "instrument_id",
+        "symbol",
+        "name",
+        "currency",
+        "market_value",
+        "unit_quantity",
+        "percent_of_parent",
+        "percent_of_portfolio",
+    }
+    assert payload["children"][0]["unit_quantity"] == "20"
+
+
 def test_existing_breakdowns_response_shape_is_unchanged(
     authenticated_user: AuthenticatedUser,
     db_session: Session,
@@ -226,5 +256,6 @@ def test_existing_breakdowns_response_shape_is_unchanged(
         "currency",
         "market_value",
         "percent",
-        "holding_count",
+        "position_count",
+        "unit_quantity",
     }

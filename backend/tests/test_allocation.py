@@ -114,7 +114,35 @@ def test_sector_breakdown_groups_multiple_holdings_with_same_sector() -> None:
     assert breakdowns.sector[0].label == "Broad Market"
     assert breakdowns.sector[0].market_value == Decimal("1400")
     assert breakdowns.sector[0].percent == Decimal("100")
-    assert breakdowns.sector[0].holding_count == 2
+    assert breakdowns.sector[0].position_count == 2
+
+
+def test_breakdowns_sum_instrument_units_and_count_distinct_positions() -> None:
+    voo = instrument(1, "VOO")
+    vxus = instrument(2, "VXUS")
+    snapshot = snapshot_for(
+        [
+            holding(1, voo, quantity="10"),
+            holding(2, voo, quantity="14"),
+            holding(3, voo, quantity="20"),
+            holding(4, vxus, quantity="5.5"),
+        ],
+        {
+            voo.id: price(voo, "500"),
+            vxus.id: price(vxus, "60"),
+        },
+    )
+
+    breakdowns = build_allocation_breakdowns(snapshot)
+
+    voo_row = next(row for row in breakdowns.instrument if row.label == "VOO")
+    assert voo_row.position_count == 1
+    assert voo_row.unit_quantity == Decimal("44")
+
+    etf_row = breakdowns.asset_class[0]
+    assert etf_row.label == "ETF"
+    assert etf_row.position_count == 2
+    assert etf_row.unit_quantity is None
 
 
 def test_missing_metadata_appears_as_unclassified() -> None:

@@ -138,3 +138,72 @@ def test_etf_exposure_data_correction(
         ("INDA", "LSE", "India", "Asia ex-Japan"),
     ]
     get_settings.cache_clear()
+
+
+def test_asia_region_normalization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'asia_regions.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    config = alembic_config(database_url)
+
+    command.upgrade(config, "20260621_0006")
+
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO instruments (
+                  symbol, name, exchange, asset_class, country, region
+                )
+                VALUES
+                  (
+                    'AAXJ',
+                    'iShares MSCI All Country Asia ex Japan ETF',
+                    'NASDAQ',
+                    'ETF',
+                    'US',
+                    'Asia'
+                  ),
+                  (
+                    'EWJ',
+                    'iShares MSCI Japan ETF',
+                    'NYSEARCA',
+                    'ETF',
+                    'JP',
+                    'Asia'
+                  ),
+                  (
+                    'TSM',
+                    'Taiwan Semiconductor Manufacturing Company Limited',
+                    'NYSE',
+                    'ADR',
+                    'TW',
+                    'Asia'
+                  )
+                """
+            )
+        )
+
+    command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                """
+                SELECT symbol, country, region
+                FROM instruments
+                ORDER BY symbol
+                """
+            )
+        ).all()
+
+    assert rows == [
+        ("AAXJ", None, "Asia ex-Japan"),
+        ("EWJ", "Japan", "Japan"),
+        ("TSM", "Taiwan", "Asia ex-Japan"),
+    ]
+    get_settings.cache_clear()

@@ -72,10 +72,13 @@ class AllocationRow(BaseModel):
     currency: str
     market_value: Decimal
     percent: Decimal
-    holding_count: int
+    position_count: int
+    unit_quantity: Decimal | None = None
 
-    @field_serializer("market_value", "percent")
-    def serialize_decimal(self, value: Decimal) -> str:
+    @field_serializer("market_value", "percent", "unit_quantity")
+    def serialize_decimal(self, value: Decimal | None) -> str | None:
+        if value is None:
+            return None
         return str(value)
 
 
@@ -95,7 +98,7 @@ class CompositionRow(BaseModel):
     name: str
     currency: str
     market_value: Decimal
-    holding_count: int
+    unit_quantity: Decimal
     percent_of_parent: Decimal
     percent_of_portfolio: Decimal
 
@@ -106,6 +109,10 @@ class CompositionRow(BaseModel):
     )
     def serialize_decimal(self, value: Decimal) -> str:
         return str(value)
+
+    @field_serializer("unit_quantity")
+    def serialize_unit_quantity(self, value: Decimal) -> str:
+        return format(value.normalize(), "f")
 
 
 class CompositionResponse(BaseModel):

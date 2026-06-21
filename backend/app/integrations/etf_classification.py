@@ -131,6 +131,61 @@ COUNTRY_EXPOSURES = (
     ("Kenya", "Africa", ("kenya", "kenyan")),
 )
 
+PROVIDER_COUNTRY_ALIASES = {
+    "AU": ("Australia", "Asia Pacific"),
+    "AUSTRALIA": ("Australia", "Asia Pacific"),
+    "BD": ("Bangladesh", "Asia ex-Japan"),
+    "BANGLADESH": ("Bangladesh", "Asia ex-Japan"),
+    "BR": ("Brazil", "Latin America"),
+    "BRAZIL": ("Brazil", "Latin America"),
+    "CA": ("Canada", "North America"),
+    "CANADA": ("Canada", "North America"),
+    "CH": ("Switzerland", "Europe"),
+    "CHINA": ("China", "Asia ex-Japan"),
+    "CN": ("China", "Asia ex-Japan"),
+    "DE": ("Germany", "Europe"),
+    "FR": ("France", "Europe"),
+    "FRANCE": ("France", "Europe"),
+    "GB": ("United Kingdom", "Europe"),
+    "GERMANY": ("Germany", "Europe"),
+    "HK": ("Hong Kong", "Asia ex-Japan"),
+    "HONG KONG": ("Hong Kong", "Asia ex-Japan"),
+    "ID": ("Indonesia", "Asia ex-Japan"),
+    "IL": ("Israel", "Middle East"),
+    "IN": ("India", "Asia ex-Japan"),
+    "INDIA": ("India", "Asia ex-Japan"),
+    "INDONESIA": ("Indonesia", "Asia ex-Japan"),
+    "ISRAEL": ("Israel", "Middle East"),
+    "JAPAN": ("Japan", "Japan"),
+    "JP": ("Japan", "Japan"),
+    "KR": ("South Korea", "Asia ex-Japan"),
+    "MALAYSIA": ("Malaysia", "Asia ex-Japan"),
+    "MX": ("Mexico", "Latin America"),
+    "MEXICO": ("Mexico", "Latin America"),
+    "MY": ("Malaysia", "Asia ex-Japan"),
+    "NETHERLANDS": ("Netherlands", "Europe"),
+    "NEW ZEALAND": ("New Zealand", "Asia Pacific"),
+    "NL": ("Netherlands", "Europe"),
+    "NZ": ("New Zealand", "Asia Pacific"),
+    "PAKISTAN": ("Pakistan", "Asia ex-Japan"),
+    "PH": ("Philippines", "Asia ex-Japan"),
+    "PHILIPPINES": ("Philippines", "Asia ex-Japan"),
+    "PK": ("Pakistan", "Asia ex-Japan"),
+    "SG": ("Singapore", "Asia ex-Japan"),
+    "SINGAPORE": ("Singapore", "Asia ex-Japan"),
+    "SOUTH KOREA": ("South Korea", "Asia ex-Japan"),
+    "SWITZERLAND": ("Switzerland", "Europe"),
+    "TAIWAN": ("Taiwan", "Asia ex-Japan"),
+    "TH": ("Thailand", "Asia ex-Japan"),
+    "THAILAND": ("Thailand", "Asia ex-Japan"),
+    "TW": ("Taiwan", "Asia ex-Japan"),
+    "UNITED KINGDOM": ("United Kingdom", "Europe"),
+    "UNITED STATES": ("United States", "North America"),
+    "US": ("United States", "North America"),
+    "VIETNAM": ("Vietnam", "Asia ex-Japan"),
+    "VN": ("Vietnam", "Asia ex-Japan"),
+}
+
 SECTOR_ALIASES = (
     (
         "Communication Services",
@@ -232,6 +287,14 @@ def normalize_hint(value: str | None) -> str:
 def contains_phrase(normalized_hint: str, alias: str) -> bool:
     normalized_alias = normalize_hint(alias)
     return f" {normalized_alias} " in f" {normalized_hint} "
+
+
+def normalize_country_geography(country: str | None) -> EtfGeography:
+    normalized_country = normalize_hint(country).upper()
+    canonical = PROVIDER_COUNTRY_ALIASES.get(normalized_country)
+    if canonical is not None:
+        return EtfGeography(*canonical)
+    return EtfGeography(country.strip() if country else None, None)
 
 
 def infer_etf_geography(hint: str | None) -> EtfGeography:

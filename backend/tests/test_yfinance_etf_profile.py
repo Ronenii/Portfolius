@@ -120,6 +120,27 @@ def test_yfinance_profile_infers_region_from_diversified_european_etf() -> None:
     assert result.region == "Europe"
 
 
+def test_yfinance_profile_infers_all_country_asia_ex_japan_region() -> None:
+    module = FakeYFinanceModule(
+        {
+            "AAXJ": FakeTicker(
+                info={
+                    "quoteType": "ETF",
+                    "longName": "iShares MSCI All Country Asia ex Japan ETF",
+                    "category": "Pacific/Asia ex-Japan Stock",
+                },
+                sector_weightings={},
+            )
+        }
+    )
+
+    result = YFinanceEtfProfileClient(yfinance_module=module).profile("AAXJ")
+
+    assert result is not None
+    assert result.country is None
+    assert result.region == "Asia ex-Japan"
+
+
 def test_yfinance_profile_returns_none_for_non_etf() -> None:
     module = FakeYFinanceModule(
         {"AAPL": FakeTicker(info={"quoteType": "EQUITY", "longName": "Apple Inc."})}

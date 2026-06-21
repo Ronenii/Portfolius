@@ -759,3 +759,239 @@ git commit -m "test: verify ETF exposure classification"
 ```
 
 If no cleanup was needed, do not create an empty commit.
+
+### Task 6: Canonical provider country geography
+
+**Files:**
+- Modify: `backend/tests/test_etf_classification.py`
+- Modify: `backend/tests/test_instrument_lookup.py`
+- Modify: `backend/app/integrations/etf_classification.py`
+- Modify: `backend/app/integrations/fmp.py`
+
+- [x] **Step 1: Write failing provider-normalization tests** <!-- added 2026-06-21 -->
+
+Add table-driven tests for `normalize_country_geography` covering:
+
+```python
+("TW", EtfGeography("Taiwan", "Asia ex-Japan"))
+("Taiwan", EtfGeography("Taiwan", "Asia ex-Japan"))
+("JP", EtfGeography("Japan", "Japan"))
+("AU", EtfGeography("Australia", "Asia Pacific"))
+```
+
+Update the FMP TSM profile expectation from country `TW`, region `Asia` to
+country `Taiwan`, region `Asia ex-Japan`.
+
+- [x] **Step 2: Run tests and verify RED** <!-- added 2026-06-21 -->
+
+Run from `backend/`:
+
+```bash
+source .venv/bin/activate
+pytest tests/test_etf_classification.py \
+  tests/test_instrument_lookup.py::test_fmp_profile_returns_rich_instrument_metadata -q
+```
+
+Expected: FAIL because `normalize_country_geography` does not exist and FMP
+still uses its broad region table.
+
+- [x] **Step 3: Implement canonical normalization** <!-- added 2026-06-21 -->
+
+Add exact provider-country aliases to `etf_classification.py`:
+
+```python
+PROVIDER_COUNTRY_ALIASES = {
+    "TW": ("Taiwan", "Asia ex-Japan"),
+    "TAIWAN": ("Taiwan", "Asia ex-Japan"),
+    "JP": ("Japan", "Japan"),
+    "JAPAN": ("Japan", "Japan"),
+    "AU": ("Australia", "Asia Pacific"),
+    "AUSTRALIA": ("Australia", "Asia Pacific"),
+}
+```
+
+Include the existing supported FMP countries, using canonical full country
+names and the same regions as ETF country exposure. Implement:
+
+```python
+def normalize_country_geography(country: str | None) -> EtfGeography:
+    normalized = normalize_hint(country).upper()
+    canonical = PROVIDER_COUNTRY_ALIASES.get(normalized)
+    return EtfGeography(*canonical) if canonical else EtfGeography(country, None)
+```
+
+Use this helper in `FmpInstrumentLookupClient.result_from_profile_payload` for
+both returned country and region, removing `REGIONS_BY_COUNTRY`.
+
+- [x] **Step 4: Run tests and verify GREEN** <!-- added 2026-06-21 -->
+
+Run the command from Step 2.
+
+Expected: all selected tests pass.
+
+- [x] **Step 5: Commit provider normalization** <!-- added 2026-06-21 -->
+
+```bash
+git add backend/app/integrations/etf_classification.py \
+  backend/app/integrations/fmp.py \
+  backend/tests/test_etf_classification.py \
+  backend/tests/test_instrument_lookup.py
+git commit -m "fix: normalize provider country regions"
+```
+
+### Task 7: AAXJ exposure inference and stored-data migration
+
+**Files:**
+- Modify: `backend/tests/test_etf_classification.py`
+- Modify: `backend/tests/test_yfinance_etf_profile.py`
+- Create: `backend/alembic/versions/20260621_0007_normalize_asia_regions.py`
+- Modify: `backend/tests/test_m3_schema.py`
+
+- [x] **Step 1: Write failing AAXJ and migration tests** <!-- added 2026-06-21 -->
+
+Add classifier and yfinance-profile cases for:
+
+```python
+"iShares MSCI All Country Asia ex Japan ETF"
+```
+
+Both must return region `Asia ex-Japan` with no single country. Add a migration
+test that inserts:
+
+```text
+TSM | country TW | region Asia
+AAXJ | asset_class ETF | name iShares MSCI All Country Asia ex Japan ETF
+     | country US | region Asia
+EWJ | country JP | region Asia
+```
+
+After upgrading to `0007`, assert TSM is `Taiwan / Asia ex-Japan`, AAXJ is
+`NULL / Asia ex-Japan`, and EWJ is `Japan / Japan`.
+
+- [x] **Step 2: Run tests and verify RED** <!-- added 2026-06-21 -->
+
+Run:
+
+```bash
+source .venv/bin/activate
+pytest tests/test_etf_classification.py \
+  tests/test_yfinance_etf_profile.py \
+  tests/test_m3_schema.py -q
+```
+
+Expected: migration test fails because revision `0007` does not exist. Any AAXJ
+classifier failure must be fixed before continuing; if it already passes, keep
+the regression test as proof of existing general inference.
+
+- [x] **Step 3: Add general data migration** <!-- added 2026-06-21 -->
+
+Create revision `20260621_0007`, down revision `20260621_0006`. Use general SQL:
+
+```sql
+UPDATE instruments
+SET country = 'Taiwan', region = 'Asia ex-Japan'
+WHERE UPPER(country) IN ('TW', 'TAIWAN');
+
+UPDATE instruments
+SET country = 'Japan', region = 'Japan'
+WHERE UPPER(country) IN ('JP', 'JAPAN');
+
+UPDATE instruments
+SET country = NULL, region = 'Asia ex-Japan'
+WHERE UPPER(asset_class) = 'ETF'
+  AND (
+    LOWER(name) LIKE '%asia%ex%japan%'
+    OR LOWER(name) LIKE '%pacific%ex%japan%'
+  );
+```
+
+Include equivalent general updates for supported non-Japan Asian country codes
+currently mapped to broad `Asia`, and Australia/New Zealand to `Asia Pacific`.
+Keep downgrade non-destructive.
+
+- [x] **Step 4: Run tests and verify GREEN** <!-- added 2026-06-21 -->
+
+Run the command from Step 2.
+
+Expected: all selected tests pass.
+
+- [x] **Step 5: Commit inference and migration** <!-- added 2026-06-21 -->
+
+```bash
+git add backend/tests/test_etf_classification.py \
+  backend/tests/test_yfinance_etf_profile.py \
+  backend/tests/test_m3_schema.py \
+  backend/alembic/versions/20260621_0007_normalize_asia_regions.py
+git commit -m "fix: migrate canonical Asia regions"
+```
+
+### Task 8: Full Asia classification verification
+
+**Files:**
+- Review all files changed in Tasks 6-7.
+
+- [x] **Step 1: Run focused tests** <!-- added 2026-06-21 -->
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest tests/test_etf_classification.py \
+  tests/test_instrument_lookup.py \
+  tests/test_yfinance_etf_profile.py \
+  tests/test_holdings_api.py \
+  tests/test_m3_schema.py -q
+```
+
+Expected: all focused tests pass.
+
+- [x] **Step 2: Run full backend gates** <!-- added 2026-06-21 -->
+
+```bash
+ruff check .
+ruff format --check \
+  app/integrations/etf_classification.py \
+  app/integrations/fmp.py \
+  tests/test_etf_classification.py \
+  tests/test_instrument_lookup.py \
+  tests/test_yfinance_etf_profile.py \
+  tests/test_m3_schema.py \
+  alembic/versions/20260621_0007_normalize_asia_regions.py
+pytest
+```
+
+Expected: lint and changed-file formatting clean; all backend tests pass. The
+repository has unrelated pre-existing formatting drift outside these files.
+
+- [x] **Step 3: Review mappings and migration diff** <!-- added 2026-06-21 -->
+
+```bash
+rg -n '"Asia"|Asia ex-Japan|Asia Pacific|Japan' \
+  app/integrations tests alembic/versions/20260621_0007_normalize_asia_regions.py
+git diff --check
+git status --short
+```
+
+Expected: provider mappings use canonical regions, migration is general rather
+than symbol-specific, and `PR_DESCRIPTION.md` remains untouched.
+
+- [x] **Step 4: Run frontend safety gates** <!-- added 2026-06-21 -->
+
+```bash
+cd ../frontend
+npm run lint
+npm run test
+npm run build
+```
+
+Expected: all frontend gates pass because region labels are API data.
+
+- [x] **Step 5: Commit verification cleanup if required** <!-- added 2026-06-21 -->
+
+If verification changes formatting or tests:
+
+```bash
+git add backend frontend docs/superpowers/plans/2026-06-21-etf-exposure-classification.md
+git commit -m "test: verify canonical Asia regions"
+```
+
+If no cleanup is required, commit only the completed tracker update.

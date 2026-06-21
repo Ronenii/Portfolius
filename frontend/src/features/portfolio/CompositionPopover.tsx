@@ -7,6 +7,7 @@ import {
   type AllocationRow,
   type CompositionResponse,
 } from "./portfolio-api";
+import { allocationUnitValue } from "./allocation-display";
 
 type CompositionPopoverProps = {
   accessToken: string;
@@ -116,7 +117,7 @@ export function CompositionPopover({
                   {formatPercent(child.percent_of_portfolio)} of portfolio
                 </span>
                 <span className="num">
-                  {child.holding_count} holding{child.holding_count === 1 ? "" : "s"}
+                  {allocationUnitValue(child.unit_quantity)} units
                 </span>
               </div>
             </article>

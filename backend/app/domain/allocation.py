@@ -102,19 +102,19 @@ def build_composition(
         ]
 
     currency_total = portfolio_total_for_currency(snapshot, selected_currency)
-    grouped: dict[int, tuple[PortfolioHoldingSnapshot, Decimal, int]] = {}
+    grouped: dict[int, tuple[PortfolioHoldingSnapshot, Decimal, Decimal]] = {}
     for holding in matching_holdings:
         if holding.market_value is None:
             continue
         instrument_id = holding.instrument.id
-        representative, market_value, holding_count = grouped.get(
+        representative, market_value, unit_quantity = grouped.get(
             instrument_id,
-            (holding, Decimal("0"), 0),
+            (holding, Decimal("0"), Decimal("0")),
         )
         grouped[instrument_id] = (
             representative,
             market_value + holding.market_value,
-            holding_count + 1,
+            unit_quantity + holding.quantity,
         )
 
     slice_total = sum(
@@ -128,11 +128,11 @@ def build_composition(
             name=representative.instrument.name or representative.instrument.symbol,
             currency=holding_currency(representative),
             market_value=market_value,
-            holding_count=holding_count,
+            unit_quantity=unit_quantity,
             percent_of_parent=percent_of(market_value, slice_total),
             percent_of_portfolio=percent_of(market_value, currency_total),
         )
-        for representative, market_value, holding_count in grouped.values()
+        for representative, market_value, unit_quantity in grouped.values()
     ]
     children = sorted(children, key=lambda row: (-row.market_value, row.symbol))
 
@@ -152,7 +152,7 @@ def build_dimension_rows(
     holdings: list[PortfolioHoldingSnapshot],
     label_for: Callable[[PortfolioHoldingSnapshot], str],
 ) -> list[AllocationRow]:
-    grouped: dict[tuple[str, str], tuple[Decimal, int]] = {}
+    grouped: dict[tuple[str, str], tuple[Decimal, set[int], Decimal]] = {}
     currency_totals: dict[str, Decimal] = {}
 
     for holding in holdings:
@@ -160,10 +160,15 @@ def build_dimension_rows(
             continue
         currency = holding_currency(holding)
         label = label_for(holding)
-        market_value, holding_count = grouped.get((currency, label), (Decimal("0"), 0))
+        market_value, instrument_ids, unit_quantity = grouped.get(
+            (currency, label),
+            (Decimal("0"), set(), Decimal("0")),
+        )
+        instrument_ids.add(holding.instrument.id)
         grouped[(currency, label)] = (
             market_value + holding.market_value,
-            holding_count + 1,
+            instrument_ids,
+            unit_quantity + holding.quantity,
         )
         currency_totals[currency] = currency_totals.get(currency, Decimal("0")) + (
             holding.market_value
@@ -176,9 +181,14 @@ def build_dimension_rows(
             currency=currency,
             market_value=market_value,
             percent=percent_of(market_value, currency_totals[currency]),
-            holding_count=holding_count,
+            position_count=len(instrument_ids),
+            unit_quantity=unit_quantity if dimension == "instrument" else None,
         )
-        for (currency, label), (market_value, holding_count) in grouped.items()
+        for (currency, label), (
+            market_value,
+            instrument_ids,
+            unit_quantity,
+        ) in grouped.items()
     ]
     return sorted(rows, key=lambda row: (-row.market_value, row.label))
 
@@ -186,13 +196,14 @@ def build_dimension_rows(
 def build_currency_rows(
     holdings: list[PortfolioHoldingSnapshot],
 ) -> list[AllocationRow]:
-    grouped: dict[str, tuple[Decimal, int]] = {}
+    grouped: dict[str, tuple[Decimal, set[int]]] = {}
     for holding in holdings:
         if holding.market_value is None:
             continue
         currency = holding_currency(holding)
-        market_value, holding_count = grouped.get(currency, (Decimal("0"), 0))
-        grouped[currency] = (market_value + holding.market_value, holding_count + 1)
+        market_value, instrument_ids = grouped.get(currency, (Decimal("0"), set()))
+        instrument_ids.add(holding.instrument.id)
+        grouped[currency] = (market_value + holding.market_value, instrument_ids)
 
     rows = [
         AllocationRow(
@@ -201,9 +212,9 @@ def build_currency_rows(
             currency=currency,
             market_value=market_value,
             percent=Decimal("100"),
-            holding_count=holding_count,
+            position_count=len(instrument_ids),
         )
-        for currency, (market_value, holding_count) in grouped.items()
+        for currency, (market_value, instrument_ids) in grouped.items()
     ]
     return sorted(rows, key=lambda row: (-row.market_value, row.label))
 

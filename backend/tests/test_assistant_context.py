@@ -15,20 +15,21 @@ def breakdowns() -> PortfolioBreakdowns:
             AllocationRow(
                 currency="USD",
                 dimension="instrument",
-                holding_count=1,
                 label="VOO",
                 market_value=Decimal("1000"),
                 percent=Decimal("62.5"),
+                position_count=1,
+                unit_quantity=Decimal("44"),
             )
         ],
         asset_class=[
             AllocationRow(
                 currency="USD",
                 dimension="asset_class",
-                holding_count=1,
                 label="ETF",
                 market_value=Decimal("1000"),
                 percent=Decimal("62.5"),
+                position_count=1,
             )
         ],
         sector=[],
@@ -78,11 +79,12 @@ def test_summarize_dimension_rounds_numbers_for_compact_tool_output() -> None:
     rows = [
         AllocationRow(
             currency="USD",
-            dimension="region",
-            holding_count=1,
-            label="North America",
+            dimension="instrument",
+            label="VOO",
             market_value=Decimal("2004.250000000001"),
             percent=Decimal("55.88518085889753721767298961"),
+            position_count=1,
+            unit_quantity=Decimal("44.000000"),
         )
     ]
 
@@ -90,6 +92,26 @@ def test_summarize_dimension_rounds_numbers_for_compact_tool_output() -> None:
 
     assert out[0]["percent"] == "55.89"
     assert out[0]["market_value"] == "2004.25"
+    assert out[0]["position_count"] == 1
+    assert out[0]["unit_quantity"] == "44"
+
+
+def test_summarize_dimension_uses_positions_for_broader_buckets() -> None:
+    rows = [
+        AllocationRow(
+            currency="USD",
+            dimension="asset_class",
+            label="ETF",
+            market_value=Decimal("2004.25"),
+            percent=Decimal("100"),
+            position_count=3,
+        )
+    ]
+
+    out = summarize_dimension(rows)
+
+    assert out[0]["position_count"] == 3
+    assert out[0]["unit_quantity"] is None
 
 
 def test_system_prompt_sets_educational_guardrail_and_tool_expectation() -> None:

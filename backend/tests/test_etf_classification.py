@@ -4,6 +4,7 @@ from app.integrations.etf_classification import (
     EtfGeography,
     infer_etf_geography,
     infer_etf_sector,
+    normalize_country_geography,
 )
 
 
@@ -47,6 +48,7 @@ def test_infers_country_focused_etf_exposure(
     [
         ("Asia Pacific Equity ETF", "Asia Pacific"),
         ("Asia Equity ETF", "Asia Pacific"),
+        ("iShares MSCI All Country Asia ex Japan ETF", "Asia ex-Japan"),
         ("Asia Pacific ex-Japan ETF", "Asia ex-Japan"),
         ("Pacific ex Japan ETF", "Asia ex-Japan"),
         ("MSCI Emerging Markets ETF", "Emerging Markets"),
@@ -80,6 +82,22 @@ def test_geography_matching_normalizes_punctuation_and_case() -> None:
 )
 def test_geography_matching_does_not_use_partial_words(hint: str) -> None:
     assert infer_etf_geography(hint) == EtfGeography(None, None)
+
+
+@pytest.mark.parametrize(
+    ("country", "expected"),
+    [
+        ("TW", EtfGeography("Taiwan", "Asia ex-Japan")),
+        ("Taiwan", EtfGeography("Taiwan", "Asia ex-Japan")),
+        ("JP", EtfGeography("Japan", "Japan")),
+        ("AU", EtfGeography("Australia", "Asia Pacific")),
+    ],
+)
+def test_normalizes_provider_country_geography(
+    country: str,
+    expected: EtfGeography,
+) -> None:
+    assert normalize_country_geography(country) == expected
 
 
 @pytest.mark.parametrize(
