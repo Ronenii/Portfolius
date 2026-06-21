@@ -18,7 +18,7 @@
 - Modify: `backend/app/schemas/portfolio.py`
 - Modify: `backend/app/domain/allocation.py`
 
-- [ ] **Step 1: Write failing aggregation tests**
+- [x] **Step 1: Write failing aggregation tests**
 
 Add a regression test with three VOO lots whose quantities are `10`, `14`, and
 `20`, plus a second ETF instrument. Assert that the VOO instrument row has
@@ -27,7 +27,7 @@ class row has `position_count == 2` and `unit_quantity is None`. Update the
 response-shape assertion to require `position_count` and `unit_quantity` instead
 of `holding_count`.
 
-- [ ] **Step 2: Run backend tests and verify RED**
+- [x] **Step 2: Run backend tests and verify RED**
 
 Run from `backend/`:
 
@@ -39,7 +39,7 @@ pytest tests/test_allocation.py tests/test_composition_api.py -q
 Expected: FAIL because `AllocationRow` does not expose `position_count` or
 `unit_quantity`.
 
-- [ ] **Step 3: Implement explicit row fields**
+- [x] **Step 3: Implement explicit row fields**
 
 Change `AllocationRow` to:
 
@@ -65,7 +65,7 @@ quantity. Populate `position_count` from the set size and populate
 `unit_quantity` only for the `instrument` dimension. In `build_currency_rows`,
 track distinct instrument IDs and return `unit_quantity=None`.
 
-- [ ] **Step 4: Run backend tests and verify GREEN**
+- [x] **Step 4: Run backend tests and verify GREEN**
 
 Run:
 

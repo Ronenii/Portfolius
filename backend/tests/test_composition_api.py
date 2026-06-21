@@ -226,5 +226,6 @@ def test_existing_breakdowns_response_shape_is_unchanged(
         "currency",
         "market_value",
         "percent",
-        "holding_count",
+        "position_count",
+        "unit_quantity",
     }
