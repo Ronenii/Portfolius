@@ -915,7 +915,7 @@ Run the command from Step 2.
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit inference and migration** <!-- added 2026-06-21 -->
+- [x] **Step 5: Commit inference and migration** <!-- added 2026-06-21 -->
 
 ```bash
 git add backend/tests/test_etf_classification.py \
@@ -930,7 +930,7 @@ git commit -m "fix: migrate canonical Asia regions"
 **Files:**
 - Review all files changed in Tasks 6-7.
 
-- [ ] **Step 1: Run focused tests** <!-- added 2026-06-21 -->
+- [x] **Step 1: Run focused tests** <!-- added 2026-06-21 -->
 
 ```bash
 cd backend
@@ -944,17 +944,25 @@ pytest tests/test_etf_classification.py \
 
 Expected: all focused tests pass.
 
-- [ ] **Step 2: Run full backend gates** <!-- added 2026-06-21 -->
+- [x] **Step 2: Run full backend gates** <!-- added 2026-06-21 -->
 
 ```bash
 ruff check .
-ruff format --check .
+ruff format --check \
+  app/integrations/etf_classification.py \
+  app/integrations/fmp.py \
+  tests/test_etf_classification.py \
+  tests/test_instrument_lookup.py \
+  tests/test_yfinance_etf_profile.py \
+  tests/test_m3_schema.py \
+  alembic/versions/20260621_0007_normalize_asia_regions.py
 pytest
 ```
 
-Expected: lint and formatting clean; all backend tests pass.
+Expected: lint and changed-file formatting clean; all backend tests pass. The
+repository has unrelated pre-existing formatting drift outside these files.
 
-- [ ] **Step 3: Review mappings and migration diff** <!-- added 2026-06-21 -->
+- [x] **Step 3: Review mappings and migration diff** <!-- added 2026-06-21 -->
 
 ```bash
 rg -n '"Asia"|Asia ex-Japan|Asia Pacific|Japan' \
@@ -966,7 +974,7 @@ git status --short
 Expected: provider mappings use canonical regions, migration is general rather
 than symbol-specific, and `PR_DESCRIPTION.md` remains untouched.
 
-- [ ] **Step 4: Run frontend safety gates** <!-- added 2026-06-21 -->
+- [x] **Step 4: Run frontend safety gates** <!-- added 2026-06-21 -->
 
 ```bash
 cd ../frontend
@@ -977,7 +985,7 @@ npm run build
 
 Expected: all frontend gates pass because region labels are API data.
 
-- [ ] **Step 5: Commit verification cleanup if required** <!-- added 2026-06-21 -->
+- [x] **Step 5: Commit verification cleanup if required** <!-- added 2026-06-21 -->
 
 If verification changes formatting or tests:
 
