@@ -102,19 +102,19 @@ def build_composition(
         ]
 
     currency_total = portfolio_total_for_currency(snapshot, selected_currency)
-    grouped: dict[int, tuple[PortfolioHoldingSnapshot, Decimal, int]] = {}
+    grouped: dict[int, tuple[PortfolioHoldingSnapshot, Decimal, Decimal]] = {}
     for holding in matching_holdings:
         if holding.market_value is None:
             continue
         instrument_id = holding.instrument.id
-        representative, market_value, holding_count = grouped.get(
+        representative, market_value, unit_quantity = grouped.get(
             instrument_id,
-            (holding, Decimal("0"), 0),
+            (holding, Decimal("0"), Decimal("0")),
         )
         grouped[instrument_id] = (
             representative,
             market_value + holding.market_value,
-            holding_count + 1,
+            unit_quantity + holding.quantity,
         )
 
     slice_total = sum(
@@ -128,11 +128,11 @@ def build_composition(
             name=representative.instrument.name or representative.instrument.symbol,
             currency=holding_currency(representative),
             market_value=market_value,
-            holding_count=holding_count,
+            unit_quantity=unit_quantity,
             percent_of_parent=percent_of(market_value, slice_total),
             percent_of_portfolio=percent_of(market_value, currency_total),
         )
-        for representative, market_value, holding_count in grouped.values()
+        for representative, market_value, unit_quantity in grouped.values()
     ]
     children = sorted(children, key=lambda row: (-row.market_value, row.symbol))
 

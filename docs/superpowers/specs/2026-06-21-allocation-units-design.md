@@ -33,9 +33,9 @@ For example, three VOO lots with quantities `10`, `14`, and `20` produce:
   otherwise `null`.
 
 The ambiguous `holding_count` field will be removed from allocation rows.
-Composition rows retain their existing `holding_count` because that endpoint
-explicitly describes how many saved lots make up one child instrument and is
-outside this focused fix.
+Composition rows use `unit_quantity`, summing quantities across saved lots for
+each child instrument. Saved lot count is an implementation detail and is not
+shown in allocation drill-downs.
 
 Allocation grouping will track distinct instrument IDs for every dimension and
 sum quantities for instrument rows. Market-value and percentage calculations
@@ -53,6 +53,11 @@ The allocation table chooses its final column from the selected dimension:
 Bar and donut tooltips follow the same rule. Numeric values retain the existing
 monospace treatment. The frontend API types will mirror the backend response.
 
+The composition popover displays each child instrument's summed quantity as
+`<quantity> units`, using the same trailing-zero-free quantity formatting as the
+Instrument allocation table. For example, IEUR lots of `5` and `15` display as
+one IEUR child row with `20 units`.
+
 ## Testing
 
 Backend regression coverage will build multiple lots for one instrument and
@@ -67,6 +72,7 @@ Frontend regression coverage will verify:
 
 - the Instrument table and chart tooltip show `44` units for multiple VOO lots;
 - broader dimensions show `1` position;
+- a broader bucket's composition shows summed units rather than saved lot count;
 - the ambiguous `Holdings` heading is absent from allocation views.
 
 Existing allocation, composition, simulation, lint, and build checks will be

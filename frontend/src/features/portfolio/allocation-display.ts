@@ -1,6 +1,6 @@
 import type { AllocationRow } from "./portfolio-api";
 
-function formatQuantity(value: string | null) {
+export function allocationUnitValue(value: string | null) {
   const quantity = Number(value ?? 0);
   return new Intl.NumberFormat("en", {
     maximumFractionDigits: 12,
@@ -13,6 +13,6 @@ export function allocationQuantityLabel(row: AllocationRow) {
 
 export function allocationQuantityValue(row: AllocationRow) {
   return row.dimension === "instrument"
-    ? formatQuantity(row.unit_quantity)
+    ? allocationUnitValue(row.unit_quantity)
     : String(row.position_count);
 }

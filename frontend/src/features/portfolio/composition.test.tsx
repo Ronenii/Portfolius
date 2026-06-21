@@ -91,23 +91,23 @@ const etfComposition: CompositionResponse = {
   children: [
     {
       currency: "USD",
-      holding_count: 1,
       instrument_id: 10,
       market_value: "750.00",
-      name: "Vanguard S&P 500 ETF",
+      name: "iShares Core MSCI Europe ETF",
       percent_of_parent: "60",
       percent_of_portfolio: "37.5",
-      symbol: "VOO",
+      symbol: "IEUR",
+      unit_quantity: "20",
     },
     {
       currency: "USD",
-      holding_count: 1,
       instrument_id: 11,
       market_value: "500.00",
       name: "iShares Core US Aggregate Bond ETF",
       percent_of_parent: "40",
       percent_of_portfolio: "25",
       symbol: "AGG",
+      unit_quantity: "5.5",
     },
   ],
   currency: "USD",
@@ -177,7 +177,8 @@ describe("allocation composition drill-down", () => {
     expect(getComposition).toHaveBeenCalledWith("access-token", "asset_class", "ETF", "USD");
     const popover = await screen.findByRole("dialog", { name: "ETF composition" });
     expect(within(popover).getByText("60% of slice · 37.5% of portfolio")).toBeInTheDocument();
-    expect(within(popover).getByText("VOO")).toBeInTheDocument();
+    expect(within(popover).getByText("IEUR")).toBeInTheDocument();
+    expect(within(popover).getByText("20 units")).toBeInTheDocument();
     expect(within(popover).getByText("1 unpriced excluded")).toBeInTheDocument();
   });
 

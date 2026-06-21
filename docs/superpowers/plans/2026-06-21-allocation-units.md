@@ -290,3 +290,85 @@ git add frontend/src/features/portfolio/simulation.test.tsx
 git add -u
 git commit -m "test: verify allocation unit semantics"
 ```
+
+### Task 5: Composition child units
+
+**Files:**
+- Modify: `backend/tests/test_composition.py`
+- Modify: `backend/tests/test_composition_api.py`
+- Modify: `backend/app/schemas/portfolio.py`
+- Modify: `backend/app/domain/allocation.py`
+- Modify: `frontend/src/features/portfolio/portfolio-api.ts`
+- Modify: `frontend/src/features/portfolio/CompositionPopover.tsx`
+- Modify: `frontend/src/features/portfolio/composition.test.tsx`
+- Modify: `frontend/src/pages/DashboardPage.test.tsx`
+
+- [x] **Step 1: Write failing composition unit tests** <!-- added 2026-06-21 -->
+
+Change the multiple-lot composition regression to use IEUR quantities `5` and
+`15`, then assert one child row with `unit_quantity == Decimal("20")`. Update
+the API response-shape assertion to expect `unit_quantity` instead of
+`holding_count`. Update the frontend composition fixture to use
+`unit_quantity: "20"` and assert the popover renders `20 units`.
+
+- [x] **Step 2: Run composition tests and verify RED** <!-- added 2026-06-21 -->
+
+Run:
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest tests/test_composition.py tests/test_composition_api.py -q
+
+cd ../frontend
+npm run test -- src/features/portfolio/composition.test.tsx \
+  src/pages/DashboardPage.test.tsx
+```
+
+Expected: backend and frontend fail because composition still exposes
+`holding_count`.
+
+- [x] **Step 3: Implement summed composition units** <!-- added 2026-06-21 -->
+
+Replace `CompositionRow.holding_count` with serialized decimal
+`unit_quantity`. In `build_composition`, aggregate quantity alongside market
+value for each instrument. Update the frontend composition type and render
+`allocationUnitValue(child.unit_quantity) units`, sharing quantity formatting
+with allocation rows.
+
+- [x] **Step 4: Run targeted tests and verify GREEN** <!-- added 2026-06-21 -->
+
+Run the same backend and frontend commands from Step 2.
+
+Expected: all selected tests pass.
+
+- [x] **Step 5: Run full verification and commit** <!-- added 2026-06-21 -->
+
+Run:
+
+```bash
+cd backend
+source .venv/bin/activate
+ruff check .
+pytest
+
+cd ../frontend
+npm run lint
+npm run test
+npm run build
+```
+
+Expected: all quality gates pass. Commit the focused extension:
+
+```bash
+git add backend/app/domain/allocation.py backend/app/schemas/portfolio.py \
+  backend/tests/test_composition.py backend/tests/test_composition_api.py \
+  frontend/src/features/portfolio/allocation-display.ts \
+  frontend/src/features/portfolio/portfolio-api.ts \
+  frontend/src/features/portfolio/CompositionPopover.tsx \
+  frontend/src/features/portfolio/composition.test.tsx \
+  frontend/src/pages/DashboardPage.test.tsx \
+  docs/superpowers/specs/2026-06-21-allocation-units-design.md \
+  docs/superpowers/plans/2026-06-21-allocation-units.md
+git commit -m "fix: show units in allocation composition"
+```

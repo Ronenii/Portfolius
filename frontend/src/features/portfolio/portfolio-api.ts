@@ -62,7 +62,7 @@ export type CompositionRow = {
   name: string;
   currency: string;
   market_value: string;
-  holding_count: number;
+  unit_quantity: string;
   percent_of_parent: string;
   percent_of_portfolio: string;
 };

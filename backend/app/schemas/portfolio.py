@@ -98,7 +98,7 @@ class CompositionRow(BaseModel):
     name: str
     currency: str
     market_value: Decimal
-    holding_count: int
+    unit_quantity: Decimal
     percent_of_parent: Decimal
     percent_of_portfolio: Decimal
 
@@ -109,6 +109,10 @@ class CompositionRow(BaseModel):
     )
     def serialize_decimal(self, value: Decimal) -> str:
         return str(value)
+
+    @field_serializer("unit_quantity")
+    def serialize_unit_quantity(self, value: Decimal) -> str:
+        return format(value.normalize(), "f")
 
 
 class CompositionResponse(BaseModel):
