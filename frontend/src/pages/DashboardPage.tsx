@@ -159,10 +159,9 @@ function summaryState(snapshot: PortfolioSnapshot | undefined) {
   }
 
   if (snapshot.summary.missing_price_holdings > 0) {
+    const missing = snapshot.summary.missing_price_holdings;
     return {
-      detail: `${snapshot.summary.missing_price_holdings} holding${
-        snapshot.summary.missing_price_holdings === 1 ? "" : "s"
-      } need a refreshed daily close before totals are complete.`,
+      detail: `${missing} holding${missing === 1 ? " needs" : "s need"} a refreshed daily close before totals are complete.`,
       title: "Prices missing",
     };
   }
@@ -352,9 +351,17 @@ export default function DashboardPage() {
               </article>
               <article className="kpi-tile">
                 <p className="panel-label">Unrealized gain</p>
-                <strong>
+                <strong
+                  className={
+                    Number(snapshotQuery.data.summary.total_unrealized_gain) < 0
+                      ? "loss"
+                      : "gain"
+                  }
+                >
                   <AnimatedNumber
-                    format={formatBaseCurrency}
+                    format={(amount) =>
+                      `${amount > 0 ? "+" : ""}${formatBaseCurrency(amount)}`
+                    }
                     value={Number(snapshotQuery.data.summary.total_unrealized_gain)}
                   />
                 </strong>
@@ -363,17 +370,18 @@ export default function DashboardPage() {
               <article className="kpi-tile">
                 <p className="panel-label">Price coverage</p>
                 <strong>
-                  {snapshotQuery.data.summary.priced_holdings} /{" "}
-                  {snapshotQuery.data.summary.missing_price_holdings}
+                  {snapshotQuery.data.summary.priced_holdings} of{" "}
+                  {snapshotQuery.data.summary.priced_holdings +
+                    snapshotQuery.data.summary.missing_price_holdings}
                 </strong>
                 <span>
-                  priced / missing · latest{" "}
+                  holdings priced · latest close{" "}
                   {formatPriceDate(snapshotQuery.data.summary.latest_price_date)}
                 </span>
               </article>
             </div>
             {summaryState(snapshotQuery.data) ? (
-              <div className="empty-state">
+              <div className="notice" role="status">
                 <strong>{summaryState(snapshotQuery.data)?.title}</strong>
                 <span>{summaryState(snapshotQuery.data)?.detail}</span>
               </div>
@@ -497,9 +505,9 @@ export default function DashboardPage() {
                   <tr>
                     <th scope="col">Label</th>
                     <th scope="col">Currency</th>
-                    <th scope="col">Market value</th>
-                    <th scope="col">Percent</th>
-                    <th scope="col">{selectedQuantityLabel}</th>
+                    <th className="num-col" scope="col">Market value</th>
+                    <th className="num-col" scope="col">Percent</th>
+                    <th className="num-col" scope="col">{selectedQuantityLabel}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -523,9 +531,7 @@ export default function DashboardPage() {
                       onMouseEnter={() => hoverBucket(row)}
                     >
                       <td data-label="Label">{row.label}</td>
-                      <td className="num" data-label="Currency">
-                        {row.currency}
-                      </td>
+                      <td data-label="Currency">{row.currency}</td>
                       <td className="num" data-label="Market value">
                         {formatMoney(row.market_value, row.currency)}
                       </td>

@@ -258,25 +258,33 @@ function SimulationResult({
               <tr>
                 <th scope="col">Label</th>
                 <th scope="col">Currency</th>
-                <th scope="col">Before</th>
-                <th scope="col">After</th>
-                <th scope="col">Change</th>
+                <th className="num-col" scope="col">Before</th>
+                <th className="num-col" scope="col">After</th>
+                <th className="num-col" scope="col">Change</th>
               </tr>
             </thead>
             <tbody>
               {selectedDelta.map((row) => (
                 <tr key={`${row.dimension}-${row.label}-${row.currency}`}>
                   <td data-label="Label">{row.label}</td>
-                  <td className="num" data-label="Currency">
-                    {row.currency}
-                  </td>
+                  <td data-label="Currency">{row.currency}</td>
                   <td className="num" data-label="Before">
                     {formatPercent(row.percent_before)}
                   </td>
                   <td className="num" data-label="After">
                     {formatPercent(row.percent_after)}
                   </td>
-                  <td className="num" data-label="Change">
+                  <td
+                    className={`num ${
+                      Number(row.percent_change) < 0
+                        ? "loss"
+                        : Number(row.percent_change) > 0
+                          ? "gain"
+                          : ""
+                    }`.trim()}
+                    data-label="Change"
+                  >
+                    {Number(row.percent_change) > 0 ? "+" : ""}
                     {formatPercent(row.percent_change)}
                   </td>
                 </tr>

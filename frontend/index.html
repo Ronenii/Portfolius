@@ -3,7 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Portfolius — a private portfolio ledger for holdings, allocation, and what-if trades."
+    />
+    <meta name="theme-color" content="#faf8f2" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
     <title>Portfolius</title>
+    <script>
+      // Apply terminal mode before first paint so dark-mode users don't see a
+      // cream flash. AppShell keeps this class in sync after mount.
+      try {
+        if (localStorage.getItem("portfolius:terminal-mode") === "true") {
+          document.documentElement.classList.add("app-root--terminal");
+        }
+      } catch {
+        /* storage unavailable — default to paper */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

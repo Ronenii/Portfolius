@@ -1,8 +1,9 @@
-import { LayoutDashboard, Landmark, UserRound, Monitor, Sun } from "lucide-react";
+import { LayoutDashboard, Landmark, LogOut, UserRound, Monitor, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import AssistantWidget from "../../features/assistant/AssistantWidget";
+import { useAuth } from "../../features/auth/AuthContext";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -13,6 +14,7 @@ const navItems = [
 const MODE_KEY = "portfolius:terminal-mode";
 
 export default function AppShell() {
+  const { user, signOut } = useAuth();
   const [isTerminal, setIsTerminal] = useState(
     () => localStorage.getItem(MODE_KEY) === "true"
   );
@@ -55,11 +57,24 @@ export default function AppShell() {
           ))}
         </nav>
         <div className="sidebar-foot">
+          {user?.email ? (
+            <p className="sidebar-user" title={user.email}>
+              {user.email}
+            </p>
+          ) : null}
           <button className="mode-toggle-btn" type="button" onClick={toggleMode}>
             {isTerminal
               ? <><Sun aria-hidden="true" size={16} strokeWidth={1.5} />Paper</>
               : <><Monitor aria-hidden="true" size={16} strokeWidth={1.5} />Terminal</>
             }
+          </button>
+          <button
+            className="mode-toggle-btn"
+            type="button"
+            onClick={() => void signOut()}
+          >
+            <LogOut aria-hidden="true" size={16} strokeWidth={1.5} />
+            Sign out
           </button>
         </div>
       </aside>

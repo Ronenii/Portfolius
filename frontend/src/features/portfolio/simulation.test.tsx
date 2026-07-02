@@ -155,7 +155,8 @@ describe("SimulationPanel", () => {
 
     expect(within(table).getByRole("cell", { name: "VOO" })).toBeInTheDocument();
     expect(within(table).getByRole("cell", { name: "100%" })).toBeInTheDocument();
-    expect(within(table).getAllByRole("cell", { name: "50%" })).toHaveLength(3);
+    expect(within(table).getAllByRole("cell", { name: "50%" })).toHaveLength(2);
+    expect(within(table).getByRole("cell", { name: "+50%" })).toBeInTheDocument();
     expect(within(table).getByRole("cell", { name: "-50%" })).toBeInTheDocument();
     expect(within(table).getByRole("cell", { name: "QQQ" })).toBeInTheDocument();
   });

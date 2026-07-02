@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+/* Fonts are loaded from index.html with preconnect — no render-blocking @import. */
 
 @tailwind base;
 @tailwind components;
@@ -188,9 +188,25 @@ a {
 }
 
 .sidebar-foot {
+  display: grid;
+  gap: 2px;
   margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid var(--rule);
+}
+
+.sidebar-user {
+  margin: 0 0 6px;
+  padding: 0 10px;
+  color: var(--ink-500);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mode-terminal .sidebar-user {
+  color: var(--ink-300);
 }
 
 .mode-terminal .sidebar-foot {
@@ -289,7 +305,6 @@ a {
 }
 
 .page-section {
-  min-height: calc(100vh - clamp(40px, 8vw, 80px));
   align-content: start;
   padding: 28px;
   border: 1px solid var(--rule);
@@ -895,6 +910,58 @@ h1 {
   }
 }
 
+/* KPI gain/loss coloring — the sign carries meaning, so the color does too. */
+.kpi-tile strong.gain {
+  color: var(--gain-700);
+}
+
+.kpi-tile strong.loss {
+  color: var(--loss-500);
+}
+
+.mode-terminal .kpi-tile strong.gain {
+  color: var(--gain-300);
+}
+
+.mode-terminal .kpi-tile strong.loss {
+  color: var(--loss-300);
+}
+
+/* Caution note — a warning that asks for action, distinct from empty states. */
+.notice {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--caution-500) 32%, transparent);
+  border-left: 3px solid var(--caution-500);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--caution-500) 7%, transparent);
+}
+
+.notice strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notice span {
+  color: var(--ink-600);
+  font-size: 13px;
+}
+
+.mode-terminal .notice {
+  border-color: color-mix(in srgb, var(--caution-500) 40%, transparent);
+  border-left-color: var(--caution-500);
+  background: color-mix(in srgb, var(--caution-500) 12%, transparent);
+}
+
+.mode-terminal .notice strong {
+  color: var(--fg-terminal);
+}
+
+.mode-terminal .notice span {
+  color: var(--ink-200);
+}
+
 .kpi-tile strong {
   display: block;
   color: var(--fg-paper);
@@ -954,7 +1021,7 @@ h1 {
   border-radius: 999px;
   color: var(--ink-500);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .allocation-controls {
@@ -979,7 +1046,20 @@ h1 {
   color: var(--ink-700);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+
+.segmented-button:hover:not(.segmented-button--active) {
+  background: var(--paper-200);
+  color: var(--fg-paper);
+}
+
+.mode-terminal .segmented-button:hover:not(.segmented-button--active) {
+  background: var(--ink-800);
+  color: var(--fg-terminal);
 }
 
 .segmented-button--active {
@@ -1154,9 +1234,22 @@ h1 {
 .allocation-table th {
   color: var(--ink-500);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* Figures read right-aligned; text columns stay left. Headers opt in with
+   .num-col so the label sits over its digits. */
+.allocation-table th.num-col,
+.holdings-table th.num-col,
+.allocation-table td.num,
+.holdings-table td.num {
+  text-align: right;
+}
+
+.holdings-table th.actions-col {
+  text-align: right;
 }
 
 .allocation-table td {
@@ -1165,7 +1258,7 @@ h1 {
 
 .allocation-table td:first-child {
   color: var(--fg-paper);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .allocation-row td {
@@ -1229,7 +1322,7 @@ h1 {
 .composition-row strong {
   display: block;
   color: var(--fg-paper);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .composition-row span {
@@ -1292,6 +1385,11 @@ h1 {
 .mode-terminal .simulation-panel {
   border-color: var(--ink-800);
   background: var(--ink-900);
+}
+
+/* Grid children stretch by default; the action button should hug its label. */
+.simulation-panel > .button {
+  justify-self: start;
 }
 
 .mode-terminal .simulation-warnings {
@@ -1627,7 +1725,7 @@ h1 {
 .assistant-message-role {
   color: var(--ink-500);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1686,7 +1784,7 @@ h1 {
   width: max-content;
   color: var(--ink-500);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .assistant-tool-badge {
@@ -1842,6 +1940,41 @@ h1 {
   box-shadow: var(--focus-ring);
 }
 
+.mode-terminal .button:focus-visible {
+  box-shadow: var(--focus-ring-terminal);
+}
+
+/* Keyboard focus for the remaining interactive controls. */
+.segmented-button:focus-visible,
+.icon-button:focus-visible,
+.text-button:focus-visible,
+.nav-link:focus-visible,
+.mode-toggle-btn:focus-visible,
+.assistant-icon-button:focus-visible,
+.assistant-conversation:focus-visible,
+.assistant-launcher:focus-visible,
+.assistant-send-button:focus-visible,
+.allocation-row:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+}
+
+.allocation-row:focus-visible {
+  outline-offset: -2px;
+}
+
+.mode-terminal .segmented-button:focus-visible,
+.mode-terminal .icon-button:focus-visible,
+.mode-terminal .text-button:focus-visible,
+.mode-terminal .nav-link:focus-visible,
+.mode-terminal .mode-toggle-btn:focus-visible,
+.mode-terminal .assistant-icon-button:focus-visible,
+.mode-terminal .assistant-conversation:focus-visible,
+.mode-terminal .assistant-send-button:focus-visible,
+.mode-terminal .allocation-row:focus-visible {
+  outline-color: var(--accent-300);
+}
+
 .button svg {
   width: 16px;
   height: 16px;
@@ -1926,23 +2059,87 @@ h1 {
   }
 }
 
-.login-page {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
-  align-items: start;
+/* ---- Login --------------------------------------------------------------
+   Full-viewport composition: brand + ledger motif on the left, sign-in
+   panel centered on the right. Always renders in paper mode. */
+.login-screen {
+  display: grid;
+  min-height: 100dvh;
+  background: var(--paper-50);
+  color: var(--fg-paper);
+  color-scheme: light;
 }
 
-.login-copy {
-  max-width: 620px;
+.login-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 400px);
+  gap: clamp(32px, 7vw, 110px);
+  align-items: center;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 64px);
 }
 
-.login-copy p:last-child {
-  max-width: 520px;
-  margin: 18px 0 0;
+.wordmark--login {
+  margin-bottom: clamp(32px, 6vh, 64px);
+  font-size: 36px;
+}
+
+.login-hero h1 {
+  max-width: 14ch;
+  font-size: clamp(44px, 4.6vw, 62px);
+}
+
+.login-lede {
+  max-width: 44ch;
+  margin: 20px 0 0;
   color: var(--ink-700);
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 21px;
   font-style: italic;
-  line-height: 1.35;
+  line-height: 1.45;
+}
+
+.login-ledger {
+  max-width: 360px;
+  margin: clamp(28px, 5vh, 52px) 0 0;
+  border-top: 1px solid var(--ink-200);
+}
+
+.login-ledger div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.login-ledger dt {
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
+.login-ledger dd {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: 13px;
+}
+
+.login-panel h2 {
+  margin: 0 0 2px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.login-footnote {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .login-panel,
@@ -2004,6 +2201,19 @@ h1 {
   grid-template-columns: minmax(0, 0.95fr) minmax(360px, 0.75fr);
   align-items: start;
   max-width: none;
+}
+
+/* In the two-column profile layout the second section reads as its own pane:
+   a vertical rule instead of the stacked-layout top rule. */
+.profile-setup .profile-form-section {
+  border-top: 0;
+  border-left: 1px solid var(--rule);
+  padding-top: 0;
+  padding-left: clamp(20px, 3vw, 32px);
+}
+
+.mode-terminal .profile-setup .profile-form-section {
+  border-left-color: var(--ink-800);
 }
 
 .profile-setup .form-error,
@@ -2379,7 +2589,7 @@ h1 {
 .holdings-table th {
   color: var(--ink-500);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -2390,12 +2600,14 @@ h1 {
 
 .holdings-table td strong {
   color: var(--fg-paper);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .row-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  width: 100%;
   gap: 6px;
 }
 
@@ -2410,6 +2622,21 @@ h1 {
   background: var(--paper-50);
   color: var(--ink-700);
   cursor: pointer;
+}
+
+.icon-button {
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+
+.icon-button:hover {
+  border-color: var(--ink-200);
+  background: var(--paper-200);
+}
+
+.mode-terminal .icon-button:hover {
+  border-color: var(--ink-600);
+  background: var(--ink-800);
 }
 
 .icon-button svg {
@@ -2429,7 +2656,7 @@ h1 {
   color: var(--accent-700);
   cursor: pointer;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .text-button:hover {
@@ -2530,6 +2757,17 @@ h1 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .sidebar-foot {
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: start;
+    gap: 8px;
+  }
+
+  .sidebar-user {
+    display: none;
+  }
+
   .nav-link {
     justify-content: center;
   }
@@ -2546,8 +2784,18 @@ h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .login-page {
+  .login-layout {
     grid-template-columns: 1fr;
+    gap: 32px;
+    align-content: start;
+  }
+
+  .wordmark--login {
+    margin-bottom: 24px;
+  }
+
+  .login-ledger {
+    display: none;
   }
 
   .form-grid {
@@ -2556,6 +2804,17 @@ h1 {
 
   .profile-setup .profile-form {
     grid-template-columns: 1fr;
+  }
+
+  .profile-setup .profile-form-section {
+    border-top: 1px solid var(--rule);
+    border-left: 0;
+    padding-top: 18px;
+    padding-left: 0;
+  }
+
+  .mode-terminal .profile-setup .profile-form-section {
+    border-top-color: var(--ink-800);
   }
 
   .holdings-workspace {
@@ -2813,7 +3072,7 @@ h1 {
     content: attr(data-label);
     color: var(--ink-500);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
