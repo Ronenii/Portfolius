@@ -209,6 +209,13 @@ a {
   color: var(--ink-300);
 }
 
+.sidebar-foot .field-error {
+  margin: 2px 0 0;
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .mode-terminal .sidebar-foot {
   border-top-color: var(--ink-800);
 }
@@ -235,6 +242,11 @@ a {
 .mode-toggle-btn:hover {
   background: var(--paper-200);
   color: var(--fg-paper);
+}
+
+.mode-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .mode-terminal .mode-toggle-btn {

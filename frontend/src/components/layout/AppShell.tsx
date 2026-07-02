@@ -18,6 +18,8 @@ export default function AppShell() {
   const [isTerminal, setIsTerminal] = useState(
     () => localStorage.getItem(MODE_KEY) === "true"
   );
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   // Mirror terminal mode onto the document root so native controls (scrollbars,
   // number spin buttons, select arrows) and the window scrollbar pick up the
@@ -36,6 +38,18 @@ export default function AppShell() {
       localStorage.setItem(MODE_KEY, String(next));
       return next;
     });
+  }
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+    setSignOutError(null);
+    try {
+      await signOut();
+    } catch {
+      setSignOutError("Sign out failed. Try again.");
+    } finally {
+      setIsSigningOut(false);
+    }
   }
 
   return (
@@ -70,12 +84,18 @@ export default function AppShell() {
           </button>
           <button
             className="mode-toggle-btn"
+            disabled={isSigningOut}
             type="button"
-            onClick={() => void signOut()}
+            onClick={handleSignOut}
           >
             <LogOut aria-hidden="true" size={16} strokeWidth={1.5} />
-            Sign out
+            {isSigningOut ? "Signing out" : "Sign out"}
           </button>
+          {signOutError ? (
+            <p className="field-error" role="alert">
+              {signOutError}
+            </p>
+          ) : null}
         </div>
       </aside>
       <div className="content-rail">
