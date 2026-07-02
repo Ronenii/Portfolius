@@ -287,10 +287,10 @@ describe("DashboardPage", () => {
 
     expect(await within(summary).findByText("$1,250.00")).toBeInTheDocument();
     expect(within(summary).getByText("$1,000.00")).toBeInTheDocument();
-    expect(within(summary).getByText("$250.00")).toBeInTheDocument();
-    expect(within(summary).getByText("1 / 0")).toBeInTheDocument();
+    expect(within(summary).getByText("+$250.00")).toBeInTheDocument();
+    expect(within(summary).getByText("1 of 1")).toBeInTheDocument();
     expect(
-      within(summary).getByText("priced / missing · latest Jun 5, 2026")
+      within(summary).getByText("holdings priced · latest close Jun 5, 2026")
     ).toBeInTheDocument();
   });
 

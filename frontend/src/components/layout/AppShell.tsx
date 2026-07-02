@@ -1,8 +1,9 @@
-import { LayoutDashboard, Landmark, UserRound, Monitor, Sun } from "lucide-react";
+import { LayoutDashboard, Landmark, LogOut, UserRound, Monitor, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import AssistantWidget from "../../features/assistant/AssistantWidget";
+import { useAuth } from "../../features/auth/AuthContext";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -12,10 +13,27 @@ const navItems = [
 
 const MODE_KEY = "portfolius:terminal-mode";
 
+function readTerminalMode(): boolean {
+  try {
+    return localStorage.getItem(MODE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeTerminalMode(value: boolean) {
+  try {
+    localStorage.setItem(MODE_KEY, String(value));
+  } catch {
+    // Client-side presentation preference only; ignore unavailable storage.
+  }
+}
+
 export default function AppShell() {
-  const [isTerminal, setIsTerminal] = useState(
-    () => localStorage.getItem(MODE_KEY) === "true"
-  );
+  const { user, signOut } = useAuth();
+  const [isTerminal, setIsTerminal] = useState(readTerminalMode);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   // Mirror terminal mode onto the document root so native controls (scrollbars,
   // number spin buttons, select arrows) and the window scrollbar pick up the
@@ -28,12 +46,41 @@ export default function AppShell() {
     };
   }, [isTerminal]);
 
+  // theme-color has no var() support, so read the page's own surface token
+  // (index.css is already loaded by the time this runs) instead of
+  // hard-coding a hex value that would drift from the design system.
+  useEffect(() => {
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) {
+      return;
+    }
+    const surfaceVar = isTerminal ? "--ink-950" : "--paper-50";
+    const surface = getComputedStyle(document.documentElement)
+      .getPropertyValue(surfaceVar)
+      .trim();
+    if (surface) {
+      themeColorMeta.setAttribute("content", surface);
+    }
+  }, [isTerminal]);
+
   function toggleMode() {
     setIsTerminal((prev) => {
       const next = !prev;
-      localStorage.setItem(MODE_KEY, String(next));
+      writeTerminalMode(next);
       return next;
     });
+  }
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+    setSignOutError(null);
+    try {
+      await signOut();
+    } catch {
+      setSignOutError("Sign out failed. Try again.");
+    } finally {
+      setIsSigningOut(false);
+    }
   }
 
   return (
@@ -55,12 +102,31 @@ export default function AppShell() {
           ))}
         </nav>
         <div className="sidebar-foot">
+          {user?.email ? (
+            <p className="sidebar-user" title={user.email}>
+              {user.email}
+            </p>
+          ) : null}
           <button className="mode-toggle-btn" type="button" onClick={toggleMode}>
             {isTerminal
               ? <><Sun aria-hidden="true" size={16} strokeWidth={1.5} />Paper</>
               : <><Monitor aria-hidden="true" size={16} strokeWidth={1.5} />Terminal</>
             }
           </button>
+          <button
+            className="mode-toggle-btn"
+            disabled={isSigningOut}
+            type="button"
+            onClick={handleSignOut}
+          >
+            <LogOut aria-hidden="true" size={16} strokeWidth={1.5} />
+            {isSigningOut ? "Signing out" : "Sign out"}
+          </button>
+          {signOutError ? (
+            <p className="field-error" role="alert">
+              {signOutError}
+            </p>
+          ) : null}
         </div>
       </aside>
       <div className="content-rail">

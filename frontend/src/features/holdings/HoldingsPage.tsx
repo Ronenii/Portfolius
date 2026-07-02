@@ -263,9 +263,9 @@ export default function HoldingsPage() {
                     <th>Name</th>
                     <th>Exchange</th>
                     <th>Currency</th>
-                    <th>Quantity</th>
-                    <th>Purchase cost</th>
-                    <th>Actions</th>
+                    <th className="num-col">Quantity</th>
+                    <th className="num-col">Purchase cost</th>
+                    <th className="actions-col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
