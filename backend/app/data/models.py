@@ -148,11 +148,20 @@ class Instrument(Base):
         back_populates="instrument",
         cascade="all, delete-orphan",
     )
+    transactions: Mapped[list["Transaction"]] = relationship(
+        back_populates="instrument",
+        cascade="all, delete-orphan",
+    )
 
 
 class Holding(Base):
     __tablename__ = "holdings"
     __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "instrument_id",
+            name="uq_holdings_user_instrument",
+        ),
         Index("ix_holdings_user_id", "user_id"),
         Index("ix_holdings_instrument_id", "instrument_id"),
     )
@@ -213,3 +222,64 @@ class Price(Base):
     )
 
     instrument: Mapped[Instrument] = relationship(back_populates="prices")
+
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+    __table_args__ = (
+        CheckConstraint(
+            "action in ('buy', 'sell')",
+            name="ck_transactions_action_valid",
+        ),
+        CheckConstraint(
+            "quantity > 0",
+            name="ck_transactions_quantity_positive",
+        ),
+        CheckConstraint(
+            "price >= 0",
+            name="ck_transactions_price_non_negative",
+        ),
+        CheckConstraint(
+            "fees >= 0",
+            name="ck_transactions_fees_non_negative",
+        ),
+        Index("ix_transactions_user_id", "user_id"),
+        Index(
+            "ix_transactions_user_instrument_trade_date_id",
+            "user_id",
+            "instrument_id",
+            "trade_date",
+            "id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    instrument_id: Mapped[int] = mapped_column(
+        ForeignKey("instruments.id"),
+        nullable=False,
+    )
+    action: Mapped[str] = mapped_column(String(10), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    fees: Mapped[Decimal] = mapped_column(
+        Numeric(20, 8),
+        default=Decimal("0"),
+        nullable=False,
+    )
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    trade_date: Mapped[date] = mapped_column(Date, nullable=False)
+    notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+    instrument: Mapped[Instrument] = relationship(back_populates="transactions")

@@ -9,3 +9,4 @@ backend/portfolius.db
 frontend/node_modules/
 frontend/dist/
 frontend/.env.local
+.superpowers/
