@@ -206,8 +206,7 @@ def test_composition_response_exposes_unit_quantity(
 ) -> None:
     add_profile(db_session, authenticated_user.user_id)
     ieur = add_instrument(db_session, "IEUR", region="Europe", close_price="50")
-    add_holding(db_session, authenticated_user.user_id, ieur, quantity="5")
-    add_holding(db_session, authenticated_user.user_id, ieur, quantity="15")
+    add_holding(db_session, authenticated_user.user_id, ieur, quantity="20")
 
     response = read_portfolio_composition(
         "region",

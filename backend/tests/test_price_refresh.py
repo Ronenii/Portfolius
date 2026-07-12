@@ -336,7 +336,6 @@ def test_refresh_requests_each_distinct_user_instrument_once(
     db_session.add_all([voo, vxus, other_user_instrument])
     db_session.flush()
     add_holding(db_session, "user-123", voo)
-    add_holding(db_session, "user-123", voo, quantity="2")
     add_holding(db_session, "user-123", vxus)
     add_holding(db_session, "user-456", other_user_instrument)
     db_session.commit()

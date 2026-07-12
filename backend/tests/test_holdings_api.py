@@ -170,11 +170,12 @@ def test_creating_holding_inserts_and_reuses_instrument(
     holding_count = db_session.scalar(select(func.count()).select_from(Holding))
 
     assert instrument_count == 1
-    assert holding_count == 2
+    assert holding_count == 1
     assert first_response.instrument.id == second_response.instrument.id
     assert first_response.instrument.symbol == "VOO"
     assert first_response.instrument.exchange == "NYSEARCA"
     assert first_response.instrument.currency == "USD"
+    assert second_response.quantity == Decimal("15.5")
 
 
 def test_creating_first_holding_fetches_instrument_price(
@@ -486,6 +487,18 @@ def test_updating_own_holding_changes_quantity_and_instrument(
     db_session: Session,
 ) -> None:
     holding = save_holding(holding_payload(), authenticated_user, db_session)
+    old_holding_id = holding.id
+    old_instrument_id = holding.instrument.id
+
+    # A holding created *after* the one under test gets a higher id, so once
+    # the old holding's row is deleted below, the newly inserted holding is
+    # guaranteed to receive an id greater than old_holding_id -- this can't
+    # be masked by SQLite reusing the deleted row's rowid.
+    save_holding(
+        holding_payload(symbol="schb", exchange="nysearca"),
+        authenticated_user,
+        db_session,
+    )
 
     response = save_holding_update(
         holding.id,
@@ -494,10 +507,31 @@ def test_updating_own_holding_changes_quantity_and_instrument(
         db_session,
     )
 
-    assert response.id == holding.id
+    # Changing instrument closes the old position and opens a new one, so a
+    # new id is expected -- see the NOTE on update_holding().
+    assert response.id != old_holding_id
     assert response.quantity == Decimal("7.25")
     assert response.instrument.symbol == "VXUS"
     assert response.instrument.exchange == ""
+
+    assert (
+        db_session.scalar(
+            select(Holding).where(
+                Holding.user_id == authenticated_user.user_id,
+                Holding.instrument_id == old_instrument_id,
+            )
+        )
+        is None
+    )
+
+    new_holding = db_session.scalar(
+        select(Holding).where(
+            Holding.user_id == authenticated_user.user_id,
+            Holding.instrument_id == response.instrument.id,
+        )
+    )
+    assert new_holding is not None
+    assert new_holding.quantity == Decimal("7.25")
 
 
 def test_deleting_own_holding_returns_204_and_removes_row(

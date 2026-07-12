@@ -1,8 +1,13 @@
-from sqlalchemy import func, select
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.data.models import Holding, Instrument
+from app.data.models import Holding, Instrument, Transaction
 from app.data.repositories.instruments import get_instrument_for_payload
+from app.data.repositories.transactions import recompute_holding
+from app.domain.transactions import InsufficientQuantityError
 from app.schemas.holdings import HoldingRequest
 
 
@@ -43,16 +48,38 @@ def get_or_create_instrument(db: Session, payload: HoldingRequest) -> Instrument
     return instrument
 
 
+def _opening_balance_transaction(
+    user_id: str,
+    instrument: Instrument,
+    payload: HoldingRequest,
+) -> Transaction:
+    currency = instrument.currency or "USD"
+    return Transaction(
+        user_id=user_id,
+        instrument_id=instrument.id,
+        action="buy",
+        quantity=payload.quantity,
+        price=payload.average_cost,
+        fees=Decimal("0"),
+        currency=currency,
+        trade_date=date.today(),
+        notes="Opening balance",
+    )
+
+
 def create_holding(db: Session, user_id: str, payload: HoldingRequest) -> Holding:
     instrument = get_or_create_instrument(db, payload)
-    holding = Holding(
-        user_id=user_id,
-        instrument=instrument,
-        quantity=payload.quantity,
-        average_cost=payload.average_cost,
-    )
-    db.add(holding)
-    db.commit()
+    db.add(_opening_balance_transaction(user_id, instrument, payload))
+
+    try:
+        db.flush()
+        holding = recompute_holding(db, user_id, instrument.id)
+        db.commit()
+    except InsufficientQuantityError:
+        db.rollback()
+        raise
+
+    assert holding is not None
     db.refresh(holding)
     return holding
 
@@ -131,14 +158,58 @@ def update_holding(
     holding: Holding,
     payload: HoldingRequest,
 ) -> Holding:
-    holding.instrument = get_or_create_instrument(db, payload)
-    holding.quantity = payload.quantity
-    holding.average_cost = payload.average_cost
-    db.commit()
-    db.refresh(holding)
-    return holding
+    # NOTE: If this update changes the instrument, the returned Holding will
+    # have a different id than `holding.id`. Changing a holding's instrument
+    # conceptually closes the old position (its transactions are deleted,
+    # and recompute_holding removes the now-empty old Holding row) and opens
+    # a new one under the new instrument (recompute_holding inserts a fresh
+    # Holding row, since none existed for that instrument yet). This is
+    # intentional, not a bug — callers must not assume the id is preserved
+    # across an instrument change.
+    user_id = holding.user_id
+    old_instrument_id = holding.instrument_id
+
+    new_instrument = get_or_create_instrument(db, payload)
+    new_instrument_id = new_instrument.id
+
+    db.execute(
+        delete(Transaction).where(
+            Transaction.user_id == user_id,
+            Transaction.instrument_id == old_instrument_id,
+        )
+    )
+    db.add(_opening_balance_transaction(user_id, new_instrument, payload))
+
+    try:
+        db.flush()
+        updated_holding = recompute_holding(db, user_id, old_instrument_id)
+        if new_instrument_id != old_instrument_id:
+            updated_holding = recompute_holding(db, user_id, new_instrument_id)
+        db.commit()
+    except InsufficientQuantityError:
+        db.rollback()
+        raise
+
+    assert updated_holding is not None
+    db.refresh(updated_holding)
+    return updated_holding
 
 
 def delete_holding(db: Session, holding: Holding) -> None:
-    db.delete(holding)
-    db.commit()
+    user_id = holding.user_id
+    instrument_id = holding.instrument_id
+
+    db.execute(
+        delete(Transaction).where(
+            Transaction.user_id == user_id,
+            Transaction.instrument_id == instrument_id,
+        )
+    )
+
+    try:
+        db.flush()
+        recompute_holding(db, user_id, instrument_id)
+        db.commit()
+    except InsufficientQuantityError:
+        db.rollback()
+        raise
