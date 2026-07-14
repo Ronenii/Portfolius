@@ -43,8 +43,9 @@ export type TransactionPayload = {
   notes?: string | null;
 };
 
-export function listTransactions(accessToken: string) {
-  return apiRequest<Transaction[]>("/api/v1/transactions", { accessToken });
+export function listTransactions(accessToken: string, symbol?: string) {
+  const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";
+  return apiRequest<Transaction[]>(`/api/v1/transactions${query}`, { accessToken });
 }
 
 export function createTransaction(accessToken: string, payload: TransactionPayload) {

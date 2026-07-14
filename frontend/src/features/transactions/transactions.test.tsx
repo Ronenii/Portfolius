@@ -212,6 +212,50 @@ describe("transactions page", () => {
     expect(within(row).getByText("$145.20")).toBeInTheDocument();
   });
 
+  it("filters by the symbol query param when present", async () => {
+    const queryClient = createQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider
+          router={createAppRouter(["/transactions?symbol=AAPL"])}
+          future={{ v7_startTransition: true }}
+        />
+      </QueryClientProvider>
+    );
+
+    await screen.findByRole("heading", { name: "Transactions" });
+
+    await waitFor(() => {
+      expect(listTransactions).toHaveBeenCalledWith("access-token", "AAPL");
+    });
+  });
+
+  it("shows an onboarding hint for logging an opening balance", async () => {
+    renderTransactionsRoute();
+
+    expect(
+      await screen.findByText(/Log a single buy for your/)
+    ).toBeInTheDocument();
+  });
+
+  it("shows a clear-filter link when a symbol filter is active", async () => {
+    const queryClient = createQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider
+          router={createAppRouter(["/transactions?symbol=AAPL"])}
+          future={{ v7_startTransition: true }}
+        />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText(/Filtered to AAPL/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Clear filter" })).toHaveAttribute(
+      "href",
+      "/transactions"
+    );
+  });
+
   it("shows an empty state when there are no transactions", async () => {
     vi.mocked(listTransactions).mockResolvedValue([]);
 

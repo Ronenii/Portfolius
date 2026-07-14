@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 import Button from "../../components/ui/Button";
 import { TrendLoader } from "../../components/ui/TrendLoader";
@@ -131,6 +132,8 @@ function formatMoney(value: string, currency = "USD") {
 export default function TransactionsPage() {
   const { accessToken } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const symbolFilter = searchParams.get("symbol");
   const [form, setForm] = useState<TransactionPayload>(emptyForm);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -138,8 +141,8 @@ export default function TransactionsPage() {
 
   const transactionsQuery = useQuery({
     enabled: Boolean(accessToken),
-    queryKey: ["transactions", accessToken],
-    queryFn: () => listTransactions(accessToken ?? ""),
+    queryKey: ["transactions", accessToken, symbolFilter],
+    queryFn: () => listTransactions(accessToken ?? "", symbolFilter ?? undefined),
   });
 
   const createMutation = useMutation({
@@ -259,6 +262,11 @@ export default function TransactionsPage() {
               <p className="panel-label">Transaction log</p>
               <h2 id="transactions-list-title">All transactions</h2>
             </div>
+            {symbolFilter ? (
+              <p className="panel-label">
+                Filtered to {symbolFilter}. <Link to="/transactions">Clear filter</Link>
+              </p>
+            ) : null}
           </div>
 
           {transactionsQuery.isLoading ? (
@@ -379,6 +387,13 @@ export default function TransactionsPage() {
               </Button>
             ) : null}
           </div>
+
+          {!editingTransaction ? (
+            <p className="field-hint">
+              Don&apos;t have your full trade history? Log a single buy for your
+              current quantity and average cost — you can backdate it.
+            </p>
+          ) : null}
 
           <form className="holding-form" noValidate onSubmit={handleSubmit}>
             {errors.form ? <p className="form-error">{errors.form}</p> : null}
