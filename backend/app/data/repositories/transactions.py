@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.data.models import Holding, Instrument, Transaction
 from app.domain.transactions import (
@@ -69,7 +69,13 @@ def list_transactions_for_user(
     one or neither -- the caller is responsible for rejecting requests that
     pass both).
     """
-    query = select(Transaction).where(Transaction.user_id == user_id)
+    # Eager-load the instrument: the response reads transaction.instrument per
+    # row, so a lazy-load would issue an N+1 query per transaction.
+    query = (
+        select(Transaction)
+        .where(Transaction.user_id == user_id)
+        .options(selectinload(Transaction.instrument))
+    )
 
     if instrument_id is not None:
         query = query.where(Transaction.instrument_id == instrument_id)
