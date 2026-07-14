@@ -127,3 +127,40 @@ class CompositionResponse(BaseModel):
     @field_serializer("market_value", "percent_of_portfolio")
     def serialize_decimal(self, value: Decimal) -> str:
         return str(value)
+
+
+class ProjectionYearPoint(BaseModel):
+    year: int
+    conservative: Decimal
+    expected: Decimal
+    optimistic: Decimal
+
+    @field_serializer("conservative", "expected", "optimistic")
+    def serialize_decimal(self, value: Decimal) -> str:
+        return str(value)
+
+
+class ProjectionResponse(BaseModel):
+    base_currency: str
+    start_value: Decimal
+    target_amount: Decimal | None
+    horizon_years: int
+    contribution_amount: Decimal
+    contribution_frequency: str
+    annual_return_expected: Decimal
+    series: list[ProjectionYearPoint]
+    target_progress_percent: Decimal | None
+    on_track: bool | None
+    target_reached_year: int | None
+
+    @field_serializer(
+        "start_value",
+        "target_amount",
+        "contribution_amount",
+        "annual_return_expected",
+        "target_progress_percent",
+    )
+    def serialize_decimal(self, value: Decimal | None) -> str | None:
+        if value is None:
+            return None
+        return str(value)
