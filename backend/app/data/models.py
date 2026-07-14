@@ -54,6 +54,18 @@ class Profile(Base):
         nullable=False,
     )
     goals_note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    goal_target_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 8),
+        nullable=True,
+    )
+    contribution_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 8),
+        nullable=True,
+    )
+    expected_annual_return: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 8),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

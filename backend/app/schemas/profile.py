@@ -1,6 +1,7 @@
 from datetime import datetime
+from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 RISK_TOLERANCES = {"conservative", "balanced", "aggressive"}
 MAX_KEYWORDS = 30
@@ -33,6 +34,9 @@ class ProfileRequest(BaseModel):
     interest_tags: list[str] = Field(default_factory=list)
     excluded_sectors: list[str] = Field(default_factory=list)
     goals_note: str | None = Field(default=None, max_length=1000)
+    goal_target_amount: Decimal | None = None
+    contribution_amount: Decimal | None = None
+    expected_annual_return: Decimal | None = None
 
     @field_validator("display_name", "time_horizon", "investment_frequency")
     @classmethod
@@ -77,6 +81,15 @@ class ProfileRequest(BaseModel):
         trimmed_value = value.strip()
         return trimmed_value or None
 
+    @field_validator("goal_target_amount", "contribution_amount")
+    @classmethod
+    def validate_non_negative(cls, value: Decimal | None) -> Decimal | None:
+        if value is None:
+            return None
+        if value < 0:
+            raise ValueError("Value must be zero or greater")
+        return value
+
 
 class ProfileResponse(BaseModel):
     id: int
@@ -89,7 +102,20 @@ class ProfileResponse(BaseModel):
     interest_tags: list[str] = Field(default_factory=list)
     excluded_sectors: list[str] = Field(default_factory=list)
     goals_note: str | None = None
+    goal_target_amount: Decimal | None = None
+    contribution_amount: Decimal | None = None
+    expected_annual_return: Decimal | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer(
+        "goal_target_amount",
+        "contribution_amount",
+        "expected_annual_return",
+    )
+    def serialize_decimal(self, value: Decimal | None) -> str | None:
+        if value is None:
+            return None
+        return str(value)

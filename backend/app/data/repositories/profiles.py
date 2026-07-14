@@ -22,6 +22,9 @@ def upsert_profile(db: Session, user_id: str, payload: ProfileRequest) -> Profil
             interest_tags=payload.interest_tags,
             excluded_sectors=payload.excluded_sectors,
             goals_note=payload.goals_note,
+            goal_target_amount=payload.goal_target_amount,
+            contribution_amount=payload.contribution_amount,
+            expected_annual_return=payload.expected_annual_return,
         )
         db.add(profile)
     else:
@@ -37,6 +40,12 @@ def upsert_profile(db: Session, user_id: str, payload: ProfileRequest) -> Profil
             profile.excluded_sectors = payload.excluded_sectors
         if "goals_note" in payload.model_fields_set:
             profile.goals_note = payload.goals_note
+        if "goal_target_amount" in payload.model_fields_set:
+            profile.goal_target_amount = payload.goal_target_amount
+        if "contribution_amount" in payload.model_fields_set:
+            profile.contribution_amount = payload.contribution_amount
+        if "expected_annual_return" in payload.model_fields_set:
+            profile.expected_annual_return = payload.expected_annual_return
 
     db.commit()
     db.refresh(profile)

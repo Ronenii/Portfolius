@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -124,3 +126,120 @@ def test_blank_goals_note_becomes_null() -> None:
     payload = profile_payload(goals_note="   ")
 
     assert payload.goals_note is None
+
+
+def test_creating_profile_with_projection_fields_persists_them(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    response = save_profile(
+        profile_payload(
+            goal_target_amount="100000",
+            contribution_amount="500",
+            expected_annual_return="7.5",
+        ),
+        authenticated_user,
+        db_session,
+    )
+
+    assert response.goal_target_amount == Decimal("100000")
+    assert response.contribution_amount == Decimal("500")
+    assert response.expected_annual_return == Decimal("7.5")
+
+    reloaded = read_profile(authenticated_user, db_session)
+    assert reloaded.goal_target_amount == Decimal("100000")
+    assert reloaded.contribution_amount == Decimal("500")
+    assert reloaded.expected_annual_return == Decimal("7.5")
+
+
+def test_creating_profile_without_projection_fields_leaves_them_none(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    response = save_profile(
+        profile_payload(),
+        authenticated_user,
+        db_session,
+    )
+
+    assert response.goal_target_amount is None
+    assert response.contribution_amount is None
+    assert response.expected_annual_return is None
+
+
+def test_updating_profile_without_projection_fields_preserves_existing_values(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    first_response = save_profile(
+        profile_payload(
+            goal_target_amount="100000",
+            contribution_amount="500",
+            expected_annual_return="7.5",
+        ),
+        authenticated_user,
+        db_session,
+    )
+
+    second_response = save_profile(
+        profile_payload(display_name="Ron"),
+        authenticated_user,
+        db_session,
+    )
+
+    assert second_response.id == first_response.id
+    assert second_response.display_name == "Ron"
+    assert second_response.goal_target_amount == Decimal("100000")
+    assert second_response.contribution_amount == Decimal("500")
+    assert second_response.expected_annual_return == Decimal("7.5")
+
+    saved_profile = db_session.scalar(select(Profile))
+    assert saved_profile is not None
+    assert saved_profile.goal_target_amount == Decimal("100000")
+    assert saved_profile.contribution_amount == Decimal("500")
+    assert saved_profile.expected_annual_return == Decimal("7.5")
+
+
+def test_updating_profile_with_new_projection_fields_updates_them(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    save_profile(
+        profile_payload(
+            goal_target_amount="100000",
+            contribution_amount="500",
+            expected_annual_return="7.5",
+        ),
+        authenticated_user,
+        db_session,
+    )
+
+    second_response = save_profile(
+        profile_payload(
+            goal_target_amount="200000",
+            contribution_amount="750",
+            expected_annual_return="6.0",
+        ),
+        authenticated_user,
+        db_session,
+    )
+
+    assert second_response.goal_target_amount == Decimal("200000")
+    assert second_response.contribution_amount == Decimal("750")
+    assert second_response.expected_annual_return == Decimal("6.0")
+
+
+def test_negative_goal_target_amount_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        profile_payload(goal_target_amount="-1")
+
+
+def test_negative_contribution_amount_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        profile_payload(contribution_amount="-1")
+
+
+def test_negative_expected_annual_return_is_accepted() -> None:
+    payload = profile_payload(expected_annual_return="-2.5")
+
+    assert payload.expected_annual_return == Decimal("-2.5")

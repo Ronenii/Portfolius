@@ -48,6 +48,36 @@ def test_m3_profile_goal_fields_upgrade_and_downgrade(
     get_settings.cache_clear()
 
 
+def test_projection_profile_fields_upgrade_and_downgrade(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'projection_fields_schema.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    config = alembic_config(database_url)
+
+    command.upgrade(config, "head")
+
+    engine = create_engine(database_url)
+    columns = {column["name"] for column in inspect(engine).get_columns("profiles")}
+    assert {
+        "goal_target_amount",
+        "contribution_amount",
+        "expected_annual_return",
+    }.issubset(columns)
+
+    command.downgrade(config, "20260707_0008")
+
+    downgraded_columns = {
+        column["name"] for column in inspect(engine).get_columns("profiles")
+    }
+    assert "goal_target_amount" not in downgraded_columns
+    assert "contribution_amount" not in downgraded_columns
+    assert "expected_annual_return" not in downgraded_columns
+    get_settings.cache_clear()
+
+
 def test_m3_assistant_tables_upgrade_and_downgrade(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
