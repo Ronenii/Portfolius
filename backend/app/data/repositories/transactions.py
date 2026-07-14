@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.data.models import Holding, Transaction
+from app.data.models import Holding, Instrument, Transaction
 from app.domain.transactions import (
     InsufficientQuantityError,
     TransactionLeg,
@@ -56,14 +56,29 @@ def get_holding_by_instrument(
     )
 
 
-def list_transactions_for_user(db: Session, user_id: str) -> list[Transaction]:
-    return list(
-        db.scalars(
-            select(Transaction)
-            .where(Transaction.user_id == user_id)
-            .order_by(Transaction.trade_date, Transaction.id)
-        )
-    )
+def list_transactions_for_user(
+    db: Session,
+    user_id: str,
+    *,
+    instrument_id: int | None = None,
+    symbol: str | None = None,
+) -> list[Transaction]:
+    """List a user's transactions, most recent first.
+
+    Optionally filtered to a single instrument, by id or by symbol (exactly
+    one or neither -- the caller is responsible for rejecting requests that
+    pass both).
+    """
+    query = select(Transaction).where(Transaction.user_id == user_id)
+
+    if instrument_id is not None:
+        query = query.where(Transaction.instrument_id == instrument_id)
+
+    if symbol is not None:
+        query = query.join(Instrument).where(Instrument.symbol == symbol)
+
+    query = query.order_by(Transaction.trade_date.desc(), Transaction.id.desc())
+    return list(db.scalars(query))
 
 
 def get_transaction_for_user(

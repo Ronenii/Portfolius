@@ -12,6 +12,7 @@ from app.api.v1.instruments import router as instruments_router
 from app.api.v1.jobs import router as jobs_router
 from app.api.v1.portfolio import router as portfolio_router
 from app.api.v1.profile import router as profile_router
+from app.api.v1.transactions import router as transactions_router
 from app.core.config import get_settings
 
 
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(profile_router)
     app.include_router(instruments_router)
     app.include_router(holdings_router)
+    app.include_router(transactions_router)
     app.include_router(portfolio_router)
     app.include_router(jobs_router)
     app.include_router(assistant_router)
