@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,6 +13,7 @@ from app.data.repositories.prices import (
 from app.data.repositories.profiles import get_profile_by_user_id
 from app.domain.allocation import build_allocation_breakdowns, build_composition
 from app.domain.portfolio_math import build_portfolio_snapshot
+from app.domain.projection import build_projection
 from app.domain.simulation import apply_trades, diff_breakdowns
 from app.integrations.market_data import MarketDataClient
 from app.schemas.instruments import InstrumentSearchResult
@@ -18,8 +21,35 @@ from app.schemas.portfolio import (
     CompositionResponse,
     PortfolioBreakdowns,
     PortfolioSnapshot,
+    ProjectionResponse,
 )
 from app.schemas.simulation import SimulationResponse, TradeLeg
+
+# Risk-tolerance -> expected annual return (%) default, used when the
+# profile has no explicit `expected_annual_return`. Keys mirror
+# `schemas/profile.py`'s `RISK_TOLERANCES`, which already normalizes and
+# validates `risk_tolerance` to one of these three strings (or `None`).
+RISK_TOLERANCE_DEFAULT_RETURN = {
+    "conservative": Decimal("4"),
+    "balanced": Decimal("6"),
+    "aggressive": Decimal("8"),
+}
+# Used when risk_tolerance is also unset/unrecognized.
+DEFAULT_ANNUAL_RETURN = Decimal("6")
+
+# Time-horizon label -> projection years. `time_horizon` is a free-form
+# string field (not DB-constrained), but the frontend only ever sends these
+# four exact labels (see `ProfileWizardPage.tsx`/`ProfileEditPage.tsx`).
+HORIZON_YEARS = {
+    "1-3 years": 3,
+    "3-7 years": 7,
+    "7-10 years": 10,
+    "10+ years": 15,
+}
+# Used when `time_horizon` doesn't match a known label, mirroring the same
+# "unrecognized input falls back to a sensible default" precedent
+# `domain/projection.py` established for `frequency`.
+DEFAULT_HORIZON_YEARS = 7
 
 
 class InstrumentLookupClient:
@@ -60,6 +90,53 @@ def build_composition_for_user(
 ) -> CompositionResponse:
     snapshot = build_snapshot_for_user(db, user_id)
     return build_composition(snapshot, dimension, key, currency=currency)
+
+
+def build_projection_for_user(
+    db: Session,
+    user_id: str,
+    *,
+    target: Decimal | None = None,
+    contribution: Decimal | None = None,
+    annual_return: Decimal | None = None,
+    years: int | None = None,
+) -> ProjectionResponse:
+    profile = get_profile_by_user_id(db, user_id)
+    if profile is None:
+        raise profile_not_found()
+
+    snapshot = build_snapshot_for_user(db, user_id)
+
+    resolved_target = target if target is not None else profile.goal_target_amount
+    resolved_contribution = (
+        contribution if contribution is not None else profile.contribution_amount
+    )
+
+    if annual_return is not None:
+        resolved_annual_return = annual_return
+    elif profile.expected_annual_return is not None:
+        resolved_annual_return = profile.expected_annual_return
+    else:
+        resolved_annual_return = RISK_TOLERANCE_DEFAULT_RETURN.get(
+            profile.risk_tolerance, DEFAULT_ANNUAL_RETURN
+        )
+
+    if years is not None:
+        resolved_years = years
+    else:
+        resolved_years = HORIZON_YEARS.get(
+            profile.time_horizon.strip(), DEFAULT_HORIZON_YEARS
+        )
+
+    return build_projection(
+        base_currency=snapshot.summary.base_currency,
+        start_value=snapshot.summary.total_market_value,
+        target=resolved_target,
+        contribution=resolved_contribution,
+        annual_return=resolved_annual_return,
+        years=resolved_years,
+        frequency=profile.investment_frequency,
+    )
 
 
 def simulate_for_user(
