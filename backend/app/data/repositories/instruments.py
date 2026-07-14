@@ -4,13 +4,13 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.data.models import Instrument
-from app.schemas.holdings import HoldingRequest
 from app.schemas.instruments import InstrumentSearchResult
+from app.schemas.transactions import TransactionRequest
 
 
 def get_instrument_for_payload(
     db: Session,
-    payload: HoldingRequest,
+    payload: TransactionRequest,
 ) -> Instrument | None:
     if payload.exchange:
         return db.scalar(
@@ -26,18 +26,6 @@ def get_instrument_for_payload(
         .order_by(Instrument.exchange.desc(), Instrument.id)
     )
 
-
-def instrument_has_useful_metadata(instrument: Instrument) -> bool:
-    return all(
-        [
-            instrument.name,
-            instrument.currency,
-            instrument.asset_class,
-            instrument.sector,
-            instrument.country,
-            instrument.region,
-        ]
-    )
 
 
 MANAGED_METADATA_FIELDS = (
