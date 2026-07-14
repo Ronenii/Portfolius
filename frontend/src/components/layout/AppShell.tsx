@@ -1,4 +1,12 @@
-import { LayoutDashboard, Landmark, LogOut, UserRound, Monitor, Sun } from "lucide-react";
+import {
+  ArrowLeftRight,
+  LayoutDashboard,
+  Landmark,
+  LogOut,
+  UserRound,
+  Monitor,
+  Sun,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -8,6 +16,7 @@ import { useAuth } from "../../features/auth/AuthContext";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/holdings",  label: "Holdings",  icon: Landmark },
+  { to: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { to: "/profile",   label: "Profile",   icon: UserRound },
 ];
 
