@@ -47,6 +47,9 @@ const savedProfile = {
   interest_tags: [],
   excluded_sectors: [],
   goals_note: null,
+  goal_target_amount: null,
+  contribution_amount: null,
+  expected_annual_return: null,
   created_at: "2026-06-04T00:00:00Z",
   updated_at: "2026-06-04T00:00:00Z",
 };
@@ -136,6 +139,9 @@ describe("profile wizard", () => {
         interest_tags: [],
         excluded_sectors: [],
         goals_note: null,
+        goal_target_amount: null,
+        contribution_amount: null,
+        expected_annual_return: null,
       });
     });
   });
@@ -189,6 +195,9 @@ describe("profile wizard", () => {
         interest_tags: ["ai infrastructure", "low-fee etfs"],
         excluded_sectors: ["high fee funds"],
         goals_note: "Prefer low-fee ETFs.",
+        goal_target_amount: null,
+        contribution_amount: null,
+        expected_annual_return: null,
       });
     });
   });
@@ -225,5 +234,69 @@ describe("profile wizard", () => {
 
     expect(saveProfile).not.toHaveBeenCalled();
     expect(screen.getByText("Display name is required")).toBeInTheDocument();
+  });
+
+  it("persists goal projection fields as strings when filled in", async () => {
+    vi.mocked(getProfile).mockRejectedValue(new ApiError(404, "Profile not found"));
+    vi.mocked(saveProfile).mockResolvedValue(savedProfile);
+    renderRoute("/profile/setup");
+
+    await fillProfileForm();
+    await userEvent.type(screen.getByLabelText("Goal target amount"), "50000");
+    await userEvent.type(screen.getByLabelText("Contribution amount"), "500");
+    await userEvent.type(screen.getByLabelText("Expected annual return (%)"), "6");
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => {
+      expect(saveProfile).toHaveBeenCalledWith("access-token", {
+        display_name: "Ronen",
+        base_currency: "USD",
+        time_horizon: "10+ years",
+        investment_frequency: "monthly",
+        risk_tolerance: null,
+        interest_tags: [],
+        excluded_sectors: [],
+        goals_note: null,
+        goal_target_amount: "50000",
+        contribution_amount: "500",
+        expected_annual_return: "6",
+      });
+    });
+  });
+
+  it("shows a validation error for a negative goal target amount", async () => {
+    vi.mocked(getProfile).mockRejectedValue(new ApiError(404, "Profile not found"));
+    renderRoute("/profile/setup");
+
+    await fillProfileForm();
+    await userEvent.type(screen.getByLabelText("Goal target amount"), "-100");
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    expect(saveProfile).not.toHaveBeenCalled();
+    expect(screen.getByText("Must be zero or greater")).toBeInTheDocument();
+  });
+
+  it("shows a validation error for a negative contribution amount", async () => {
+    vi.mocked(getProfile).mockRejectedValue(new ApiError(404, "Profile not found"));
+    renderRoute("/profile/setup");
+
+    await fillProfileForm();
+    await userEvent.type(screen.getByLabelText("Contribution amount"), "-50");
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    expect(saveProfile).not.toHaveBeenCalled();
+    expect(screen.getByText("Must be zero or greater")).toBeInTheDocument();
+  });
+
+  it("shows a validation error for a non-numeric expected annual return", async () => {
+    vi.mocked(getProfile).mockRejectedValue(new ApiError(404, "Profile not found"));
+    renderRoute("/profile/setup");
+
+    await fillProfileForm();
+    await userEvent.type(screen.getByLabelText("Expected annual return (%)"), "abc");
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    expect(saveProfile).not.toHaveBeenCalled();
+    expect(screen.getByText("Must be a number")).toBeInTheDocument();
   });
 });

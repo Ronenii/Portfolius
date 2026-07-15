@@ -10,6 +10,14 @@ import { listHoldings } from "../features/holdings/holdings-api";
 import { ApiError } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import { getProfile } from "../features/profile/profile-api";
+import {
+  getPortfolioBreakdowns,
+  getPortfolioSnapshot,
+  getProjection,
+  type PortfolioBreakdowns,
+  type PortfolioSnapshot,
+  type ProjectionResponse,
+} from "../features/portfolio/portfolio-api";
 
 vi.mock("../lib/supabase", () => ({
   supabase: {
@@ -35,6 +43,22 @@ vi.mock("../features/holdings/holdings-api", () => ({
   deleteHolding: vi.fn(),
 }));
 
+// The /dashboard route mounts several panels that each own a query against
+// portfolio-api. Without this mock they'd all race to read the single
+// globally-stubbed `fetch` Response body (only the first reader succeeds;
+// Response bodies can only be consumed once), which is exactly the kind of
+// non-deterministic setup that broke when a new panel (ProjectionPanel) was
+// added. Stub the module directly so each query gets a deterministic,
+// correctly-shaped fixture instead.
+vi.mock("../features/portfolio/portfolio-api", () => ({
+  getComposition: vi.fn(),
+  getPortfolioBreakdowns: vi.fn(),
+  getPortfolioSnapshot: vi.fn(),
+  getProjection: vi.fn(),
+  refreshPrices: vi.fn(),
+  simulatePortfolio: vi.fn(),
+}));
+
 const mockSession = {
   access_token: "access-token",
   refresh_token: "refresh-token",
@@ -54,8 +78,49 @@ const mockProfile = {
   interest_tags: [],
   excluded_sectors: [],
   goals_note: null,
+  goal_target_amount: null,
+  contribution_amount: null,
+  expected_annual_return: null,
   created_at: "2026-06-04T00:00:00Z",
   updated_at: "2026-06-04T00:00:00Z",
+};
+
+const emptySnapshot: PortfolioSnapshot = {
+  currency_totals: {},
+  holdings: [],
+  summary: {
+    base_currency: "USD",
+    latest_price_date: null,
+    missing_price_holdings: 0,
+    priced_holdings: 0,
+    total_cost_basis: "0",
+    total_market_value: "0",
+    total_unrealized_gain: "0",
+  },
+};
+
+const emptyBreakdowns: PortfolioBreakdowns = {
+  asset_class: [],
+  country: [],
+  currency: [],
+  instrument: [],
+  region: [],
+  sector: [],
+  unpriced_holding_count: 0,
+};
+
+const emptyProjection: ProjectionResponse = {
+  annual_return_expected: "0.06",
+  base_currency: "USD",
+  contribution_amount: "0",
+  contribution_frequency: "monthly",
+  horizon_years: 10,
+  on_track: null,
+  series: [{ conservative: "0", expected: "0", optimistic: "0", year: 0 }],
+  start_value: "0",
+  target_amount: null,
+  target_progress_percent: null,
+  target_reached_year: null,
 };
 
 function mockAuthState(session: Session | null) {
@@ -108,6 +173,9 @@ describe("app router foundation", () => {
   it("renders the dashboard with the compact backend health signal", async () => {
     mockAuthState(mockSession);
     vi.mocked(getProfile).mockResolvedValue(mockProfile);
+    vi.mocked(getPortfolioSnapshot).mockResolvedValue(emptySnapshot);
+    vi.mocked(getPortfolioBreakdowns).mockResolvedValue(emptyBreakdowns);
+    vi.mocked(getProjection).mockResolvedValue(emptyProjection);
     renderRoute("/dashboard");
 
     expect(
