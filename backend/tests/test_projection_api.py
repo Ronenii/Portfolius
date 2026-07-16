@@ -122,7 +122,6 @@ def test_projection_uses_profile_stored_values_by_default(
         investment_frequency="monthly",
         goal_target_amount="50000",
         contribution_amount="200",
-        expected_annual_return="7",
     )
     add_holding(db_session, authenticated_user.user_id, "VOO")
 
@@ -132,8 +131,22 @@ def test_projection_uses_profile_stored_values_by_default(
     assert response.target_amount == Decimal("50000")
     assert response.contribution_amount == Decimal("200")
     assert response.contribution_frequency == "monthly"
-    assert response.annual_return_expected == Decimal("7")
+    assert response.annual_return_expected == Decimal("8")
     assert response.horizon_years == 15
+
+
+def test_projection_uses_computed_weighted_average_return(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    add_profile(db_session, authenticated_user.user_id, risk_tolerance="conservative")
+    voo = add_holding(db_session, authenticated_user.user_id, "VOO")
+    voo.instrument.historical_annual_return = Decimal("11.50")
+    db_session.commit()
+
+    response = read_portfolio_projection(authenticated_user, db_session)
+
+    assert response.annual_return_expected == Decimal("11.50")
 
 
 def test_projection_falls_back_to_risk_tolerance_default_return(
@@ -303,3 +316,21 @@ def test_projection_scopes_start_value_to_authenticated_user(
 
     assert response_one.start_value == Decimal("1000")
     assert response_two.start_value == Decimal("160")
+
+
+def test_projection_uses_zero_computed_return_not_risk_tolerance_default(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    """Regression test: computed return of Decimal("0.00") should not be
+    overridden by risk-tolerance default (which would be Decimal("4") for
+    conservative). Tests the fix for the falsy Decimal("0") bug in the `or`
+    operator fallback logic."""
+    add_profile(db_session, authenticated_user.user_id, risk_tolerance="conservative")
+    holding = add_holding(db_session, authenticated_user.user_id, "FLAT")
+    holding.instrument.historical_annual_return = Decimal("0.00")
+    db_session.commit()
+
+    response = read_portfolio_projection(authenticated_user, db_session)
+
+    assert response.annual_return_expected == Decimal("0.00")

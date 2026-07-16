@@ -12,7 +12,10 @@ from app.data.repositories.prices import (
 )
 from app.data.repositories.profiles import get_profile_by_user_id
 from app.domain.allocation import build_allocation_breakdowns, build_composition
-from app.domain.portfolio_math import build_portfolio_snapshot
+from app.domain.portfolio_math import (
+    build_portfolio_snapshot,
+    compute_weighted_average_return,
+)
 from app.domain.projection import build_projection
 from app.domain.simulation import apply_trades, diff_breakdowns
 from app.integrations.market_data import MarketDataClient
@@ -114,11 +117,16 @@ def build_projection_for_user(
 
     if annual_return is not None:
         resolved_annual_return = annual_return
-    elif profile.expected_annual_return is not None:
-        resolved_annual_return = profile.expected_annual_return
     else:
-        resolved_annual_return = RISK_TOLERANCE_DEFAULT_RETURN.get(
-            profile.risk_tolerance, DEFAULT_ANNUAL_RETURN
+        computed_return = compute_weighted_average_return(
+            snapshot.holdings, snapshot.summary.base_currency
+        )
+        resolved_annual_return = (
+            computed_return
+            if computed_return is not None
+            else RISK_TOLERANCE_DEFAULT_RETURN.get(
+                profile.risk_tolerance, DEFAULT_ANNUAL_RETURN
+            )
         )
 
     if years is not None:
