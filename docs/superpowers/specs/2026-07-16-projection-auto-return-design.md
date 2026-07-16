@@ -31,7 +31,8 @@ newly-listed instruments, fetch failures) — not the primary source.
   day, so recomputing it daily would add avoidable yfinance load) and stored
   on the `Instrument` row, mirroring how `asset_class`/`sector`/etc. are
   already stored directly on the instrument rather than recomputed per
-  request.
+  request. A one-time startup-hook bootstrap covers the gap between
+  shipping this and the first monthly cron tick (see Section C).
 - `compute_weighted_average_return` (the portfolio-level weighting function)
   reads each holding's stored historical return first, falling back to the
   asset-class bucket table only when it's absent.
@@ -115,6 +116,23 @@ user-facing reason to trigger a slow 5-year history fetch on demand):
   `PORTFOLIUS_API_URL`/`PORTFOLIUS_SCHEDULER_SECRET` secrets, same curl
   call against the new endpoint), but on a monthly `cron` schedule instead
   of a weekday/market-hours one.
+
+**Bootstrap on first deploy:** the monthly cron alone would leave every
+instrument's `historical_annual_return` at `None` (falling back to the
+asset-class bucket) for up to a month after this ships. To avoid that gap,
+a FastAPI startup hook in `backend/app/main.py` checks once, on process
+start, whether the job has ever run at all — i.e. whether every instrument
+row still has `historical_return_updated_at IS NULL` (a single cheap
+`SELECT EXISTS`-style query, not a full table scan of computed values). If
+so, it kicks off `refresh_historical_returns_for_all_instruments` as a
+non-blocking background task (`asyncio.create_task`, not awaited during
+startup) so it doesn't delay the app becoming ready/passing health checks.
+Once that first run completes, every processed instrument has a non-null
+timestamp, so the check is a no-op on every subsequent restart — this is a
+one-time bootstrap, not a replacement for the monthly cadence. This is a new
+pattern for the app (no existing startup/lifespan hook exists yet in
+`main.py`); confirmed safe because the backend runs as a single instance
+(no risk of two concurrent instances both racing to bootstrap at once).
 
 ## D. Weighted-average computation (`backend/app/domain/portfolio_math.py`)
 
@@ -204,6 +222,12 @@ up correctly.
 **`app/api/v1/jobs.py`:** the new endpoint rejects requests without a valid
 `X-Scheduler-Secret` and calls through to the refresh function on success —
 mirroring the existing `refresh-etf-metadata` endpoint test.
+
+**Startup-hook bootstrap (`main.py`):** the "has this ever run" check
+returns true when every instrument has `historical_return_updated_at IS
+NULL` (including the empty-instruments-table case) and false as soon as any
+one instrument has a non-null timestamp; the background task is only
+scheduled in the true case.
 
 **`portfolio_math.py`:** `compute_weighted_average_return` — a holding with
 a stored `historical_annual_return` uses it directly (ignoring its
