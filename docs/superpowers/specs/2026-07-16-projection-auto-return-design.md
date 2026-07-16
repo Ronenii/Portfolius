@@ -5,35 +5,121 @@ profile field with a value computed from the user's current portfolio
 composition, so the goal projection starts from a real, portfolio-derived
 number instead of a guess.
 
-## Background: why not a true asset-class breakdown
+## Background: grounding this in real data
 
-`asset_class` is not a clean equity/bond/cash/commodity taxonomy today — it's
-a free-text label sourced from external data providers (`"STOCK"`, `"ETF"`,
-`"FUND"`, `"ADR"`, inconsistently cased), and nothing in the codebase knows
-what's actually *inside* an ETF or fund (it could hold equities, bonds, or
-commodities). A fully accurate weighted return would require fetching each
-ETF/fund's true underlying composition from a data provider — a
-significantly larger, separate effort. This spec instead maps the coarse
-labels we already have to assumed long-run returns, accepting that
-ETF/fund/ADR holdings are treated as equity-like by default. Descoping to
-"fetch real composition data first" was considered and explicitly rejected
-in favor of shipping the approximation now.
+An earlier draft of this spec proposed a purely asset-class-bucket
+assumed-return table (STOCK/ETF/FUND/ADR → 8%, CRYPTO → 12%, etc.) with no
+real data behind the numbers. That was revisited: `YFinanceMarketDataClient`
+(already a dependency, used today for latest-close prices) can fetch much
+longer price history via `ticker.history(period=...)` — we don't need a new
+data provider integration to get real historical performance per
+instrument, just a longer lookback on an API we already call.
+
+This spec is a **hybrid**: each instrument's own trailing 5-year annualized
+return (computed from real yfinance history, when at least 3 years of it is
+available) is used first; the original asset-class bucket table becomes the
+fallback for instruments where real history is missing or too thin (crypto,
+newly-listed instruments, fetch failures) — not the primary source.
 
 ## Architecture
 
-A new pure function computes a weighted-average expected return from a
-portfolio snapshot's holdings — each priced, base-currency holding's
-`market_value` weighted against an assumed-return table keyed by its
-`asset_class` label. `build_projection_for_user` calls it in place of
-reading `profile.expected_annual_return` (removed entirely — schema, DB
-column, and both profile forms). The existing risk-tolerance default and the
-`annual_return` what-if query override (used by the projection panel's
-slider) are unchanged.
+- A new `MarketDataClient` method fetches an instrument's trailing 5-year
+  price history and computes its annualized return (CAGR), returning `None`
+  if fewer than 3 years of history is available.
+- This is precomputed by a new **monthly** scheduled job (not the existing
+  daily price-refresh job — a 5-year annualized return barely moves day to
+  day, so recomputing it daily would add avoidable yfinance load) and stored
+  on the `Instrument` row, mirroring how `asset_class`/`sector`/etc. are
+  already stored directly on the instrument rather than recomputed per
+  request.
+- `compute_weighted_average_return` (the portfolio-level weighting function)
+  reads each holding's stored historical return first, falling back to the
+  asset-class bucket table only when it's absent.
+- `build_projection_for_user` calls this in place of reading
+  `profile.expected_annual_return`, which is removed entirely (schema, DB
+  column, both profile forms). The existing risk-tolerance default and the
+  `annual_return` what-if query override (used by the projection panel's
+  slider) are unchanged.
 
-## A. Computation (`backend/app/domain/portfolio_math.py`)
+## A. Historical return computation (`backend/app/integrations/yfinance_client.py`)
 
-New module-level constants, alongside the existing snapshot-building code in
-this file:
+New method on `YFinanceMarketDataClient`, and a matching addition to the
+`MarketDataClient` `Protocol` (`app/integrations/market_data.py`):
+
+```python
+def get_historical_annualized_return(
+    self,
+    symbol: str,
+    exchange: str,
+    currency_hint: str | None,
+) -> Decimal | None:
+```
+
+- Fetches `ticker.history(period="5y")`.
+- Finds the earliest and latest valid (non-null, finite) closing prices in
+  that range — reusing the existing `latest_non_null_close` helper for the
+  latest one, and a new mirror-image `first_non_null_close` for the
+  earliest.
+- Computes the actual elapsed span between those two dates in years
+  (`days / 365.25`). If that span is under 3 years, or there are fewer than
+  two valid closes, or the earliest price isn't positive, returns `None` —
+  "not enough real data to trust" is decided once, here, at the source.
+- Otherwise computes `CAGR = (end_price / start_price) ** (1 / years) - 1`
+  in `Decimal` (Python's `Decimal` supports fractional-exponent `**`
+  natively via its context, so this stays in `Decimal` throughout, no float
+  round-tripping), expressed as a quantized percentage (e.g. `Decimal("9.42")`
+  for 9.42%/year).
+
+## B. Storage (`backend/app/data/models.py` + migration)
+
+Two new nullable columns on `Instrument`, next to the existing
+`metadata_updated_at`:
+
+```python
+historical_annual_return: Mapped[Decimal | None] = mapped_column(
+    Numeric(20, 8), nullable=True
+)
+historical_return_updated_at: Mapped[datetime | None] = mapped_column(
+    DateTime(timezone=True), nullable=True
+)
+```
+
+A migration adds both columns (nullable, no backfill — existing instruments
+simply have `None` until the first monthly job run). `historical_annual_return`
+is also added to `InstrumentResponse` (`backend/app/schemas/holdings.py`),
+the same schema `PortfolioHoldingSnapshot.instrument` already uses, so it's
+available wherever a holding snapshot is — including inside
+`build_projection_for_user`.
+
+## C. Monthly refresh job
+
+Mirrors the existing `refresh_instrument_metadata_for_all_instruments`
+pattern exactly (a scheduler-only job with no per-user variant — there's no
+user-facing reason to trigger a slow 5-year history fetch on demand):
+
+- New `backend/app/domain/historical_return_refresh.py`, with
+  `refresh_historical_returns_for_all_instruments(db, market_data_client)`:
+  iterates every instrument (`list_all_instruments`), calls
+  `get_historical_annualized_return` for each, and either stores the result
+  + a fresh `historical_return_updated_at` timestamp (success), leaves the
+  instrument untouched (returned `None` — "skipped"), or counts it as
+  "failed" (an exception was raised). Returns a result dataclass/schema
+  shaped like the existing `PriceRefreshResult`/`MetadataRefreshResult`
+  (`requested`/`updated`/`skipped`/`failed`).
+- New endpoint `POST /api/v1/jobs/refresh-historical-returns`
+  (`backend/app/api/v1/jobs.py`), gated by the same `X-Scheduler-Secret`
+  header check as `refresh-etf-metadata` (scheduler-secret-only, no
+  authenticated-user path).
+- New `.github/workflows/refresh-historical-returns.yml`, structurally
+  identical to the existing `refresh-prices.yml` (same
+  `PORTFOLIUS_API_URL`/`PORTFOLIUS_SCHEDULER_SECRET` secrets, same curl
+  call against the new endpoint), but on a monthly `cron` schedule instead
+  of a weekday/market-hours one.
+
+## D. Weighted-average computation (`backend/app/domain/portfolio_math.py`)
+
+Same constants as the original draft, now serving purely as the fallback
+tier:
 
 ```python
 ASSET_CLASS_DEFAULT_RETURN: dict[str, Decimal] = {
@@ -42,12 +128,8 @@ ASSET_CLASS_DEFAULT_RETURN: dict[str, Decimal] = {
     "CASH": Decimal("2"),
     "MONEY MARKET": Decimal("2"),
 }
-
-# STOCK/ETF/FUND/ADR and any unrecognized asset_class label default here.
-EQUITY_LIKE_RETURN = Decimal("8")
+EQUITY_LIKE_RETURN = Decimal("8")  # STOCK/ETF/FUND/ADR and any unrecognized label
 ```
-
-New function:
 
 ```python
 def compute_weighted_average_return(
@@ -56,40 +138,23 @@ def compute_weighted_average_return(
 ```
 
 - Filters `holdings` to those where `market_value is not None` and
-  `holding.instrument.currency == base_currency` — the same subset
-  `build_portfolio_snapshot` already uses to accumulate `total_market_value`,
-  so the weights are consistent with the denominator they're derived from. A
-  holding priced in a different currency is excluded here exactly as it's
-  already excluded from `total_market_value` today — not a new
-  inconsistency.
-- For each included holding, normalizes `instrument.asset_class` via
-  `.strip().upper()` (existing values are inconsistently cased — e.g.
-  `"Stock"`, `"STOCK"`, `" ETF "` — and must resolve identically) and looks
-  it up in `ASSET_CLASS_DEFAULT_RETURN`, falling back to `EQUITY_LIKE_RETURN`
-  for `None`, empty, or unrecognized labels.
+  `instrument.currency == base_currency` — the same subset already used to
+  accumulate `total_market_value`, so the weights are consistent with the
+  denominator they're derived from.
+- Returns `None` if nothing qualifies (nothing to compute from — empty
+  portfolio, or everything unpriced/non-base-currency).
+- For each qualifying holding, the rate is `instrument.historical_annual_return`
+  if it's set; otherwise the asset-class bucket lookup (`asset_class`
+  normalized via `.strip().upper()`, defaulting to `EQUITY_LIKE_RETURN` for
+  `None`/unrecognized labels) — exactly the original draft's bucket logic,
+  demoted to a fallback.
 - Returns the market-value-weighted average of those per-holding rates,
-  quantized to the same precision convention as the rest of the projection
-  math (`Decimal.quantize` to 2 places, `ROUND_HALF_UP`).
-- Returns `None` when there are no qualifying holdings (empty portfolio, or
-  all holdings unpriced/non-base-currency) — signals "nothing to compute
-  from," triggering the existing risk-tolerance fallback.
+  quantized to 2 places.
 
-## B. Wiring into the projection (`backend/app/domain/portfolio_service.py`)
+## E. Wiring into the projection (`backend/app/domain/portfolio_service.py`)
 
-`build_projection_for_user`'s existing resolution:
-
-```python
-if annual_return is not None:
-    resolved_annual_return = annual_return
-elif profile.expected_annual_return is not None:
-    resolved_annual_return = profile.expected_annual_return
-else:
-    resolved_annual_return = RISK_TOLERANCE_DEFAULT_RETURN.get(
-        profile.risk_tolerance, DEFAULT_ANNUAL_RETURN
-    )
-```
-
-becomes:
+Unchanged from the original draft — `build_projection_for_user`'s
+resolution becomes:
 
 ```python
 if annual_return is not None:
@@ -102,55 +167,70 @@ else:
     )
 ```
 
-The `annual_return` what-if override (the projection panel's slider) is
-untouched — it still wins over everything, exactly as today.
+The `annual_return` what-if override (the projection panel's slider) still
+wins over everything, exactly as today.
 
-## C. Removing the manual field
+## F. Removing the manual field
 
-**Backend:**
-- Migration drops `expected_annual_return` from the `profiles` table.
-- `expected_annual_return` removed from `ProfileRequest`/`ProfileResponse`
-  (`backend/app/schemas/profile.py`) and the `Profile` model
-  (`backend/app/data/models.py`).
+Unchanged from the original draft:
 
-**Frontend:**
-- "Expected annual return (%)" removed from both `ProfileEditPage.tsx` and
-  `ProfileWizardPage.tsx` — input, label, `validateProfile` check, and the
-  submitted payload.
-- `expected_annual_return` dropped from `ProfilePayload`/`Profile` types in
-  `profile-api.ts`.
-- `ProjectionPanel`'s existing "Expected annual return" slider is untouched
-  — it already just reflects `data.annual_return_expected` from the
-  projection response and lets the user drag it for what-if exploration; the
-  only change is that the *starting* value it displays now comes from the
-  auto-computation instead of a stored manual value.
+**Backend:** migration drops `expected_annual_return` from the `profiles`
+table; removed from `ProfileRequest`/`ProfileResponse`
+(`backend/app/schemas/profile.py`) and the `Profile` model.
 
-## D. Testing
+**Frontend:** "Expected annual return (%)" removed from both
+`ProfileEditPage.tsx` and `ProfileWizardPage.tsx` (input, label,
+`validateProfile` check, submitted payload), and dropped from
+`ProfilePayload`/`Profile` types in `profile-api.ts`. `ProjectionPanel`'s
+existing "Expected annual return" slider is untouched — it already just
+reflects `data.annual_return_expected` from the projection response; only
+the starting value's source changes.
 
-**Backend:**
-- `compute_weighted_average_return`: weighted average across a mix of asset
-  classes (e.g. STOCK + CRYPTO + COMMODITY) matches a hand-computed expected
-  value; case/whitespace-insensitive matching (`"Stock"`, `"STOCK"`,
-  `" ETF "` all resolve identically); unrecognized/`None` asset_class falls
-  back to `EQUITY_LIKE_RETURN`; holdings with `market_value is None` or a
-  non-base-currency `instrument.currency` are excluded from both numerator
-  and denominator; an empty/all-excluded holdings list returns `None`.
-- `test_projection_api.py`: the profile-driven precedence chain (no
-  override → auto-computed → falls back to risk-tolerance default when no
-  qualifying holdings exist) resolves correctly end-to-end. Existing tests
-  that pass `expected_annual_return` in the request payload are updated to
-  drop that field.
+## G. Testing
+
+**`yfinance_client.py`:** `get_historical_annualized_return` — full 5-year
+history produces a CAGR matching a hand-computed value; fewer than 3 years
+of span returns `None`; empty/no-data history returns `None`; a
+non-positive earliest price returns `None` defensively.
+
+**`historical_return_refresh.py`:** refreshing updates
+`historical_annual_return` + `historical_return_updated_at` on a successful
+fetch; leaves both untouched when the client returns `None`; counts an
+exception as "failed" without stopping the rest of the batch (matching the
+existing `refresh_instrument_metadata_for_all_instruments` resilience
+pattern); the result counts (`requested`/`updated`/`skipped`/`failed`) add
+up correctly.
+
+**`app/api/v1/jobs.py`:** the new endpoint rejects requests without a valid
+`X-Scheduler-Secret` and calls through to the refresh function on success —
+mirroring the existing `refresh-etf-metadata` endpoint test.
+
+**`portfolio_math.py`:** `compute_weighted_average_return` — a holding with
+a stored `historical_annual_return` uses it directly (ignoring its
+`asset_class`, even if one is set); a holding with `historical_annual_return
+= None` falls back to the asset-class bucket; a portfolio mixing both kinds
+of holdings weights each correctly by its own rate; case/whitespace
+-insensitive bucket matching, non-base-currency/unpriced exclusion, and the
+empty-portfolio `None` case all carry over from the original draft's test
+list.
+
+**`test_projection_api.py`:** the end-to-end precedence chain (no override
+→ auto-computed → risk-tolerance fallback when nothing qualifies) resolves
+correctly. Existing tests passing `expected_annual_return` in the request
+payload are updated to drop that field.
 
 **Frontend:** existing profile-form tests referencing "Expected annual
-return (%)" as an input are removed/updated (`profile.test.tsx`), since the
-field no longer exists in the form. `ProjectionPanel`'s tests are unaffected
-— they never referenced the profile's manual field directly, only the
-projection response.
+return (%)" as an input are removed/updated (`profile.test.tsx`).
+`ProjectionPanel`'s tests are unaffected.
 
 ## Out of scope
 
-- Fetching true underlying ETF/fund composition (equity/bond/cash split)
-  from a data provider — a separate, larger effort (see Background).
-- Any change to `RISK_TOLERANCE_DEFAULT_RETURN` or its role as the fallback
-  for portfolios with no qualifying holdings.
+- Any change to `RISK_TOLERANCE_DEFAULT_RETURN` or its role as the final
+  fallback for portfolios with no qualifying holdings.
 - Any change to `ProjectionPanel`'s slider UI or behavior.
+- Backfilling `historical_annual_return` for existing instruments outside
+  the normal monthly job cadence (it populates naturally on the first run
+  after this ships).
+- A user-facing "refresh my historical returns now" trigger — the monthly
+  job is scheduler-only, matching the existing ETF-metadata refresh's
+  precedent.
