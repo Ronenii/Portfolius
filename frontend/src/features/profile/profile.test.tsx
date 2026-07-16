@@ -300,3 +300,32 @@ describe("profile wizard", () => {
     expect(screen.getByText("Must be a number")).toBeInTheDocument();
   });
 });
+
+describe("profile edit", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockAuthState();
+  });
+
+  it("formats stored decimal values without the database's trailing zeros", async () => {
+    vi.mocked(getProfile).mockResolvedValue({
+      ...savedProfile,
+      goal_target_amount: "1000000.00000000",
+      contribution_amount: "362.30000000",
+      expected_annual_return: "6.00000000",
+    });
+    renderRoute("/profile");
+
+    expect(await screen.findByLabelText("Goal target amount")).toHaveValue(
+      "1000000"
+    );
+    expect(screen.getByLabelText("Contribution amount")).toHaveValue("362.3");
+    expect(screen.getByLabelText("Expected annual return (%)")).toHaveValue(
+      "6"
+    );
+  });
+});

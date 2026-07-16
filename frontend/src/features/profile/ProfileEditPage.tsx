@@ -21,6 +21,16 @@ const riskTolerances = [
 const maxKeywordLength = 40;
 const maxKeywords = 30;
 
+function formatDecimalForInput(value: string | null): string | null {
+  if (value == null) return null;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return value;
+  const fixed = numeric.toFixed(3);
+  return fixed.includes(".")
+    ? fixed.replace(/0+$/, "").replace(/\.$/, "")
+    : fixed;
+}
+
 function validateProfile(payload: ProfilePayload): ProfileFormErrors {
   const errors: ProfileFormErrors = {};
   if (!payload.display_name.trim()) errors.display_name = "Display name is required";
@@ -498,9 +508,9 @@ export default function ProfileEditPage() {
     interest_tags: initial.interest_tags,
     excluded_sectors: initial.excluded_sectors,
     goals_note: initial.goals_note,
-    goal_target_amount: initial.goal_target_amount,
-    contribution_amount: initial.contribution_amount,
-    expected_annual_return: initial.expected_annual_return,
+    goal_target_amount: formatDecimalForInput(initial.goal_target_amount),
+    contribution_amount: formatDecimalForInput(initial.contribution_amount),
+    expected_annual_return: formatDecimalForInput(initial.expected_annual_return),
   };
 
   return (
