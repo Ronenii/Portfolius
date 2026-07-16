@@ -2507,6 +2507,7 @@ h1 {
 }
 
 .profile-setup .form-error,
+.profile-setup .form-success,
 .profile-setup .form-actions {
   grid-column: 1 / -1;
 }
