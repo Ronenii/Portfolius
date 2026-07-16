@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 from app.integrations.market_data import MarketPrice
@@ -10,6 +10,12 @@ def normalize_code(value: str | None, fallback: str = "UNKNOWN") -> str:
         return fallback
     normalized_value = value.strip().upper()
     return normalized_value or fallback
+
+
+HISTORICAL_RETURN_PERIOD = "5y"
+MIN_HISTORICAL_YEARS = Decimal("3")
+DAYS_PER_YEAR = Decimal("365.25")
+RETURN_QUANTIZE = Decimal("0.01")
 
 
 class YFinanceMarketDataClient:
@@ -58,6 +64,39 @@ class YFinanceMarketDataClient:
             source="yfinance",
         )
 
+    def get_historical_annualized_return(
+        self,
+        symbol: str,
+        exchange: str,
+        currency_hint: str | None,
+    ) -> Decimal | None:
+        normalized_symbol = normalize_code(symbol)
+        ticker = self.yfinance_module.Ticker(normalized_symbol)
+        history = ticker.history(period=HISTORICAL_RETURN_PERIOD)
+
+        if getattr(history, "empty", False):
+            return None
+
+        first = first_non_null_close(history)
+        last = latest_non_null_close(history)
+        if first is None or last is None:
+            return None
+
+        start_date, start_price = first
+        end_date, end_price = last
+        if end_date <= start_date or start_price <= 0:
+            return None
+
+        years = Decimal((end_date - start_date).days) / DAYS_PER_YEAR
+        if years < MIN_HISTORICAL_YEARS:
+            return None
+
+        growth = end_price / start_price
+        annualized_growth = growth ** (Decimal(1) / years)
+        return ((annualized_growth - 1) * 100).quantize(
+            RETURN_QUANTIZE, rounding=ROUND_HALF_UP
+        )
+
 
 def provider_currency(ticker: Any) -> str | None:
     fast_info = getattr(ticker, "fast_info", None)
@@ -74,6 +113,20 @@ def latest_non_null_close(history: Any) -> tuple[date, Decimal] | None:
     indexes = history.index
 
     for raw_date, raw_close in reversed(list(zip(indexes, closes, strict=False))):
+        close_price = parse_finite_decimal(raw_close)
+        if close_price is None:
+            continue
+
+        return normalize_date(raw_date), close_price
+
+    return None
+
+
+def first_non_null_close(history: Any) -> tuple[date, Decimal] | None:
+    closes = history["Close"]
+    indexes = history.index
+
+    for raw_date, raw_close in zip(indexes, closes, strict=False):
         close_price = parse_finite_decimal(raw_close)
         if close_price is None:
             continue
