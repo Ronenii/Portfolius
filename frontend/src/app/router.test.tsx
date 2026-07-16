@@ -116,7 +116,9 @@ const emptyProjection: ProjectionResponse = {
   contribution_frequency: "monthly",
   horizon_years: 10,
   on_track: null,
-  series: [{ conservative: "0", expected: "0", optimistic: "0", year: 0 }],
+  series: [
+    { conservative: "0", expected: "0", optimistic: "0", cost_basis: "0", year: 0 },
+  ],
   start_value: "0",
   target_amount: null,
   target_progress_percent: null,

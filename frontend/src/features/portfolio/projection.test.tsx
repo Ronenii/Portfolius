@@ -27,8 +27,20 @@ const projectionWithTarget: ProjectionResponse = {
   contribution_frequency: "monthly",
   annual_return_expected: "0.06",
   series: [
-    { year: 0, conservative: "10000", expected: "10000", optimistic: "10000" },
-    { year: 1, conservative: "11000", expected: "11600", optimistic: "12200" },
+    {
+      year: 0,
+      conservative: "10000",
+      expected: "10000",
+      optimistic: "10000",
+      cost_basis: "9000",
+    },
+    {
+      year: 1,
+      conservative: "11000",
+      expected: "11600",
+      optimistic: "12200",
+      cost_basis: "9500",
+    },
   ],
   target_progress_percent: "20",
   on_track: true,

@@ -2,7 +2,8 @@ import { useState } from "react";
 
 import {
   Area,
-  AreaChart,
+  ComposedChart,
+  Line,
   ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
@@ -24,14 +25,30 @@ const prefersReducedMotion = () =>
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-type BandKey = "conservative" | "expected" | "optimistic";
+type BandKey = "conservative" | "expected" | "optimistic" | "costBasis";
 
-const BAND_KEYS: BandKey[] = ["conservative", "expected", "optimistic"];
+const BAND_KEYS: BandKey[] = [
+  "conservative",
+  "expected",
+  "optimistic",
+  "costBasis",
+];
 
 const BAND_LABELS: Record<BandKey, string> = {
   conservative: "Conservative",
   expected: "Expected",
   optimistic: "Optimistic",
+  costBasis: "Cost basis",
+};
+
+// chartColors[3] is reserved for the target ReferenceLine (below) - band
+// colors are looked up explicitly here rather than positionally by index so
+// the two can never collide.
+const BAND_COLORS: Record<BandKey, string> = {
+  conservative: chartColors[0],
+  expected: chartColors[1],
+  optimistic: chartColors[2],
+  costBasis: chartColors[4],
 };
 
 type MilestoneRow = { numericExpected: number; year: number };
@@ -69,6 +86,7 @@ export function ProjectionChart({
     numericConservative: Number(point.conservative),
     numericExpected: Number(point.expected),
     numericOptimistic: Number(point.optimistic),
+    numericCostBasis: Number(point.cost_basis),
   }));
 
   const numericTarget = targetAmount == null ? null : Number(targetAmount);
@@ -103,7 +121,7 @@ export function ProjectionChart({
     <div className="projection-chart-wrap">
       <div className="projection-chart" role="img" aria-label="Goal projection chart">
         <ResponsiveContainer width="100%" height={260}>
-        <AreaChart
+        <ComposedChart
           data={chartRows}
           margin={{ bottom: 4, left: 8, right: 12, top: 4 }}
         >
@@ -135,6 +153,10 @@ export function ProjectionChart({
                     <div>
                       <dt>Optimistic</dt>
                       <dd>{formatValue(row.optimistic, currency)}</dd>
+                    </div>
+                    <div>
+                      <dt>Cost basis</dt>
+                      <dd>{formatValue(row.cost_basis, currency)}</dd>
                     </div>
                   </dl>
                 </div>
@@ -174,6 +196,18 @@ export function ProjectionChart({
             animationDuration={800}
             animationEasing="ease-out"
           />
+          <Line
+            dataKey="numericCostBasis"
+            dot={false}
+            hide={hiddenBands.has("costBasis")}
+            stroke={BAND_COLORS.costBasis}
+            strokeDasharray="2 2"
+            strokeWidth={2}
+            type="monotone"
+            isAnimationActive={animationsEnabled}
+            animationDuration={800}
+            animationEasing="ease-out"
+          />
           {numericTarget != null && (
             <ReferenceLine
               y={numericTarget}
@@ -199,7 +233,7 @@ export function ProjectionChart({
               y={milestonePoint.numericExpected}
             />
           )}
-        </AreaChart>
+        </ComposedChart>
         </ResponsiveContainer>
       </div>
 
@@ -208,7 +242,7 @@ export function ProjectionChart({
         role="group"
         aria-label="Toggle projection bands"
       >
-        {BAND_KEYS.map((band, index) => {
+        {BAND_KEYS.map((band) => {
           const isVisible = !hiddenBands.has(band);
           return (
             <button
@@ -226,7 +260,7 @@ export function ProjectionChart({
               <span
                 aria-hidden="true"
                 className="projection-band-swatch"
-                style={{ backgroundColor: chartColors[index] }}
+                style={{ backgroundColor: BAND_COLORS[band] }}
               />
               {BAND_LABELS[band]}
             </button>

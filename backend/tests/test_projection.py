@@ -196,3 +196,75 @@ def test_series_covers_year_zero_through_years_inclusive() -> None:
     )
 
     assert [point.year for point in response.series] == list(range(11))
+
+
+def test_cost_basis_starts_at_start_cost_basis() -> None:
+    response = build_projection(
+        base_currency="USD",
+        start_value=Decimal("10000"),
+        start_cost_basis=Decimal("8000"),
+        target=None,
+        contribution=None,
+        annual_return=Decimal("10"),
+        years=2,
+        frequency="annually",
+    )
+
+    points = series_by_year(response)
+    assert points[0].cost_basis == Decimal("8000.00")
+
+
+def test_cost_basis_accumulates_contributions_without_growth() -> None:
+    response = build_projection(
+        base_currency="USD",
+        start_value=Decimal("10000"),
+        start_cost_basis=Decimal("8000"),
+        target=None,
+        contribution=Decimal("1000"),
+        annual_return=Decimal("10"),
+        years=3,
+        frequency="annually",
+    )
+
+    points = series_by_year(response)
+    assert points[0].cost_basis == Decimal("8000.00")
+    assert points[1].cost_basis == Decimal("9000.00")
+    assert points[2].cost_basis == Decimal("10000.00")
+    assert points[3].cost_basis == Decimal("11000.00")
+
+
+def test_cost_basis_flat_when_no_contribution() -> None:
+    response = build_projection(
+        base_currency="USD",
+        start_value=Decimal("10000"),
+        start_cost_basis=Decimal("8000"),
+        target=None,
+        contribution=None,
+        annual_return=Decimal("10"),
+        years=2,
+        frequency="annually",
+    )
+
+    points = series_by_year(response)
+    assert (
+        points[0].cost_basis
+        == points[1].cost_basis
+        == points[2].cost_basis
+        == Decimal("8000.00")
+    )
+
+
+def test_cost_basis_defaults_to_zero_when_not_provided() -> None:
+    response = build_projection(
+        base_currency="USD",
+        start_value=Decimal("10000"),
+        target=None,
+        contribution=Decimal("500"),
+        annual_return=Decimal("10"),
+        years=1,
+        frequency="annually",
+    )
+
+    points = series_by_year(response)
+    assert points[0].cost_basis == Decimal("0.00")
+    assert points[1].cost_basis == Decimal("500.00")

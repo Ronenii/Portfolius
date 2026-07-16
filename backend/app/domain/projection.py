@@ -73,6 +73,7 @@ def build_projection(
     *,
     base_currency: str,
     start_value: Decimal,
+    start_cost_basis: Decimal = Decimal("0"),
     target: Decimal | None,
     contribution: Decimal | None,
     annual_return: Decimal,
@@ -107,6 +108,9 @@ def build_projection(
                 start_value, contribution_per_period, optimistic_rate, n
             )
         )
+        cost_basis = _quantize(
+            start_cost_basis + contribution_per_period * periods_per_year * year
+        )
         expected_by_year[year] = expected
         series.append(
             ProjectionYearPoint(
@@ -114,6 +118,7 @@ def build_projection(
                 conservative=conservative,
                 expected=expected,
                 optimistic=optimistic,
+                cost_basis=cost_basis,
             )
         )
 

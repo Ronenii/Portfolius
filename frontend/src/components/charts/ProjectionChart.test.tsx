@@ -6,8 +6,20 @@ import type { ProjectionYearPoint } from "../../features/portfolio/portfolio-api
 import { findMilestonePoint, ProjectionChart } from "./ProjectionChart";
 
 const series: ProjectionYearPoint[] = [
-  { year: 0, conservative: "10000", expected: "10000", optimistic: "10000" },
-  { year: 1, conservative: "10800", expected: "11000", optimistic: "11200" },
+  {
+    year: 0,
+    conservative: "10000",
+    expected: "10000",
+    optimistic: "10000",
+    cost_basis: "8000",
+  },
+  {
+    year: 1,
+    conservative: "10800",
+    expected: "11000",
+    optimistic: "11200",
+    cost_basis: "9000",
+  },
 ];
 
 function formatValue(value: string, currency: string) {
@@ -45,6 +57,21 @@ describe("ProjectionChart", () => {
     expect(
       screen.getByRole("button", { name: "Optimistic" })
     ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Cost basis" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  it("toggles the cost-basis chip off when clicked", async () => {
+    renderChart();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cost basis" }));
+
+    expect(screen.getByRole("button", { name: "Cost basis" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
   });
 
   it("toggles a band off when its chip is clicked", async () => {
@@ -62,6 +89,7 @@ describe("ProjectionChart", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Conservative" }));
     await userEvent.click(screen.getByRole("button", { name: "Expected" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cost basis" }));
 
     expect(screen.getByRole("button", { name: "Optimistic" })).toBeDisabled();
 
@@ -69,6 +97,22 @@ describe("ProjectionChart", () => {
     expect(
       screen.getByRole("button", { name: "Optimistic" })
     ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("refuses to hide the last visible band, even when it's cost basis", async () => {
+    renderChart();
+
+    await userEvent.click(screen.getByRole("button", { name: "Conservative" }));
+    await userEvent.click(screen.getByRole("button", { name: "Expected" }));
+    await userEvent.click(screen.getByRole("button", { name: "Optimistic" }));
+
+    expect(screen.getByRole("button", { name: "Cost basis" })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cost basis" }));
+    expect(screen.getByRole("button", { name: "Cost basis" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
   });
 
   it("puts the band toggles outside the role=img chart element", () => {

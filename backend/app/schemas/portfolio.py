@@ -134,8 +134,9 @@ class ProjectionYearPoint(BaseModel):
     conservative: Decimal
     expected: Decimal
     optimistic: Decimal
+    cost_basis: Decimal
 
-    @field_serializer("conservative", "expected", "optimistic")
+    @field_serializer("conservative", "expected", "optimistic", "cost_basis")
     def serialize_decimal(self, value: Decimal) -> str:
         return str(value)
 

@@ -113,6 +113,7 @@ export type ProjectionYearPoint = {
   conservative: string;
   expected: string;
   optimistic: string;
+  cost_basis: string;
 };
 
 export type ProjectionResponse = {

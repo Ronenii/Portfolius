@@ -131,6 +131,7 @@ def build_projection_for_user(
     return build_projection(
         base_currency=snapshot.summary.base_currency,
         start_value=snapshot.summary.total_market_value,
+        start_cost_basis=snapshot.summary.total_cost_basis,
         target=resolved_target,
         contribution=resolved_contribution,
         annual_return=resolved_annual_return,
