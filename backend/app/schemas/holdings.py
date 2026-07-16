@@ -22,8 +22,13 @@ class InstrumentResponse(BaseModel):
     sector: str | None
     country: str | None
     region: str | None
+    historical_annual_return: Decimal | None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("historical_annual_return")
+    def serialize_historical_annual_return(self, value: Decimal | None) -> str | None:
+        return None if value is None else str(value)
 
 
 class HoldingResponse(BaseModel):

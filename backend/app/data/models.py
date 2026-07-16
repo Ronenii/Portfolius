@@ -151,6 +151,14 @@ class Instrument(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    historical_annual_return: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 8),
+        nullable=True,
+    )
+    historical_return_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     holdings: Mapped[list["Holding"]] = relationship(
         back_populates="instrument",

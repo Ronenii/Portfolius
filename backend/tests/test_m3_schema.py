@@ -78,6 +78,37 @@ def test_projection_profile_fields_upgrade_and_downgrade(
     get_settings.cache_clear()
 
 
+def test_instrument_historical_return_upgrade_and_downgrade(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database_url = (
+        f"sqlite+pysqlite:///{tmp_path / 'instrument_historical_return_schema.db'}"
+    )
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    config = alembic_config(database_url)
+
+    command.upgrade(config, "head")
+
+    engine = create_engine(database_url)
+    columns = {
+        column["name"] for column in inspect(engine).get_columns("instruments")
+    }
+    assert {"historical_annual_return", "historical_return_updated_at"}.issubset(
+        columns
+    )
+
+    command.downgrade(config, "20260707_0009")
+
+    downgraded_columns = {
+        column["name"] for column in inspect(engine).get_columns("instruments")
+    }
+    assert "historical_annual_return" not in downgraded_columns
+    assert "historical_return_updated_at" not in downgraded_columns
+    get_settings.cache_clear()
+
+
 def test_m3_assistant_tables_upgrade_and_downgrade(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
