@@ -2,7 +2,12 @@ from datetime import date
 from decimal import Decimal
 
 from app.data.models import Holding, Instrument, Price, Profile
-from app.domain.portfolio_math import build_portfolio_snapshot
+from app.domain.portfolio_math import (
+    ASSET_CLASS_DEFAULT_RETURN,
+    EQUITY_LIKE_RETURN,
+    build_portfolio_snapshot,
+    compute_weighted_average_return,
+)
 
 
 def profile(base_currency: str = "USD") -> Profile:
@@ -19,6 +24,8 @@ def instrument(
     symbol: str,
     currency: str | None = "USD",
     exchange: str = "NYSEARCA",
+    asset_class: str | None = "ETF",
+    historical_annual_return: Decimal | None = None,
 ) -> Instrument:
     return Instrument(
         id=len(symbol),
@@ -26,10 +33,11 @@ def instrument(
         name=f"{symbol} Fund",
         exchange=exchange,
         currency=currency,
-        asset_class="ETF",
+        asset_class=asset_class,
         sector="Broad Market",
         country="United States",
         region="North America",
+        historical_annual_return=historical_annual_return,
     )
 
 
@@ -222,3 +230,130 @@ def test_portfolio_snapshot_serializes_decimals_as_strings() -> None:
     assert payload["holdings"][0]["cost_basis"] == "800"
     assert payload["holdings"][0]["market_value"] == "1000"
     assert payload["currency_totals"]["USD"]["market_value"] == "1000"
+
+
+def test_weighted_average_uses_stored_historical_return_over_bucket() -> None:
+    voo = instrument(
+        "VOO", asset_class="ETF", historical_annual_return=Decimal("11.50")
+    )
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        [holding(1, voo, quantity="10", average_cost="80")],
+        {voo.id: price(voo, "100")},
+    )
+
+    result = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+
+    assert result == Decimal("11.50")
+
+
+def test_weighted_average_falls_back_to_asset_class_bucket() -> None:
+    btc = instrument("BTCUSD", asset_class="CRYPTO")
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        [holding(1, btc, quantity="1", average_cost="20000")],
+        {btc.id: price(btc, "25000")},
+    )
+
+    result = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+
+    assert result == ASSET_CLASS_DEFAULT_RETURN["CRYPTO"]
+
+
+def test_weighted_average_bucket_matching_is_case_and_whitespace_insensitive() -> None:
+    gold = instrument("GLD", asset_class="  commodity ")
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        [holding(1, gold, quantity="10", average_cost="150")],
+        {gold.id: price(gold, "180")},
+    )
+
+    result = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+
+    assert result == ASSET_CLASS_DEFAULT_RETURN["COMMODITY"]
+
+
+def test_weighted_average_defaults_unrecognized_asset_class_to_equity_like() -> None:
+    mystery = instrument("XYZ", asset_class="SOMETHING_ELSE")
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        [holding(1, mystery, quantity="5", average_cost="40")],
+        {mystery.id: price(mystery, "50")},
+    )
+
+    result = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+
+    assert result == EQUITY_LIKE_RETURN
+
+
+def test_weighted_average_combines_multiple_holdings_by_market_value() -> None:
+    voo = instrument(
+        "VOO", asset_class="ETF", historical_annual_return=Decimal("10.00")
+    )
+    btc = instrument("BTCUSD", asset_class="CRYPTO")
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        [
+            holding(1, voo, quantity="10", average_cost="80"),
+            holding(2, btc, quantity="0.5", average_cost="1500"),
+        ],
+        {voo.id: price(voo, "100"), btc.id: price(btc, "2000")},
+    )
+
+    result = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+
+    assert result == Decimal("11.00")
+
+
+def test_weighted_average_excludes_unpriced_and_non_base_currency_holdings() -> None:
+    voo = instrument(
+        "VOO", asset_class="ETF", historical_annual_return=Decimal("9.00")
+    )
+    unpriced = instrument("ZZZZ", asset_class="ETF")
+    foreign = instrument("EFAEU", currency="EUR", asset_class="ETF")
+    snapshot = build_portfolio_snapshot(
+        profile(base_currency="USD"),
+        [
+            holding(1, voo, quantity="10", average_cost="80"),
+            holding(2, unpriced, quantity="5", average_cost="50"),
+            holding(3, foreign, quantity="4", average_cost="60"),
+        ],
+        {voo.id: price(voo, "100"), foreign.id: price(foreign, "70")},
+    )
+
+    result = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+
+    assert result == Decimal("9.00")
+
+
+def test_weighted_average_returns_none_when_no_holdings_qualify() -> None:
+    unpriced = instrument("ZZZ", asset_class="ETF")
+    snapshot = build_portfolio_snapshot(
+        profile(),
+        [holding(1, unpriced, quantity="5", average_cost="50")],
+        {},
+    )
+
+    result = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+
+    assert result is None
+
+
+def test_weighted_average_returns_none_for_empty_portfolio() -> None:
+    result = compute_weighted_average_return([], "USD")
+
+    assert result is None

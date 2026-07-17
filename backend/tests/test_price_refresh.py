@@ -126,6 +126,86 @@ class ScriptedMarketDataClient:
         return self.prices.get(symbol)
 
 
+class HistoricalReturnHistory:
+    empty = False
+
+    @property
+    def index(self) -> list[date]:
+        return [date(2021, 1, 4), date(2023, 6, 15), date(2026, 1, 2)]
+
+    def __getitem__(self, column_name: str) -> list[float | None]:
+        assert column_name == "Close"
+        return [100.0, 150.0, 200.0]
+
+
+class HistoricalReturnTicker:
+    fast_info = {"currency": "usd"}
+
+    def __init__(self, symbol: str) -> None:
+        self.symbol = symbol
+
+    def history(self, period: str) -> HistoricalReturnHistory:
+        assert period == "5y"
+        return HistoricalReturnHistory()
+
+
+class ThinHistoryHistory:
+    empty = False
+
+    @property
+    def index(self) -> list[date]:
+        return [date(2024, 6, 1), date(2026, 1, 2)]
+
+    def __getitem__(self, column_name: str) -> list[float | None]:
+        assert column_name == "Close"
+        return [100.0, 150.0]
+
+
+class ThinHistoryTicker:
+    fast_info: dict[str, str] = {}
+
+    def __init__(self, symbol: str) -> None:
+        self.symbol = symbol
+
+    def history(self, period: str) -> ThinHistoryHistory:
+        assert period == "5y"
+        return ThinHistoryHistory()
+
+
+class SingleValidCloseHistory:
+    empty = False
+
+    @property
+    def index(self) -> list[date]:
+        return [date(2021, 1, 4), date(2026, 1, 2)]
+
+    def __getitem__(self, column_name: str) -> list[float | None]:
+        assert column_name == "Close"
+        return [float("nan"), 200.0]
+
+
+class SingleValidCloseTicker:
+    fast_info: dict[str, str] = {}
+
+    def __init__(self, symbol: str) -> None:
+        self.symbol = symbol
+
+    def history(self, period: str) -> SingleValidCloseHistory:
+        assert period == "5y"
+        return SingleValidCloseHistory()
+
+
+class EmptyHistoricalTicker:
+    fast_info: dict[str, str] = {}
+
+    def __init__(self, symbol: str) -> None:
+        self.symbol = symbol
+
+    def history(self, period: str) -> EmptyHistory:
+        assert period == "5y"
+        return EmptyHistory()
+
+
 def add_holding(
     db_session: Session,
     user_id: str,
@@ -327,6 +407,42 @@ def test_yfinance_adapter_uses_currency_hint_when_provider_currency_missing() ->
     assert price.currency == "EUR"
 
 
+def test_yfinance_adapter_computes_annualized_return_over_full_history() -> None:
+    client = YFinanceMarketDataClient(
+        yfinance_module=SimpleNamespace(Ticker=HistoricalReturnTicker),
+    )
+
+    annualized_return = client.get_historical_annualized_return(
+        "voo", "nysearca", "USD"
+    )
+
+    assert annualized_return == Decimal("14.89")
+
+
+def test_yfinance_adapter_returns_none_when_history_spans_under_three_years() -> None:
+    client = YFinanceMarketDataClient(
+        yfinance_module=SimpleNamespace(Ticker=ThinHistoryTicker),
+    )
+
+    assert client.get_historical_annualized_return("VOO", "NYSEARCA", "USD") is None
+
+
+def test_yfinance_adapter_returns_none_with_fewer_than_two_valid_closes() -> None:
+    client = YFinanceMarketDataClient(
+        yfinance_module=SimpleNamespace(Ticker=SingleValidCloseTicker),
+    )
+
+    assert client.get_historical_annualized_return("VOO", "NYSEARCA", "USD") is None
+
+
+def test_yfinance_adapter_historical_return_none_for_empty_history() -> None:
+    client = YFinanceMarketDataClient(
+        yfinance_module=SimpleNamespace(Ticker=EmptyHistoricalTicker),
+    )
+
+    assert client.get_historical_annualized_return("VOO", "NYSEARCA", "USD") is None
+
+
 def test_refresh_requests_each_distinct_user_instrument_once(
     db_session: Session,
 ) -> None:
@@ -336,7 +452,6 @@ def test_refresh_requests_each_distinct_user_instrument_once(
     db_session.add_all([voo, vxus, other_user_instrument])
     db_session.flush()
     add_holding(db_session, "user-123", voo)
-    add_holding(db_session, "user-123", voo, quantity="2")
     add_holding(db_session, "user-123", vxus)
     add_holding(db_session, "user-456", other_user_instrument)
     db_session.commit()

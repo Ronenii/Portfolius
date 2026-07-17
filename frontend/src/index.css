@@ -974,6 +974,49 @@ h1 {
   color: var(--ink-200);
 }
 
+/* Goal projection progress bar — reuses the gain color to signal forward
+   progress toward a target, matching .gain/.loss elsewhere in this file. */
+.projection-caption {
+  color: var(--ink-600);
+  font-size: 13px;
+}
+
+.projection-goal {
+  display: grid;
+  gap: 6px;
+}
+
+.projection-progress-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--ink-600);
+}
+
+.projection-progress {
+  height: 8px;
+  border-radius: var(--radius-md);
+  background: var(--paper-50);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+.projection-progress-bar {
+  height: 100%;
+  border-radius: var(--radius-md);
+  background: var(--gain-500);
+}
+
+.mode-terminal .projection-progress {
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+}
+
+.mode-terminal .projection-progress-bar {
+  background: var(--gain-300);
+}
+
 .kpi-tile strong {
   display: block;
   color: var(--fg-paper);
@@ -1198,6 +1241,306 @@ h1 {
 
 .mode-terminal .allocation-tooltip strong,
 .mode-terminal .allocation-tooltip dd {
+  color: var(--fg-terminal);
+}
+
+.projection-chart {
+  min-width: 0;
+  min-height: 240px;
+  padding: 8px 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper-50);
+}
+
+.projection-chart .recharts-wrapper,
+.projection-chart .recharts-surface,
+.projection-chart .recharts-layer,
+.projection-chart .recharts-rectangle,
+.projection-chart svg,
+.projection-chart svg * {
+  outline: none;
+}
+
+.projection-chart text {
+  fill: var(--ink-500);
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.projection-tooltip {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+  padding: 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper-50);
+  color: var(--fg-paper);
+  box-shadow: var(--shadow-2);
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.projection-tooltip strong {
+  color: var(--fg-paper);
+  font-size: 13px;
+}
+
+.projection-tooltip dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.projection-tooltip dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.projection-tooltip dt {
+  color: var(--ink-500);
+}
+
+.projection-tooltip dd {
+  margin: 0;
+  color: var(--fg-paper);
+  font-family: var(--font-mono);
+}
+
+.mode-terminal .projection-chart {
+  border-color: var(--ink-800);
+  background: var(--ink-900);
+}
+
+.mode-terminal .projection-chart text,
+.mode-terminal .recharts-cartesian-axis-tick text {
+  fill: var(--ink-300) !important;
+}
+
+.mode-terminal .recharts-default-tooltip {
+  background-color: var(--ink-900) !important;
+  border: 1px solid var(--ink-700) !important;
+  color: var(--fg-terminal) !important;
+}
+
+.mode-terminal .recharts-tooltip-label {
+  color: var(--fg-terminal) !important;
+}
+
+.mode-terminal .recharts-tooltip-item {
+  color: var(--ink-200) !important;
+}
+
+.mode-terminal .projection-tooltip {
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+  color: var(--fg-terminal);
+}
+
+.mode-terminal .projection-tooltip strong,
+.mode-terminal .projection-tooltip dd {
+  color: var(--fg-terminal);
+}
+
+.projection-chart-wrap {
+  display: grid;
+  gap: 10px;
+}
+
+.projection-band-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.projection-band-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper-50);
+  color: var(--ink-700);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.projection-band-toggle--muted {
+  opacity: 0.5;
+}
+
+.projection-band-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.projection-band-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.mode-terminal .projection-band-toggle {
+  border-color: var(--ink-800);
+  background: var(--ink-900);
+  color: var(--ink-300);
+}
+
+.projection-milestone-dot {
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.25));
+}
+
+.mode-terminal .projection-milestone-dot {
+  stroke: var(--ink-900);
+}
+
+.projection-slider-field {
+  display: grid;
+  gap: 6px;
+}
+
+.projection-static-field {
+  display: grid;
+  gap: 6px;
+}
+
+.projection-static-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--ink-600);
+}
+
+.projection-static-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.projection-slider-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--ink-600);
+}
+
+.projection-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rule);
+  appearance: none;
+  cursor: pointer;
+}
+
+.projection-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  border: 2px solid var(--paper-50);
+  box-shadow: 0 0 0 1px var(--rule);
+}
+
+.projection-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-500);
+  border: 2px solid var(--paper-50);
+  box-shadow: 0 0 0 1px var(--rule);
+}
+
+.mode-terminal .projection-slider {
+  background: var(--ink-800);
+}
+
+.mode-terminal .projection-slider::-webkit-slider-thumb,
+.mode-terminal .projection-slider::-moz-range-thumb {
+  background: var(--accent-300);
+  border-color: var(--ink-900);
+}
+
+.projection-updating {
+  font-size: 12px;
+  color: var(--ink-600);
+}
+
+.projection-reset {
+  justify-self: start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-500);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.mode-terminal .projection-reset {
+  color: var(--accent-300);
+}
+
+.info-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.info-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-600);
+  font-size: 11px;
+  line-height: 1;
+  cursor: help;
+}
+
+.info-tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 10;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--ink-900);
+  color: var(--paper-50);
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 120ms ease;
+}
+
+.info-tooltip-trigger:hover + .info-tooltip-bubble,
+.info-tooltip-trigger:focus-visible + .info-tooltip-bubble {
+  opacity: 1;
+}
+
+.mode-terminal .info-tooltip-trigger {
+  border-color: var(--ink-700);
+  color: var(--ink-300);
+}
+
+.mode-terminal .info-tooltip-bubble {
+  background: var(--ink-700);
   color: var(--fg-terminal);
 }
 
@@ -2204,6 +2547,15 @@ h1 {
   max-width: 760px;
 }
 
+/* Groups the form's "pane" sections (Interests & goals, Goal projection) so
+   the two-column .profile-setup .profile-form grid still sees a single
+   second-column item — without this, a second top-level .profile-form-section
+   gets auto-placed into a new grid row instead of stacking in the same pane. */
+.profile-form-panes {
+  display: grid;
+  gap: 20px;
+}
+
 .profile-setup {
   width: 100%;
   max-width: none;
@@ -2229,6 +2581,7 @@ h1 {
 }
 
 .profile-setup .form-error,
+.profile-setup .form-success,
 .profile-setup .form-actions {
   grid-column: 1 / -1;
 }

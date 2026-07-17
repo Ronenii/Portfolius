@@ -5,7 +5,11 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.v1.jobs import refresh_etf_metadata, refresh_prices
+from app.api.v1.jobs import (
+    refresh_etf_metadata,
+    refresh_historical_returns,
+    refresh_prices,
+)
 from app.api.v1.portfolio import read_portfolio_breakdowns, read_portfolio_snapshot
 from app.core.auth import AuthenticatedUser, get_current_user
 from app.core.config import Settings
@@ -34,6 +38,19 @@ class FakeMarketDataClient:
             currency=currency_hint or "UNKNOWN",
             source="fake",
         )
+
+
+class FakeHistoricalReturnClient:
+    def __init__(self, returns: dict[str, Decimal | None]) -> None:
+        self.returns = returns
+
+    def get_historical_annualized_return(
+        self,
+        symbol: str,
+        exchange: str,
+        currency_hint: str | None,
+    ) -> Decimal | None:
+        return self.returns.get(symbol)
 
 
 class FakeInstrumentLookupClient:
@@ -442,6 +459,56 @@ def test_refresh_without_user_or_scheduler_secret_returns_401(
             FakeMarketDataClient(),
             datetime(2026, 6, 5, 15, 0, tzinfo=UTC),
             settings=Settings(),
+        )
+
+    assert exc_info.value.status_code == 401
+
+
+def test_historical_returns_refresh_route_is_registered_as_migration_job() -> None:
+    routes = [
+        route
+        for route in app.routes
+        if getattr(route, "path", None) == "/api/v1/jobs/refresh-historical-returns"
+    ]
+
+    assert len(routes) == 1
+    dependency_calls = {
+        dependency.call for dependency in routes[0].dependant.dependencies
+    }
+    assert get_current_user not in dependency_calls
+
+
+def test_historical_returns_refresh_computes_for_all_instruments(
+    authenticated_user: AuthenticatedUser,
+    db_session: Session,
+) -> None:
+    add_profile(db_session, authenticated_user.user_id)
+    ixc_holding = add_holding(db_session, authenticated_user.user_id, "IXC")
+    market_data_client = FakeHistoricalReturnClient({"IXC": Decimal("9.42")})
+
+    response = refresh_historical_returns(
+        db_session,
+        market_data_client,
+        settings=Settings(scheduler_secret="secret"),
+        scheduler_secret="secret",
+    )
+
+    db_session.refresh(ixc_holding.instrument)
+    assert response.requested == 1
+    assert response.updated == 1
+    assert response.skipped == 0
+    assert response.failed == 0
+    assert ixc_holding.instrument.historical_annual_return == Decimal("9.42")
+
+
+def test_historical_returns_refresh_requires_scheduler_secret(
+    db_session: Session,
+) -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        refresh_historical_returns(
+            db_session,
+            FakeHistoricalReturnClient({}),
+            settings=Settings(scheduler_secret="secret"),
         )
 
     assert exc_info.value.status_code == 401

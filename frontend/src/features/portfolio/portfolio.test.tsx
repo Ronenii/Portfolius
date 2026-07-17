@@ -5,6 +5,7 @@ import {
   getComposition,
   getPortfolioBreakdowns,
   getPortfolioSnapshot,
+  getProjection,
   refreshPrices,
 } from "./portfolio-api";
 
@@ -92,6 +93,59 @@ describe("portfolio-api", () => {
       accessToken: "access-token",
       method: "POST",
     });
+  });
+
+  it("requests the projection with a bearer token and no overrides", async () => {
+    const projection = {
+      base_currency: "USD",
+      start_value: "1000",
+      target_amount: null,
+      horizon_years: 7,
+      contribution_amount: "0",
+      contribution_frequency: "monthly",
+      annual_return_expected: "6",
+      series: [],
+      target_progress_percent: null,
+      on_track: null,
+      target_reached_year: null,
+    };
+    vi.mocked(apiRequest).mockResolvedValue(projection);
+
+    await expect(getProjection("access-token")).resolves.toEqual(projection);
+
+    expect(apiRequest).toHaveBeenCalledWith("/api/v1/portfolio/projection", {
+      accessToken: "access-token",
+    });
+  });
+
+  it("requests the projection with query overrides", async () => {
+    const projection = {
+      base_currency: "USD",
+      start_value: "1000",
+      target_amount: "50000",
+      horizon_years: 3,
+      contribution_amount: "100",
+      contribution_frequency: "monthly",
+      annual_return_expected: "5",
+      series: [],
+      target_progress_percent: "2",
+      on_track: true,
+      target_reached_year: 3,
+    };
+    vi.mocked(apiRequest).mockResolvedValue(projection);
+
+    await expect(
+      getProjection("access-token", {
+        target: "50000",
+        contribution: "100",
+        years: 3,
+      })
+    ).resolves.toEqual(projection);
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/v1/portfolio/projection?target=50000&contribution=100&years=3",
+      { accessToken: "access-token" }
+    );
   });
 
   it("surfaces API errors from portfolio requests", async () => {

@@ -1,0 +1,27 @@
+name: Refresh Historical Returns
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+jobs:
+  refresh-historical-returns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh instrument historical returns
+        run: |
+          if [ -z "${PORTFOLIUS_API_URL:-}" ] || [ -z "${PORTFOLIUS_SCHEDULER_SECRET:-}" ]; then
+            echo "Missing PORTFOLIUS_API_URL or PORTFOLIUS_SCHEDULER_SECRET"
+            exit 1
+          fi
+
+          refresh_url="${PORTFOLIUS_API_URL%/}/api/v1/jobs/refresh-historical-returns"
+
+          curl --fail-with-body \
+            --request POST \
+            --header "X-Scheduler-Secret: $PORTFOLIUS_SCHEDULER_SECRET" \
+            "$refresh_url"
+        env:
+          PORTFOLIUS_API_URL: ${{ secrets.PORTFOLIUS_API_URL }}
+          PORTFOLIUS_SCHEDULER_SECRET: ${{ secrets.PORTFOLIUS_SCHEDULER_SECRET }}

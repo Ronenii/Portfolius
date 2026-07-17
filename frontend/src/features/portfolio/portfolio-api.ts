@@ -108,6 +108,34 @@ export type RefreshPricesResult = {
   failed: number;
 };
 
+export type ProjectionYearPoint = {
+  year: number;
+  conservative: string;
+  expected: string;
+  optimistic: string;
+  cost_basis: string;
+};
+
+export type ProjectionResponse = {
+  base_currency: string;
+  start_value: string;
+  target_amount: string | null;
+  horizon_years: number;
+  contribution_amount: string;
+  contribution_frequency: string;
+  annual_return_expected: string;
+  series: ProjectionYearPoint[];
+  target_progress_percent: string | null;
+  on_track: boolean | null;
+  target_reached_year: number | null;
+};
+
+export type ProjectionOverrides = {
+  target?: string;
+  contribution?: string;
+  years?: number;
+};
+
 export function getPortfolioSnapshot(accessToken: string) {
   return apiRequest<PortfolioSnapshot>("/api/v1/portfolio/snapshot", {
     accessToken,
@@ -148,4 +176,22 @@ export function simulatePortfolio(accessToken: string, legs: TradeLeg[]) {
     body: { legs },
     method: "POST",
   });
+}
+
+export function getProjection(
+  accessToken: string,
+  overrides: ProjectionOverrides = {}
+) {
+  const params = new URLSearchParams();
+  if (overrides.target !== undefined) params.set("target", overrides.target);
+  if (overrides.contribution !== undefined)
+    params.set("contribution", overrides.contribution);
+  if (overrides.years !== undefined)
+    params.set("years", String(overrides.years));
+
+  const query = params.toString();
+  return apiRequest<ProjectionResponse>(
+    `/api/v1/portfolio/projection${query ? `?${query}` : ""}`,
+    { accessToken }
+  );
 }

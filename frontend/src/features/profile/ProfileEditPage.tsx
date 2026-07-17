@@ -21,6 +21,16 @@ const riskTolerances = [
 const maxKeywordLength = 40;
 const maxKeywords = 30;
 
+function formatDecimalForInput(value: string | null): string | null {
+  if (value == null) return null;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return value;
+  const fixed = numeric.toFixed(3);
+  return fixed.includes(".")
+    ? fixed.replace(/0+$/, "").replace(/\.$/, "")
+    : fixed;
+}
+
 function validateProfile(payload: ProfilePayload): ProfileFormErrors {
   const errors: ProfileFormErrors = {};
   if (!payload.display_name.trim()) errors.display_name = "Display name is required";
@@ -28,6 +38,21 @@ function validateProfile(payload: ProfilePayload): ProfileFormErrors {
   if (!payload.time_horizon) errors.time_horizon = "Time horizon is required";
   if (!payload.investment_frequency)
     errors.investment_frequency = "Investment frequency is required";
+
+  if (payload.goal_target_amount !== null) {
+    const numericValue = Number(payload.goal_target_amount);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
+      errors.goal_target_amount = "Must be zero or greater";
+    }
+  }
+
+  if (payload.contribution_amount !== null) {
+    const numericValue = Number(payload.contribution_amount);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
+      errors.contribution_amount = "Must be zero or greater";
+    }
+  }
+
   return errors;
 }
 
@@ -125,6 +150,8 @@ function ProfileEditForm({
       ...form,
       display_name: form.display_name.trim(),
       goals_note: form.goals_note?.trim() || null,
+      goal_target_amount: form.goal_target_amount?.trim() || null,
+      contribution_amount: form.contribution_amount?.trim() || null,
     };
     const validationErrors = validateProfile(payload);
     if (Object.keys(validationErrors).length > 0) {
@@ -220,153 +247,197 @@ function ProfileEditForm({
         </div>
       </div>
 
-      <section className="profile-form-section" aria-labelledby="profile-goals-title">
-        <div className="profile-form-section-heading">
-          <p className="eyebrow">Assistant context</p>
-          <h2 id="profile-goals-title">Interests & goals</h2>
-        </div>
-
-        <fieldset className="choice-group">
-          <legend>Risk tolerance</legend>
-          <div className="choice-row">
-            {riskTolerances.map((option) => (
-              <label className="choice-option" key={option.value}>
-                <input
-                  checked={form.risk_tolerance === option.value}
-                  name="risk_tolerance"
-                  type="radio"
-                  value={option.value}
-                  onChange={() => updateField("risk_tolerance", option.value)}
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
+      <div className="profile-form-panes">
+        <section className="profile-form-section" aria-labelledby="profile-goals-title">
+          <div className="profile-form-section-heading">
+            <p className="eyebrow">Assistant context</p>
+            <h2 id="profile-goals-title">Interests & goals</h2>
           </div>
-        </fieldset>
 
-        <fieldset className="choice-group">
-          <legend>Interests</legend>
-          <div className="keyword-label-row">
-            <label htmlFor="interest-keyword">Add interest keyword</label>
-            <span className="tooltip-shell">
-              <button
-                aria-label="Interest keyword examples"
-                className="tooltip-trigger"
-                type="button"
-              >
-                <HelpCircle aria-hidden="true" />
-              </button>
-              <span className="tooltip-content" role="tooltip">
-                Examples: dividends, AI infrastructure, low-fee ETFs, emerging markets.
+          <fieldset className="choice-group">
+            <legend>Risk tolerance</legend>
+            <div className="choice-row">
+              {riskTolerances.map((option) => (
+                <label className="choice-option" key={option.value}>
+                  <input
+                    checked={form.risk_tolerance === option.value}
+                    name="risk_tolerance"
+                    type="radio"
+                    value={option.value}
+                    onChange={() => updateField("risk_tolerance", option.value)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="choice-group">
+            <legend>Interests</legend>
+            <div className="keyword-label-row">
+              <label htmlFor="interest-keyword">Add interest keyword</label>
+              <span className="tooltip-shell">
+                <button
+                  aria-label="Interest keyword examples"
+                  className="tooltip-trigger"
+                  type="button"
+                >
+                  <HelpCircle aria-hidden="true" />
+                </button>
+                <span className="tooltip-content" role="tooltip">
+                  Examples: dividends, AI infrastructure, low-fee ETFs, emerging markets.
+                </span>
               </span>
+            </div>
+            <div className="keyword-entry">
+              {form.interest_tags.map((keyword) => (
+                <span className="keyword-chip" key={keyword}>
+                  {keyword}
+                  <button
+                    aria-label={`Remove ${keyword}`}
+                    type="button"
+                    onClick={() => removeKeyword("interest_tags", keyword)}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+              <input
+                id="interest-keyword"
+                maxLength={maxKeywordLength}
+                placeholder="Type and press Enter"
+                type="text"
+                value={interestInput}
+                onBlur={(event) =>
+                  addKeyword("interest_tags", event.currentTarget.value, () =>
+                    setInterestInput("")
+                  )
+                }
+                onChange={(event) => setInterestInput(event.target.value)}
+                onKeyDown={(event) =>
+                  handleKeywordKeyDown(
+                    event,
+                    "interest_tags",
+                    form.interest_tags,
+                    () => setInterestInput("")
+                  )
+                }
+              />
+            </div>
+          </fieldset>
+
+          <fieldset className="choice-group">
+            <legend>Preferences to avoid</legend>
+            <div className="keyword-label-row">
+              <label htmlFor="avoid-keyword">Add avoid keyword</label>
+              <span className="tooltip-shell">
+                <button
+                  aria-label="Avoid keyword examples"
+                  className="tooltip-trigger"
+                  type="button"
+                >
+                  <HelpCircle aria-hidden="true" />
+                </button>
+                <span className="tooltip-content" role="tooltip">
+                  Examples: tobacco, high fee funds, speculative crypto, weapons.
+                </span>
+              </span>
+            </div>
+            <div className="keyword-entry">
+              {form.excluded_sectors.map((keyword) => (
+                <span className="keyword-chip" key={keyword}>
+                  {keyword}
+                  <button
+                    aria-label={`Remove ${keyword}`}
+                    type="button"
+                    onClick={() => removeKeyword("excluded_sectors", keyword)}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+              <input
+                id="avoid-keyword"
+                maxLength={maxKeywordLength}
+                placeholder="Type and press Enter"
+                type="text"
+                value={avoidInput}
+                onBlur={(event) =>
+                  addKeyword("excluded_sectors", event.currentTarget.value, () =>
+                    setAvoidInput("")
+                  )
+                }
+                onChange={(event) => setAvoidInput(event.target.value)}
+                onKeyDown={(event) =>
+                  handleKeywordKeyDown(
+                    event,
+                    "excluded_sectors",
+                    form.excluded_sectors,
+                    () => setAvoidInput("")
+                  )
+                }
+              />
+            </div>
+          </fieldset>
+
+          <div className="field">
+            <label htmlFor="goals-note">Goals note</label>
+            <textarea
+              id="goals-note"
+              maxLength={1000}
+              name="goals_note"
+              rows={4}
+              value={form.goals_note ?? ""}
+              onChange={(event) => updateField("goals_note", event.target.value)}
+            />
+            <span className="field-hint">
+              This helps the assistant understand your portfolio goals.
             </span>
           </div>
-          <div className="keyword-entry">
-            {form.interest_tags.map((keyword) => (
-              <span className="keyword-chip" key={keyword}>
-                {keyword}
-                <button
-                  aria-label={`Remove ${keyword}`}
-                  type="button"
-                  onClick={() => removeKeyword("interest_tags", keyword)}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </span>
-            ))}
-            <input
-              id="interest-keyword"
-              maxLength={maxKeywordLength}
-              placeholder="Type and press Enter"
-              type="text"
-              value={interestInput}
-              onBlur={(event) =>
-                addKeyword("interest_tags", event.currentTarget.value, () =>
-                  setInterestInput("")
-                )
-              }
-              onChange={(event) => setInterestInput(event.target.value)}
-              onKeyDown={(event) =>
-                handleKeywordKeyDown(
-                  event,
-                  "interest_tags",
-                  form.interest_tags,
-                  () => setInterestInput("")
-                )
-              }
-            />
-          </div>
-        </fieldset>
+        </section>
 
-        <fieldset className="choice-group">
-          <legend>Preferences to avoid</legend>
-          <div className="keyword-label-row">
-            <label htmlFor="avoid-keyword">Add avoid keyword</label>
-            <span className="tooltip-shell">
-              <button
-                aria-label="Avoid keyword examples"
-                className="tooltip-trigger"
-                type="button"
-              >
-                <HelpCircle aria-hidden="true" />
-              </button>
-              <span className="tooltip-content" role="tooltip">
-                Examples: tobacco, high fee funds, speculative crypto, weapons.
-              </span>
-            </span>
+        <section
+          className="profile-form-section"
+          aria-labelledby="profile-projection-title"
+        >
+          <div className="profile-form-section-heading">
+            <p className="eyebrow">Assistant context</p>
+            <h2 id="profile-projection-title">Goal projection</h2>
           </div>
-          <div className="keyword-entry">
-            {form.excluded_sectors.map((keyword) => (
-              <span className="keyword-chip" key={keyword}>
-                {keyword}
-                <button
-                  aria-label={`Remove ${keyword}`}
-                  type="button"
-                  onClick={() => removeKeyword("excluded_sectors", keyword)}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </span>
-            ))}
-            <input
-              id="avoid-keyword"
-              maxLength={maxKeywordLength}
-              placeholder="Type and press Enter"
-              type="text"
-              value={avoidInput}
-              onBlur={(event) =>
-                addKeyword("excluded_sectors", event.currentTarget.value, () =>
-                  setAvoidInput("")
-                )
-              }
-              onChange={(event) => setAvoidInput(event.target.value)}
-              onKeyDown={(event) =>
-                handleKeywordKeyDown(
-                  event,
-                  "excluded_sectors",
-                  form.excluded_sectors,
-                  () => setAvoidInput("")
-                )
-              }
-            />
-          </div>
-        </fieldset>
 
-        <div className="field">
-          <label htmlFor="goals-note">Goals note</label>
-          <textarea
-            id="goals-note"
-            maxLength={1000}
-            name="goals_note"
-            rows={4}
-            value={form.goals_note ?? ""}
-            onChange={(event) => updateField("goals_note", event.target.value)}
-          />
-          <span className="field-hint">
-            This helps the assistant understand your portfolio goals.
-          </span>
-        </div>
-      </section>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="goal-target-amount">Goal target amount</label>
+              <input
+                id="goal-target-amount"
+                inputMode="decimal"
+                value={form.goal_target_amount ?? ""}
+                onChange={(event) =>
+                  updateField("goal_target_amount", event.target.value)
+                }
+              />
+              {errors.goal_target_amount ? (
+                <span className="field-error">{errors.goal_target_amount}</span>
+              ) : null}
+            </div>
+
+            <div className="field">
+              <label htmlFor="contribution-amount">Contribution amount</label>
+              <input
+                id="contribution-amount"
+                inputMode="decimal"
+                value={form.contribution_amount ?? ""}
+                onChange={(event) =>
+                  updateField("contribution_amount", event.target.value)
+                }
+              />
+              {errors.contribution_amount ? (
+                <span className="field-error">{errors.contribution_amount}</span>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      </div>
 
       <div className="form-actions">
         <Button
@@ -412,6 +483,8 @@ export default function ProfileEditPage() {
     interest_tags: initial.interest_tags,
     excluded_sectors: initial.excluded_sectors,
     goals_note: initial.goals_note,
+    goal_target_amount: formatDecimalForInput(initial.goal_target_amount),
+    contribution_amount: formatDecimalForInput(initial.contribution_amount),
   };
 
   return (

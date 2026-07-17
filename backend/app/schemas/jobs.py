@@ -6,3 +6,10 @@ class MetadataRefreshResult(BaseModel):
     updated: int
     skipped: int
     failed: int
+
+
+class HistoricalReturnRefreshResult(BaseModel):
+    requested: int
+    updated: int
+    skipped: int
+    failed: int

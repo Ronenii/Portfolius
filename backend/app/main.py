@@ -1,5 +1,8 @@
+import asyncio
 import logging
 import warnings
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,10 +12,16 @@ from app.api.v1.db_ping import router as db_ping_router
 from app.api.v1.health import router as health_router
 from app.api.v1.holdings import router as holdings_router
 from app.api.v1.instruments import router as instruments_router
+from app.api.v1.jobs import get_market_data_client
 from app.api.v1.jobs import router as jobs_router
 from app.api.v1.portfolio import router as portfolio_router
 from app.api.v1.profile import router as profile_router
+from app.api.v1.transactions import router as transactions_router
 from app.core.config import get_settings
+from app.data.database import SessionLocal
+from app.domain.historical_return_refresh import (
+    bootstrap_historical_returns_if_never_run,
+)
 
 
 def configure_logging() -> None:
@@ -40,11 +49,46 @@ def suppress_third_party_warnings() -> None:
     warnings.filterwarnings("ignore", message=".*utcnow.*", module="yfinance")
 
 
+def run_startup_historical_return_bootstrap() -> None:
+    db = SessionLocal()
+    try:
+        try:
+            result = bootstrap_historical_returns_if_never_run(
+                db, get_market_data_client()
+            )
+            if result is not None:
+                logging.getLogger("app").info(
+                    "Historical return bootstrap complete: "
+                    "requested=%d updated=%d skipped=%d failed=%d",
+                    result.requested,
+                    result.updated,
+                    result.skipped,
+                    result.failed,
+                )
+        except Exception:
+            logging.getLogger("app").exception(
+                "Historical return startup bootstrap failed"
+            )
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Dispatched to a thread so the (synchronous, potentially slow)
+    # yfinance/DB work never blocks the event loop or delays the app
+    # becoming ready. `bootstrap_historical_returns_if_never_run` itself is
+    # a no-op after the very first successful run, so this is safe to fire
+    # unconditionally on every restart.
+    asyncio.create_task(asyncio.to_thread(run_startup_historical_return_bootstrap))
+    yield
+
+
 def create_app() -> FastAPI:
     suppress_third_party_warnings()
     configure_logging()
     settings = get_settings()
-    app = FastAPI(title="Portfolius API")
+    app = FastAPI(title="Portfolius API", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.frontend_origins,
@@ -56,6 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(profile_router)
     app.include_router(instruments_router)
     app.include_router(holdings_router)
+    app.include_router(transactions_router)
     app.include_router(portfolio_router)
     app.include_router(jobs_router)
     app.include_router(assistant_router)

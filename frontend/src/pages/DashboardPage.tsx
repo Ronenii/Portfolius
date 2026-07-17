@@ -27,6 +27,7 @@ import {
   type PortfolioBreakdowns,
   type PortfolioSnapshot,
 } from "../features/portfolio/portfolio-api";
+import ProjectionPanel from "../features/portfolio/ProjectionPanel";
 import SimulationPanel from "../features/portfolio/SimulationPanel";
 import { ApiError, type BackendHealth, fetchBackendHealth } from "../lib/api";
 
@@ -561,6 +562,7 @@ export default function DashboardPage() {
         ) : null}
       </section>
 
+      {accessToken ? <ProjectionPanel accessToken={accessToken} /> : null}
       {accessToken ? <SimulationPanel accessToken={accessToken} /> : null}
 
       {showBackendStatus ? (

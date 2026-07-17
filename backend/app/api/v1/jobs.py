@@ -13,6 +13,9 @@ from app.core.auth import (
 )
 from app.core.config import Settings, get_settings
 from app.data.database import get_db
+from app.domain.historical_return_refresh import (
+    refresh_historical_returns_for_all_instruments,
+)
 from app.domain.market_hours import is_us_market_open
 from app.domain.metadata_refresh import refresh_instrument_metadata_for_all_instruments
 from app.domain.price_refresh import (
@@ -25,7 +28,7 @@ from app.integrations.instrument_lookup import CompositeInstrumentLookupClient
 from app.integrations.market_data import MarketDataClient
 from app.integrations.yfinance_client import YFinanceMarketDataClient
 from app.integrations.yfinance_etf_profile import YFinanceEtfProfileClient
-from app.schemas.jobs import MetadataRefreshResult
+from app.schemas.jobs import HistoricalReturnRefreshResult, MetadataRefreshResult
 
 router = APIRouter(tags=["jobs"])
 
@@ -111,6 +114,21 @@ def refresh_etf_metadata(
     if not validate_scheduler_secret(settings, scheduler_secret):
         raise unauthorized()
     return refresh_instrument_metadata_for_all_instruments(db, lookup_client)
+
+
+@router.post(
+    "/api/v1/jobs/refresh-historical-returns",
+    response_model=HistoricalReturnRefreshResult,
+)
+def refresh_historical_returns(
+    db: Annotated[Session, Depends(get_db)],
+    market_data_client: Annotated[MarketDataClient, Depends(get_market_data_client)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    scheduler_secret: Annotated[str | None, Header(alias="X-Scheduler-Secret")] = None,
+) -> HistoricalReturnRefreshResult:
+    if not validate_scheduler_secret(settings, scheduler_secret):
+        raise unauthorized()
+    return refresh_historical_returns_for_all_instruments(db, market_data_client)
 
 
 def validate_scheduler_secret(

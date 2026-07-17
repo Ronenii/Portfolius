@@ -9,6 +9,8 @@ export type ProfilePayload = {
   interest_tags: string[];
   excluded_sectors: string[];
   goals_note: string | null;
+  goal_target_amount: string | null;
+  contribution_amount: string | null;
 };
 
 export type Profile = ProfilePayload & {

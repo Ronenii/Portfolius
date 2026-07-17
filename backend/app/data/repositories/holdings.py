@@ -3,12 +3,12 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.data.models import Holding, Instrument
 from app.data.repositories.instruments import get_instrument_for_payload
-from app.schemas.holdings import HoldingRequest
+from app.schemas.transactions import TransactionRequest
 
 
 def fill_missing_instrument_metadata(
     instrument: Instrument,
-    payload: HoldingRequest,
+    payload: TransactionRequest,
 ) -> None:
     for field in (
         "name",
@@ -22,7 +22,7 @@ def fill_missing_instrument_metadata(
             setattr(instrument, field, getattr(payload, field))
 
 
-def get_or_create_instrument(db: Session, payload: HoldingRequest) -> Instrument:
+def get_or_create_instrument(db: Session, payload: TransactionRequest) -> Instrument:
     instrument = get_instrument_for_payload(db, payload)
     if instrument is None:
         instrument = Instrument(
@@ -41,20 +41,6 @@ def get_or_create_instrument(db: Session, payload: HoldingRequest) -> Instrument
         fill_missing_instrument_metadata(instrument, payload)
 
     return instrument
-
-
-def create_holding(db: Session, user_id: str, payload: HoldingRequest) -> Holding:
-    instrument = get_or_create_instrument(db, payload)
-    holding = Holding(
-        user_id=user_id,
-        instrument=instrument,
-        quantity=payload.quantity,
-        average_cost=payload.average_cost,
-    )
-    db.add(holding)
-    db.commit()
-    db.refresh(holding)
-    return holding
 
 
 def list_holdings_for_user(db: Session, user_id: str) -> list[Holding]:
@@ -124,21 +110,3 @@ def get_holding_for_user(
             Holding.user_id == user_id,
         )
     )
-
-
-def update_holding(
-    db: Session,
-    holding: Holding,
-    payload: HoldingRequest,
-) -> Holding:
-    holding.instrument = get_or_create_instrument(db, payload)
-    holding.quantity = payload.quantity
-    holding.average_cost = payload.average_cost
-    db.commit()
-    db.refresh(holding)
-    return holding
-
-
-def delete_holding(db: Session, holding: Holding) -> None:
-    db.delete(holding)
-    db.commit()
