@@ -29,5 +29,13 @@ export default tseslint.config(
         { varsIgnorePattern: "^_", argsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" }
       ],
     },
+  },
+  {
+    // Node build scripts (e.g. the PWA icon generator) run under Node, not the
+    // browser, so give them Node globals (Buffer, process, console, …).
+    files: ["scripts/**/*.{js,mjs}"],
+    languageOptions: {
+      globals: globals.node,
+    },
   }
 );
