@@ -102,7 +102,6 @@ def build_projection_for_user(
     *,
     target: Decimal | None = None,
     contribution: Decimal | None = None,
-    annual_return: Decimal | None = None,
     years: int | None = None,
 ) -> ProjectionResponse:
     profile = get_profile_by_user_id(db, user_id)
@@ -116,19 +115,16 @@ def build_projection_for_user(
         contribution if contribution is not None else profile.contribution_amount
     )
 
-    if annual_return is not None:
-        resolved_annual_return = annual_return
-    else:
-        computed_return = compute_weighted_average_return(
-            snapshot.holdings, snapshot.summary.base_currency
+    computed_return = compute_weighted_average_return(
+        snapshot.holdings, snapshot.summary.base_currency
+    )
+    resolved_annual_return = (
+        computed_return
+        if computed_return is not None
+        else RISK_TOLERANCE_DEFAULT_RETURN.get(
+            profile.risk_tolerance, DEFAULT_ANNUAL_RETURN
         )
-        resolved_annual_return = (
-            computed_return
-            if computed_return is not None
-            else RISK_TOLERANCE_DEFAULT_RETURN.get(
-                profile.risk_tolerance, DEFAULT_ANNUAL_RETURN
-            )
-        )
+    )
 
     if years is not None:
         resolved_years = years

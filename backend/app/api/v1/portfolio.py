@@ -91,7 +91,6 @@ def read_portfolio_projection(
     db: Annotated[Session, Depends(get_db)],
     target: Decimal | None = None,
     contribution: Decimal | None = None,
-    annual_return: Decimal | None = None,
     years: int | None = None,
 ) -> ProjectionResponse:
     if target is not None and target < 0:
@@ -114,7 +113,6 @@ def read_portfolio_projection(
         current_user.user_id,
         target=target,
         contribution=contribution,
-        annual_return=annual_return,
         years=years,
     )
 

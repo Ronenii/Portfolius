@@ -223,13 +223,11 @@ def test_projection_overrides_take_precedence_over_profile_values(
         db_session,
         target=Decimal("90000"),
         contribution=Decimal("500"),
-        annual_return=Decimal("10"),
         years=20,
     )
 
     assert response.target_amount == Decimal("90000")
     assert response.contribution_amount == Decimal("500")
-    assert response.annual_return_expected == Decimal("10")
     assert response.horizon_years == 20
 
 
