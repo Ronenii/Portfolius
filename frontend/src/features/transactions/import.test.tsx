@@ -164,6 +164,33 @@ describe("import page", () => {
     });
   });
 
+  it("disables the import action after a successful import so the same rows cannot be re-submitted", async () => {
+    vi.mocked(importTransactions).mockResolvedValue({
+      results: [{ row: 1, status: "imported", reason: null }],
+    });
+    renderImportRoute();
+    await screen.findByRole("heading", { name: "Import CSV" });
+
+    const csv =
+      "trade_date,action,symbol,quantity,price,fees,notes\n" +
+      "2026-01-05,buy,AAPL,10,145.20,1.50,Initial buy\n";
+    await uploadFile(csv);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Import 1 valid row" })
+    );
+
+    // Once the import succeeds the action is disabled (the backend is not
+    // idempotent, so a re-click would double the transactions).
+    const doneButton = await screen.findByRole("button", {
+      name: /load a new file to import again/i,
+    });
+    expect(doneButton).toBeDisabled();
+
+    await userEvent.click(doneButton);
+    expect(importTransactions).toHaveBeenCalledTimes(1);
+  });
+
   it("reports a partial success without blocking the imported row", async () => {
     const response: ImportResponse = {
       results: [

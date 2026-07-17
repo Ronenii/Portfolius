@@ -100,7 +100,11 @@ export default function ImportPage() {
   }
 
   function handleImport() {
-    if (!parseResult) {
+    // The backend import is not idempotent (one create_transaction per row, no
+    // dedup), so re-submitting the same parsed file would double the
+    // transactions and the derived holding. Block a re-import until a fresh
+    // file is loaded (which calls importMutation.reset()).
+    if (!parseResult || importMutation.isSuccess) {
       return;
     }
     const validRows = parseResult.rows
@@ -222,13 +226,19 @@ export default function ImportPage() {
               </div>
               <Button
                 type="button"
-                disabled={validRows.length === 0 || importMutation.isPending}
+                disabled={
+                  validRows.length === 0 ||
+                  importMutation.isPending ||
+                  importMutation.isSuccess
+                }
                 loading={importMutation.isPending}
                 onClick={handleImport}
               >
                 {importMutation.isPending
                   ? "Importing"
-                  : `Import ${validRows.length} valid row${validRows.length === 1 ? "" : "s"}`}
+                  : importMutation.isSuccess
+                    ? "Imported — load a new file to import again"
+                    : `Import ${validRows.length} valid row${validRows.length === 1 ? "" : "s"}`}
               </Button>
             </div>
 
