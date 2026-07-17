@@ -14,6 +14,7 @@ import HoldingsPage from "../features/holdings/HoldingsPage";
 import ProfileEditPage from "../features/profile/ProfileEditPage";
 import ProfileGate from "../features/profile/ProfileGate";
 import ProfileWizardPage from "../features/profile/ProfileWizardPage";
+import ImportPage from "../features/transactions/ImportPage";
 import TransactionsPage from "../features/transactions/TransactionsPage";
 import DashboardPage from "../pages/DashboardPage";
 
@@ -49,6 +50,7 @@ export const routes: RouteObject[] = [
               { path: "/profile", element: <ProfileEditPage /> },
               { path: "/holdings", element: <HoldingsPage /> },
               { path: "/transactions", element: <TransactionsPage /> },
+              { path: "/transactions/import", element: <ImportPage /> },
             ],
           },
         ],

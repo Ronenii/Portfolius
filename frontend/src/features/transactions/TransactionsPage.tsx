@@ -253,6 +253,7 @@ export default function TransactionsPage() {
           <p className="eyebrow">Ledger</p>
           <h1 id="transactions-title">Transactions</h1>
         </div>
+        <Link to="/transactions/import">Import CSV</Link>
       </header>
 
       <div className="holdings-workspace">

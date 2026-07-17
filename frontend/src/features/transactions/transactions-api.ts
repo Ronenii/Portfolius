@@ -1,4 +1,5 @@
 import { apiRequest } from "../../lib/api";
+import type { ImportRow } from "../../lib/csv";
 
 export type Instrument = {
   id: number;
@@ -72,5 +73,24 @@ export function deleteTransaction(accessToken: string, transactionId: number) {
   return apiRequest<void>(`/api/v1/transactions/${transactionId}`, {
     accessToken,
     method: "DELETE",
+  });
+}
+
+export type ImportResultRow = {
+  row: number;
+  status: "imported" | "failed";
+  reason: string | null;
+};
+
+export type ImportResponse = { results: ImportResultRow[] };
+
+export function importTransactions(
+  accessToken: string,
+  rows: ImportRow[]
+): Promise<ImportResponse> {
+  return apiRequest<ImportResponse>("/api/v1/transactions/import", {
+    accessToken,
+    body: { rows },
+    method: "POST",
   });
 }

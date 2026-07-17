@@ -2932,6 +2932,36 @@ h1 {
   font-size: 14px;
 }
 
+/* ---- CSV import drop zone ---- */
+.import-dropzone {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  padding: 28px 18px;
+  border: 1.5px dashed var(--ink-200);
+  border-radius: var(--radius-lg);
+  background: var(--paper-100);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.import-dropzone:hover,
+.import-dropzone:focus-within {
+  border-color: var(--accent-500);
+  background: var(--paper-50);
+}
+
+.mode-terminal .import-dropzone {
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+}
+
+.mode-terminal .import-dropzone:hover,
+.mode-terminal .import-dropzone:focus-within {
+  border-color: var(--accent-300);
+  background: var(--ink-950);
+}
+
 .holdings-table-wrap {
   overflow-x: auto;
 }
