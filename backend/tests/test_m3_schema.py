@@ -61,11 +61,8 @@ def test_projection_profile_fields_upgrade_and_downgrade(
 
     engine = create_engine(database_url)
     columns = {column["name"] for column in inspect(engine).get_columns("profiles")}
-    assert {
-        "goal_target_amount",
-        "contribution_amount",
-        "expected_annual_return",
-    }.issubset(columns)
+    assert {"goal_target_amount", "contribution_amount"}.issubset(columns)
+    assert "expected_annual_return" not in columns
 
     command.downgrade(config, "20260707_0008")
 
@@ -75,6 +72,32 @@ def test_projection_profile_fields_upgrade_and_downgrade(
     assert "goal_target_amount" not in downgraded_columns
     assert "contribution_amount" not in downgraded_columns
     assert "expected_annual_return" not in downgraded_columns
+    get_settings.cache_clear()
+
+
+def test_profile_expected_annual_return_dropped_at_head(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database_url = (
+        f"sqlite+pysqlite:///{tmp_path / 'expected_annual_return_removed_schema.db'}"
+    )
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    config = alembic_config(database_url)
+
+    command.upgrade(config, "head")
+
+    engine = create_engine(database_url)
+    columns = {column["name"] for column in inspect(engine).get_columns("profiles")}
+    assert "expected_annual_return" not in columns
+
+    command.downgrade(config, "20260716_0010")
+
+    downgraded_columns = {
+        column["name"] for column in inspect(engine).get_columns("profiles")
+    }
+    assert "expected_annual_return" in downgraded_columns
     get_settings.cache_clear()
 
 

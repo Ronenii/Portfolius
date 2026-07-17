@@ -20,7 +20,6 @@ def add_profile(
     risk_tolerance: str | None = None,
     goal_target_amount: str | None = None,
     contribution_amount: str | None = None,
-    expected_annual_return: str | None = None,
 ) -> Profile:
     profile = Profile(
         user_id=user_id,
@@ -34,11 +33,6 @@ def add_profile(
         ),
         contribution_amount=(
             Decimal(contribution_amount) if contribution_amount is not None else None
-        ),
-        expected_annual_return=(
-            Decimal(expected_annual_return)
-            if expected_annual_return is not None
-            else None
         ),
     )
     db_session.add(profile)
@@ -157,7 +151,6 @@ def test_projection_falls_back_to_risk_tolerance_default_return(
         db_session,
         authenticated_user.user_id,
         risk_tolerance="aggressive",
-        expected_annual_return=None,
     )
 
     response = read_portfolio_projection(authenticated_user, db_session)
@@ -173,7 +166,6 @@ def test_projection_falls_back_to_default_annual_return_when_unset(
         db_session,
         authenticated_user.user_id,
         risk_tolerance=None,
-        expected_annual_return=None,
     )
 
     response = read_portfolio_projection(authenticated_user, db_session)
@@ -224,7 +216,6 @@ def test_projection_overrides_take_precedence_over_profile_values(
         time_horizon="10+ years",
         goal_target_amount="50000",
         contribution_amount="200",
-        expected_annual_return="7",
     )
 
     response = read_portfolio_projection(

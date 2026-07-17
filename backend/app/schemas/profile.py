@@ -36,7 +36,6 @@ class ProfileRequest(BaseModel):
     goals_note: str | None = Field(default=None, max_length=1000)
     goal_target_amount: Decimal | None = None
     contribution_amount: Decimal | None = None
-    expected_annual_return: Decimal | None = None
 
     @field_validator("display_name", "time_horizon", "investment_frequency")
     @classmethod
@@ -104,17 +103,12 @@ class ProfileResponse(BaseModel):
     goals_note: str | None = None
     goal_target_amount: Decimal | None = None
     contribution_amount: Decimal | None = None
-    expected_annual_return: Decimal | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
-    @field_serializer(
-        "goal_target_amount",
-        "contribution_amount",
-        "expected_annual_return",
-    )
+    @field_serializer("goal_target_amount", "contribution_amount")
     def serialize_decimal(self, value: Decimal | None) -> str | None:
         if value is None:
             return None

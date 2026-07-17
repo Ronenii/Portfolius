@@ -62,10 +62,6 @@ class Profile(Base):
         Numeric(20, 8),
         nullable=True,
     )
-    expected_annual_return: Mapped[Decimal | None] = mapped_column(
-        Numeric(20, 8),
-        nullable=True,
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

@@ -136,7 +136,6 @@ def test_creating_profile_with_projection_fields_persists_them(
         profile_payload(
             goal_target_amount="100000",
             contribution_amount="500",
-            expected_annual_return="7.5",
         ),
         authenticated_user,
         db_session,
@@ -144,12 +143,10 @@ def test_creating_profile_with_projection_fields_persists_them(
 
     assert response.goal_target_amount == Decimal("100000")
     assert response.contribution_amount == Decimal("500")
-    assert response.expected_annual_return == Decimal("7.5")
 
     reloaded = read_profile(authenticated_user, db_session)
     assert reloaded.goal_target_amount == Decimal("100000")
     assert reloaded.contribution_amount == Decimal("500")
-    assert reloaded.expected_annual_return == Decimal("7.5")
 
 
 def test_creating_profile_without_projection_fields_leaves_them_none(
@@ -164,7 +161,6 @@ def test_creating_profile_without_projection_fields_leaves_them_none(
 
     assert response.goal_target_amount is None
     assert response.contribution_amount is None
-    assert response.expected_annual_return is None
 
 
 def test_updating_profile_without_projection_fields_preserves_existing_values(
@@ -175,7 +171,6 @@ def test_updating_profile_without_projection_fields_preserves_existing_values(
         profile_payload(
             goal_target_amount="100000",
             contribution_amount="500",
-            expected_annual_return="7.5",
         ),
         authenticated_user,
         db_session,
@@ -191,13 +186,11 @@ def test_updating_profile_without_projection_fields_preserves_existing_values(
     assert second_response.display_name == "Ron"
     assert second_response.goal_target_amount == Decimal("100000")
     assert second_response.contribution_amount == Decimal("500")
-    assert second_response.expected_annual_return == Decimal("7.5")
 
     saved_profile = db_session.scalar(select(Profile))
     assert saved_profile is not None
     assert saved_profile.goal_target_amount == Decimal("100000")
     assert saved_profile.contribution_amount == Decimal("500")
-    assert saved_profile.expected_annual_return == Decimal("7.5")
 
 
 def test_updating_profile_with_new_projection_fields_updates_them(
@@ -208,7 +201,6 @@ def test_updating_profile_with_new_projection_fields_updates_them(
         profile_payload(
             goal_target_amount="100000",
             contribution_amount="500",
-            expected_annual_return="7.5",
         ),
         authenticated_user,
         db_session,
@@ -218,7 +210,6 @@ def test_updating_profile_with_new_projection_fields_updates_them(
         profile_payload(
             goal_target_amount="200000",
             contribution_amount="750",
-            expected_annual_return="6.0",
         ),
         authenticated_user,
         db_session,
@@ -226,7 +217,6 @@ def test_updating_profile_with_new_projection_fields_updates_them(
 
     assert second_response.goal_target_amount == Decimal("200000")
     assert second_response.contribution_amount == Decimal("750")
-    assert second_response.expected_annual_return == Decimal("6.0")
 
 
 def test_negative_goal_target_amount_is_rejected() -> None:
@@ -237,9 +227,3 @@ def test_negative_goal_target_amount_is_rejected() -> None:
 def test_negative_contribution_amount_is_rejected() -> None:
     with pytest.raises(ValidationError):
         profile_payload(contribution_amount="-1")
-
-
-def test_negative_expected_annual_return_is_accepted() -> None:
-    payload = profile_payload(expected_annual_return="-2.5")
-
-    assert payload.expected_annual_return == Decimal("-2.5")
