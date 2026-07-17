@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ProjectionChart } from "../../components/charts/ProjectionChart";
+import { InfoTooltip } from "../../components/ui/InfoTooltip";
 import { TrendLoader } from "../../components/ui/TrendLoader";
 import { ApiError } from "../../lib/api";
 import { getProjection } from "./portfolio-api";
@@ -46,10 +47,6 @@ export default function ProjectionPanel({ accessToken }: { accessToken: string }
     null
   );
   const [contribution, setContribution] = useState<string | null>(null);
-  const [annualReturnDraft, setAnnualReturnDraft] = useState<string | null>(
-    null
-  );
-  const [annualReturn, setAnnualReturn] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -58,28 +55,14 @@ export default function ProjectionPanel({ accessToken }: { accessToken: string }
     return () => clearTimeout(timer);
   }, [contributionDraft]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnnualReturn(annualReturnDraft);
-    }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [annualReturnDraft]);
-
   const projectionQuery = useQuery({
     enabled: Boolean(accessToken),
     placeholderData: keepPreviousData,
-    queryKey: [
-      "portfolio-projection",
-      accessToken,
-      years,
-      contribution,
-      annualReturn,
-    ],
+    queryKey: ["portfolio-projection", accessToken, years, contribution],
     queryFn: () => {
       const overrides: Parameters<typeof getProjection>[1] = {};
       if (years !== null) overrides.years = years;
       if (contribution !== null) overrides.contribution = contribution;
-      if (annualReturn !== null) overrides.annualReturn = annualReturn;
       return getProjection(accessToken, overrides);
     },
   });
@@ -89,21 +72,17 @@ export default function ProjectionPanel({ accessToken }: { accessToken: string }
   const displayedContribution = Number(
     contributionDraft ?? contribution ?? data?.contribution_amount ?? "0"
   );
-  const displayedAnnualReturn = Number(
-    annualReturnDraft ?? annualReturn ?? data?.annual_return_expected ?? "0"
-  );
+  const displayedAnnualReturn = Number(data?.annual_return_expected ?? "0");
   const contributionMax = Math.max(
     Number(data?.contribution_amount ?? 0) * 4,
     1000
   );
-  const hasOverride = years !== null || contribution !== null || annualReturn !== null;
+  const hasOverride = years !== null || contribution !== null;
 
   function resetOverrides() {
     setYears(null);
     setContributionDraft(null);
     setContribution(null);
-    setAnnualReturnDraft(null);
-    setAnnualReturn(null);
   }
 
   const isProfileMissing =
@@ -187,27 +166,18 @@ export default function ProjectionPanel({ accessToken }: { accessToken: string }
             />
           </div>
 
-          <div className="projection-slider-field">
-            <div className="projection-slider-heading">
-              <label htmlFor="projection-annual-return">
+          <div className="projection-static-field">
+            <div className="projection-static-heading">
+              <span className="projection-static-label">
                 Expected annual return
-              </label>
+                <InfoTooltip text="Estimated from your current holdings — a weighted average of each holding's 5-year historical return, or a broad asset-class estimate where history isn't available yet.">
+                  ?
+                </InfoTooltip>
+              </span>
               <span className="num">
                 {formatPercent(String(displayedAnnualReturn))}
               </span>
             </div>
-            <input
-              className="projection-slider"
-              id="projection-annual-return"
-              max={20}
-              min={-5}
-              step={0.5}
-              type="range"
-              value={displayedAnnualReturn}
-              onChange={(event) =>
-                setAnnualReturnDraft(event.target.value)
-              }
-            />
           </div>
 
           {projectionQuery.isFetching && !projectionQuery.isLoading ? (

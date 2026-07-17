@@ -25,7 +25,7 @@ const projectionWithTarget: ProjectionResponse = {
   horizon_years: 10,
   contribution_amount: "500",
   contribution_frequency: "monthly",
-  annual_return_expected: "0.06",
+  annual_return_expected: "6",
   series: [
     {
       year: 0,
@@ -171,24 +171,27 @@ describe("ProjectionPanel", () => {
     });
   });
 
-  it("debounces an annual return slider change into a committed override", async () => {
+  it("shows the computed expected annual return as static, non-editable text", async () => {
     vi.mocked(getProjection).mockResolvedValue(projectionWithTarget);
 
     renderPanel();
     await screen.findByRole("img", { name: "Goal projection chart" });
 
-    const slider = screen.getByLabelText("Expected annual return");
-    fireEvent.change(slider, { target: { value: "7.5" } });
+    expect(screen.getByText("6%")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("slider", { name: "Expected annual return" })
+    ).not.toBeInTheDocument();
+  });
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-    });
+  it("shows a tooltip trigger explaining how the expected annual return is computed", async () => {
+    vi.mocked(getProjection).mockResolvedValue(projectionWithTarget);
 
-    await waitFor(() => {
-      expect(getProjection).toHaveBeenLastCalledWith("access-token", {
-        annualReturn: "7.5",
-      });
-    });
+    renderPanel();
+    await screen.findByRole("img", { name: "Goal projection chart" });
+
+    expect(
+      screen.getByRole("button", { name: "How is this calculated?" })
+    ).toBeInTheDocument();
   });
 
   it("hides the reset control until an override is active, then reverts on click", async () => {

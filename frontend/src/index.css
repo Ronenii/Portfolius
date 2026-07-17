@@ -1403,6 +1403,25 @@ h1 {
   gap: 6px;
 }
 
+.projection-static-field {
+  display: grid;
+  gap: 6px;
+}
+
+.projection-static-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--ink-600);
+}
+
+.projection-static-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .projection-slider-heading {
   display: flex;
   align-items: baseline;
