@@ -109,7 +109,7 @@ const emptyBreakdowns: PortfolioBreakdowns = {
 };
 
 const emptyProjection: ProjectionResponse = {
-  annual_return_expected: "0.06",
+  annual_return_expected: "6",
   base_currency: "USD",
   contribution_amount: "0",
   contribution_frequency: "monthly",
