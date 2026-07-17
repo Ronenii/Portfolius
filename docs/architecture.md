@@ -204,7 +204,27 @@ messages
 - created_at
 ```
 
-Later milestones can add transactions, target allocations, CSV imports, and richer instrument exposure tables.
+M5 added `transactions` (the authoritative buy/sell ledger `holdings` is now derived from), two new nullable numeric fields on `profiles` (`goal_target_amount`, `contribution_amount`), and two new nullable fields on `instruments` (`historical_annual_return`, `historical_return_updated_at`):
+
+```text
+transactions
+- id
+- user_id
+- instrument_id       (FK -> instruments.id)
+- action              ("buy" | "sell")
+- quantity            (> 0)
+- price               (>= 0)
+- fees                (>= 0, default 0)
+- currency
+- trade_date
+- notes
+- created_at
+- updated_at
+```
+
+`transactions` has a composite index on `(user_id, instrument_id, trade_date, id)` (the fold's replay order) and a plain index on `user_id`. `holdings` gained a `uq_holdings_user_instrument` unique constraint (one derived row per user+instrument) — see "Transactions & Derived Holdings (M5)" below.
+
+Later milestones can add target allocations and richer instrument exposure tables.
 
 ## API Shape
 
@@ -221,17 +241,24 @@ Planned product endpoints:
 ```text
 GET/PUT /api/v1/profile
 GET /api/v1/instruments/search
-GET/POST /api/v1/holdings
-GET/PUT/DELETE /api/v1/holdings/{holding_id}
+GET /api/v1/holdings
+GET /api/v1/holdings/{holding_id}
+GET/POST /api/v1/transactions
+GET/PUT/DELETE /api/v1/transactions/{transaction_id}
+POST /api/v1/transactions/import
 GET /api/v1/portfolio/snapshot
 GET /api/v1/portfolio/breakdowns
 GET /api/v1/portfolio/breakdowns/{dimension}/{key}/composition
+GET /api/v1/portfolio/projection
 POST /api/v1/portfolio/simulate
 POST /api/v1/assistant/messages
 GET  /api/v1/assistant/conversations
 GET  /api/v1/assistant/conversations/{conversation_id}
 POST /api/v1/jobs/refresh-prices
+POST /api/v1/jobs/refresh-historical-returns
 ```
+
+M5 replaced the holdings write routes: `holdings` is list/get only now (see "Transactions & Derived Holdings (M5)" below) — all writes go through `/api/v1/transactions`.
 
 M3 assistant endpoints:
 
@@ -324,6 +351,8 @@ The loading spinner is now suppressed when optimistic messages are already in th
 
 `components/ui/TrendLoader.tsx` provides a branded loading indicator: an animated upward-trending SVG line with a leading dot, replacing the previous text-only "Loading…" empty-states. The path is normalised to `pathLength={100}` so the stroke draw and dot animation stay in sync regardless of rendered size. It respects `prefers-reduced-motion` (rendering a static tip dot instead of `animateMotion`) and exposes accessible status text via `role="status"` and an `srLabel`. It is used on the dashboard (snapshot and allocation loads) and across the auth, holdings, and profile gates.
 
+M5 introduced a shaped `Skeleton` primitive (`components/ui/Skeleton.tsx`) for panel-level loading: `HoldingsPage`, `TransactionsPage`, the dashboard summary/allocation sections, `ProfileEditPage`, and `CompositionPopover` now render skeleton blocks shaped like their real layout instead of `TrendLoader` while loading. The two full-page gates (`AuthRoutes`, `ProfileGate`) keep `TrendLoader`, since no page shell exists yet at that point to skeleton.
+
 ### Production mode
 
 The dashboard reads a `VITE_PROD_MODE` flag (truthy values: `1`, `true`, `yes`, `on`). When enabled, `DashboardPage` hides the "Backend status" strip and disables the `backend-health` query entirely, so production users never see the developer-facing health/endpoint diagnostics. The flag defaults to off, preserving the status strip in local development.
@@ -347,6 +376,32 @@ The `CompositionResponse` payload carries the parent slice (`dimension`, `key`, 
 The frontend renders the same allocation data through user-selectable chart types: bar, donut, or table. The selection is a presentation preference persisted client-side to `localStorage` under `portfolius:allocation-chart-type` (mirroring the terminal-mode pattern), defaulting to bar; it never changes the backend math or the table rows used for accessibility and precise reading. `bar` and `donut` render the chart alongside the dense table; `table` hides the chart and shows the table full-width. No line charts: a single current snapshot is not time-series data, so trend visualizations are deferred until a later milestone adds price or allocation history.
 
 The drill-down is not hover-only. Each allocation table row is focusable (`role="button"`, `aria-expanded`) and opens the composition popover (`CompositionPopover`, which lazily fetches via TanStack Query) on hover, focus, and `Enter`/`Space`, closing on blur/`Escape`; chart segments open the same popover on click as an enhancement. Only one slice is open at a time. The popover shows the same data regardless of trigger and handles loading, empty, and error states, so screen-reader users reading the dense table get the identical composition — the table remains the canonical readable view.
+
+## Transactions & Derived Holdings (M5)
+
+M5 makes the `transactions` table the authoritative record of a position and turns `holdings` into a **derived, read-only** view recomputed from it. This unlocks weighted-average cost basis and realized-gain tracking without touching the existing M2–M4 allocation/simulation/composition/assistant pipeline, which still reads `holdings` in its original shape.
+
+- **The fold** (`domain/transactions.py`): `fold_transactions(legs)` replays one instrument's buy/sell legs, sorted by `(trade_date, id)`, through `apply_buy`/`apply_sell` into a `PositionState(quantity, average_cost, total_cost, realized_gain)`. A **buy** adds `quantity*price + fees` to the running cost basis and recomputes the weighted-average cost. A **sell** reduces quantity and cost basis proportionally (leaving `average_cost` unchanged), accrues `realized_gain += quantity*(price - average_cost) - fees`, and resets `total_cost` to zero when quantity reaches exactly zero (to avoid Decimal residue). A sell that would exceed the currently held quantity raises `InsufficientQuantityError`, which the API surfaces as `422` — unlike the simulation module's `apply_sell`, which caps-and-warns for hypothetical what-if trades. This is deliberate: the ledger must stay internally consistent, while simulation is exploratory.
+- **`recompute_holding`** (`data/repositories/transactions.py`) replays every transaction for a `(user_id, instrument_id)` pair through the fold and upserts the derived `holdings` row to match — or deletes it outright once the position is fully closed (quantity == 0), rather than leaving a zero-quantity row behind. It only flushes, never commits, so `create_transaction`/`update_transaction`/`delete_transaction` control the transaction boundary and can roll back atomically when the fold rejects a leg (oversell).
+- **Migration `0008`** creates the `transactions` table, then does a one-time data migration: it merges any pre-existing duplicate `(user_id, instrument_id)` holdings rows (summing quantity, quantity-weighting `average_cost`) before adding the new `uq_holdings_user_instrument` unique constraint, and finally seeds one opening-balance `buy` transaction per existing holding (`quantity`/`average_cost` copied over, `trade_date` derived from the holding's `created_at`) so that folding transactions reproduces every user's pre-M5 holdings exactly.
+- **`uq_holdings_user_instrument`** is the standing invariant going forward: at most one derived holding row per `(user_id, instrument_id)`. Two buys of the same instrument collapse into that single row with a recomputed weighted-average cost, not two rows.
+- **Holdings are derived and read-only.** The destructive holdings write API (`POST`/`PUT`/`DELETE /api/v1/holdings`) was removed along with the holdings-form UI; `GET /api/v1/holdings` and `GET /api/v1/holdings/{holding_id}` are unchanged. A position is now created, edited, or closed only by adding, editing, or deleting a transaction through `/api/v1/transactions`, which recomputes the affected holding afterward.
+
+## Goal Projection (M5)
+
+`GET /api/v1/portfolio/projection` returns a deterministic forward projection of portfolio value: three yearly bands (`conservative`, `expected`, `optimistic`) plus a `cost_basis` line, from today (`start_value`, the snapshot's `total_market_value`) out to the profile's time horizon. Optional `?target=`, `?contribution=`, and `?years=` query parameters override the profile's stored `goal_target_amount`, `contribution_amount`, and horizon for interactive what-if use; the horizon otherwise comes from mapping `time_horizon` (`1-3 years`→3, `3-7 years`→7, `7-10 years`→10, `10+ years`→15, default 7 for an unrecognized label). Contributions compound at the cadence implied by `investment_frequency` (weekly/monthly/quarterly/annually, default monthly). The response also reports `target_progress_percent`, `on_track`, and `target_reached_year` when a target is set.
+
+The **expected annual return is auto-computed, not user-entered.** `compute_weighted_average_return` (`domain/portfolio_math.py`) takes the current holdings priced in the base currency and computes a market-value-weighted average of each instrument's `historical_annual_return` — its 5-year CAGR, computed by `YFinanceMarketDataClient.get_historical_annualized_return` from yfinance daily closes (requires at least 3 years of history; returns `None` otherwise). An instrument with no computed history yet falls back to a flat assumed return by `asset_class` (`ASSET_CLASS_DEFAULT_RETURN`: bonds/commodities/cash lower, `EQUITY_LIKE_RETURN` for stocks/ETFs/funds/ADRs and anything unclassified). If there are no qualifying holdings at all (e.g. an empty portfolio, or none priced in the base currency), `build_projection_for_user` falls back further to a flat return by the profile's `risk_tolerance` bucket (`RISK_TOLERANCE_DEFAULT_RETURN`: conservative/balanced/aggressive), or a flat default if `risk_tolerance` is also unset.
+
+Each instrument's `historical_annual_return` is kept fresh by `POST /api/v1/jobs/refresh-historical-returns` (scheduler-secret protected, same pattern as the price/metadata refresh jobs), scheduled monthly via `.github/workflows/refresh-historical-returns.yml`. It is also **bootstrapped once on backend startup**: the FastAPI `lifespan` hook dispatches `bootstrap_historical_returns_if_never_run` to a background thread on every process start, which is a no-op after the very first successful run (it checks whether any instrument has ever had `historical_return_updated_at` set), so a fresh or migrated database gets historical returns without waiting for the monthly cron. Migration `0010` added `instruments.historical_annual_return` / `historical_return_updated_at`; migration `0011` then **dropped** the earlier manually-entered `profiles.expected_annual_return` field (added in `0009` alongside `goal_target_amount`/`contribution_amount`) now that the return is always computed, never asked for in the profile form.
+
+## Progressive Web App (M5)
+
+Portfolius is installable via `vite-plugin-pwa` (`registerType: "autoUpdate"`, `strategies: "generateSW"`): a manifest (name, theme/background colors, standalone display, 192/512 and maskable icons) plus a generated service worker that precaches the built app-shell only. Financial data must never be served stale, so the workbox config forces `NetworkOnly` for both the API origin (derived from `VITE_API_URL` at build time) and any `*.supabase.co` request (auth/session), and `navigateFallbackDenylist` excludes `/api` paths from the SPA navigation fallback as defense-in-depth. A custom install affordance (`features/pwa/usePwaInstall.ts`) captures the browser's `beforeinstallprompt` event so an install button in `AppShell` can trigger it on demand, hiding itself once the app reports `appinstalled`.
+
+## CSV Import (M5)
+
+`frontend/src/lib/csv.ts` is a small hand-rolled CSV parser (no dependency) that handles quoted fields, `\n`/`\r\n` line endings, and blank-line skipping. It recognizes two header templates: a transactions template (`trade_date,action,symbol,quantity,price,fees,notes`) and a positions template (`symbol,quantity,average_cost`, mapped to opening-balance `buy` rows dated today). `ImportPage.tsx` parses the uploaded file client-side, previews every row with per-row validation errors, and only POSTs the client-valid rows as JSON to `POST /api/v1/transactions/import` (`{ rows: [...] }`) — no multipart upload path was added. The backend processes each row independently through the same instrument-resolution and `create_transaction` fold logic as a single-transaction create, returning `{ results: [{ row, status: "imported" | "failed", reason? }] }` so one bad row (a validation failure or an oversell) is reported and skipped without discarding the valid rows already imported in the same batch.
 
 ## Portfolio Simulation (M3)
 
@@ -478,7 +533,7 @@ To enable Google OAuth:
 - M3.x: design language, terminal mode, mobile layout, and assistant price tool. **Done.**
 - M4: allocation exploration, including composition drill-downs and user-selectable chart types. **Done.**
 - M4.x: assistant reliability hardening (reasoning model + `reasoning_effort`, free-tier token budgeting, rate-limit and empty-reply handling, inline tool-call recovery), assistant/Simulation-tab pricing parity, and Markdown-rendered replies. **Done.**
-- M5: transactions, projections, PWA install, and CSV import.
+- M5: transactions ledger with derived, read-only holdings (weighted-average cost, oversell rejection); goal projection with an auto-computed expected annual return (historical CAGR weighted by composition, risk-tolerance fallback); installable PWA (never caches API/auth data); CSV import (transactions or positions template, per-row partial success); and shaped skeleton loading states replacing panel-level `TrendLoader` usage. **Done.**
 - M6: profile intelligence and personalization, including dark mode, suggested interest/avoid tags, and automatic typo cleanup for free-form profile keywords.
 
 Future holding-entry improvements should make the add-holding flow ticker-first. A user should normally add a holding by entering a ticker and selecting the resolved instrument metadata. Manual instrument details should only be shown when the ticker lookup cannot find the instrument, so users are not asked to fill exchange, currency, asset class, sector, country, or region when the system can resolve them.
