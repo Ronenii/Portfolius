@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.data.models import Instrument
 from app.domain.historical_return_refresh import (
+    bootstrap_historical_returns_if_never_run,
+    historical_returns_never_computed,
     refresh_historical_returns_for_all_instruments,
 )
 
@@ -106,3 +108,65 @@ def test_refresh_counts_failures_without_stopping_the_batch(
     assert result.failed == 1
     assert voo.historical_annual_return is None
     assert bnd.historical_annual_return == Decimal("3.50")
+
+
+def test_never_computed_is_true_for_an_empty_instruments_table(
+    db_session: Session,
+) -> None:
+    assert historical_returns_never_computed(db_session) is True
+
+
+def test_never_computed_is_true_when_every_instrument_is_null(
+    db_session: Session,
+) -> None:
+    db_session.add(instrument("VOO"))
+    db_session.commit()
+
+    assert historical_returns_never_computed(db_session) is True
+
+
+def test_never_computed_is_false_once_any_instrument_has_a_value(
+    db_session: Session,
+) -> None:
+    voo = instrument("VOO")
+    voo.historical_annual_return = Decimal("8.00")
+    voo.historical_return_updated_at = datetime.now(UTC)
+    db_session.add(voo)
+    db_session.add(instrument("BND"))
+    db_session.commit()
+
+    assert historical_returns_never_computed(db_session) is False
+
+
+def test_bootstrap_runs_the_refresh_when_never_computed(
+    db_session: Session,
+) -> None:
+    voo = instrument("VOO")
+    db_session.add(voo)
+    db_session.commit()
+    client = ScriptedHistoricalReturnClient({"VOO": Decimal("14.89")})
+
+    result = bootstrap_historical_returns_if_never_run(db_session, client)
+
+    db_session.refresh(voo)
+    assert result is not None
+    assert result.updated == 1
+    assert voo.historical_annual_return == Decimal("14.89")
+
+
+def test_bootstrap_is_a_no_op_once_already_computed(
+    db_session: Session,
+) -> None:
+    voo = instrument("VOO")
+    voo.historical_annual_return = Decimal("8.00")
+    voo.historical_return_updated_at = datetime.now(UTC)
+    db_session.add(voo)
+    db_session.commit()
+    client = ScriptedHistoricalReturnClient({"VOO": Decimal("14.89")})
+
+    result = bootstrap_historical_returns_if_never_run(db_session, client)
+
+    db_session.refresh(voo)
+    assert result is None
+    assert client.requests == []
+    assert voo.historical_annual_return == Decimal("8.00")
