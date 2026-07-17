@@ -138,13 +138,12 @@ describe("portfolio-api", () => {
       getProjection("access-token", {
         target: "50000",
         contribution: "100",
-        annualReturn: "5",
         years: 3,
       })
     ).resolves.toEqual(projection);
 
     expect(apiRequest).toHaveBeenCalledWith(
-      "/api/v1/portfolio/projection?target=50000&contribution=100&annual_return=5&years=3",
+      "/api/v1/portfolio/projection?target=50000&contribution=100&years=3",
       { accessToken: "access-token" }
     );
   });

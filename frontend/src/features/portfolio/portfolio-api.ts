@@ -133,7 +133,6 @@ export type ProjectionResponse = {
 export type ProjectionOverrides = {
   target?: string;
   contribution?: string;
-  annualReturn?: string;
   years?: number;
 };
 
@@ -187,8 +186,6 @@ export function getProjection(
   if (overrides.target !== undefined) params.set("target", overrides.target);
   if (overrides.contribution !== undefined)
     params.set("contribution", overrides.contribution);
-  if (overrides.annualReturn !== undefined)
-    params.set("annual_return", overrides.annualReturn);
   if (overrides.years !== undefined)
     params.set("years", String(overrides.years));
 
