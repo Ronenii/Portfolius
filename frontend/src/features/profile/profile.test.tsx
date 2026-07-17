@@ -49,7 +49,6 @@ const savedProfile = {
   goals_note: null,
   goal_target_amount: null,
   contribution_amount: null,
-  expected_annual_return: null,
   created_at: "2026-06-04T00:00:00Z",
   updated_at: "2026-06-04T00:00:00Z",
 };
@@ -141,7 +140,6 @@ describe("profile wizard", () => {
         goals_note: null,
         goal_target_amount: null,
         contribution_amount: null,
-        expected_annual_return: null,
       });
     });
   });
@@ -197,7 +195,6 @@ describe("profile wizard", () => {
         goals_note: "Prefer low-fee ETFs.",
         goal_target_amount: null,
         contribution_amount: null,
-        expected_annual_return: null,
       });
     });
   });
@@ -244,7 +241,6 @@ describe("profile wizard", () => {
     await fillProfileForm();
     await userEvent.type(screen.getByLabelText("Goal target amount"), "50000");
     await userEvent.type(screen.getByLabelText("Contribution amount"), "500");
-    await userEvent.type(screen.getByLabelText("Expected annual return (%)"), "6");
     await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
     await waitFor(() => {
@@ -259,7 +255,6 @@ describe("profile wizard", () => {
         goals_note: null,
         goal_target_amount: "50000",
         contribution_amount: "500",
-        expected_annual_return: "6",
       });
     });
   });
@@ -288,17 +283,6 @@ describe("profile wizard", () => {
     expect(screen.getByText("Must be zero or greater")).toBeInTheDocument();
   });
 
-  it("shows a validation error for a non-numeric expected annual return", async () => {
-    vi.mocked(getProfile).mockRejectedValue(new ApiError(404, "Profile not found"));
-    renderRoute("/profile/setup");
-
-    await fillProfileForm();
-    await userEvent.type(screen.getByLabelText("Expected annual return (%)"), "abc");
-    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
-
-    expect(saveProfile).not.toHaveBeenCalled();
-    expect(screen.getByText("Must be a number")).toBeInTheDocument();
-  });
 });
 
 describe("profile edit", () => {
@@ -316,7 +300,6 @@ describe("profile edit", () => {
       ...savedProfile,
       goal_target_amount: "1000000.00000000",
       contribution_amount: "362.30000000",
-      expected_annual_return: "6.00000000",
     });
     renderRoute("/profile");
 
@@ -324,8 +307,5 @@ describe("profile edit", () => {
       "1000000"
     );
     expect(screen.getByLabelText("Contribution amount")).toHaveValue("362.3");
-    expect(screen.getByLabelText("Expected annual return (%)")).toHaveValue(
-      "6"
-    );
   });
 });

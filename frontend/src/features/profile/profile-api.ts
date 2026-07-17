@@ -11,7 +11,6 @@ export type ProfilePayload = {
   goals_note: string | null;
   goal_target_amount: string | null;
   contribution_amount: string | null;
-  expected_annual_return: string | null;
 };
 
 export type Profile = ProfilePayload & {

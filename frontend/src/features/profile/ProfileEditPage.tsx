@@ -53,13 +53,6 @@ function validateProfile(payload: ProfilePayload): ProfileFormErrors {
     }
   }
 
-  if (payload.expected_annual_return !== null) {
-    const numericValue = Number(payload.expected_annual_return);
-    if (!Number.isFinite(numericValue)) {
-      errors.expected_annual_return = "Must be a number";
-    }
-  }
-
   return errors;
 }
 
@@ -159,7 +152,6 @@ function ProfileEditForm({
       goals_note: form.goals_note?.trim() || null,
       goal_target_amount: form.goal_target_amount?.trim() || null,
       contribution_amount: form.contribution_amount?.trim() || null,
-      expected_annual_return: form.expected_annual_return?.trim() || null,
     };
     const validationErrors = validateProfile(payload);
     if (Object.keys(validationErrors).length > 0) {
@@ -443,23 +435,6 @@ function ProfileEditForm({
                 <span className="field-error">{errors.contribution_amount}</span>
               ) : null}
             </div>
-
-            <div className="field">
-              <label htmlFor="expected-annual-return">
-                Expected annual return (%)
-              </label>
-              <input
-                id="expected-annual-return"
-                inputMode="decimal"
-                value={form.expected_annual_return ?? ""}
-                onChange={(event) =>
-                  updateField("expected_annual_return", event.target.value)
-                }
-              />
-              {errors.expected_annual_return ? (
-                <span className="field-error">{errors.expected_annual_return}</span>
-              ) : null}
-            </div>
           </div>
         </section>
       </div>
@@ -510,7 +485,6 @@ export default function ProfileEditPage() {
     goals_note: initial.goals_note,
     goal_target_amount: formatDecimalForInput(initial.goal_target_amount),
     contribution_amount: formatDecimalForInput(initial.contribution_amount),
-    expected_annual_return: formatDecimalForInput(initial.expected_annual_return),
   };
 
   return (
