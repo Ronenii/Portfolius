@@ -3623,6 +3623,30 @@ h1 {
   border-radius: var(--radius-full);
 }
 
+/* Right-aligns a skeleton bar within a block-level container (e.g. a
+   numeric table cell or a legend row) so it previews right-aligned figures. */
+.skeleton--end {
+  margin-left: auto;
+}
+
+/* Loading placeholder for the allocation legend/table area — mirrors
+   .allocation-table-wrap's card look while rows are just shaped bars. */
+.skeleton-legend {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper-50);
+}
+
+.skeleton-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .mode-terminal .skeleton,
 .terminal-section .skeleton {
   background: var(--ink-800);
@@ -3632,6 +3656,12 @@ h1 {
     var(--ink-700) 50%,
     var(--ink-800) 70%
   );
+}
+
+.mode-terminal .skeleton-legend,
+.terminal-section .skeleton-legend {
+  border-color: var(--ink-800);
+  background: var(--ink-900);
 }
 
 @keyframes skeleton-shimmer {

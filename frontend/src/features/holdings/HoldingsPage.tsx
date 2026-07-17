@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { TrendLoader } from "../../components/ui/TrendLoader";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { useAuth } from "../auth/AuthContext";
 import { listHoldings } from "./holdings-api";
 
@@ -55,7 +55,51 @@ export default function HoldingsPage() {
           </div>
 
           {holdingsQuery.isLoading ? (
-            <TrendLoader label="Loading holdings" />
+            <div aria-busy="true" className="holdings-table-wrap" role="status">
+              <span className="sr-only">Loading holdings</span>
+              <table aria-hidden="true" className="holdings-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Name</th>
+                    <th>Exchange</th>
+                    <th>Currency</th>
+                    <th className="num-col">Quantity</th>
+                    <th className="num-col">Purchase cost</th>
+                    <th className="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[0, 1, 2, 3].map((row) => (
+                    <tr key={row}>
+                      <td>
+                        <Skeleton height={14} width={64} />
+                      </td>
+                      <td>
+                        <Skeleton height={14} width={150} />
+                      </td>
+                      <td>
+                        <Skeleton height={14} width={90} />
+                      </td>
+                      <td>
+                        <Skeleton height={14} width={48} />
+                      </td>
+                      <td className="num">
+                        <Skeleton className="skeleton--end" height={14} width={60} />
+                      </td>
+                      <td className="num">
+                        <Skeleton className="skeleton--end" height={14} width={76} />
+                      </td>
+                      <td className="actions-col">
+                        <div className="row-actions">
+                          <Skeleton circle height={32} width={32} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
 
           {holdingsQuery.error ? (
