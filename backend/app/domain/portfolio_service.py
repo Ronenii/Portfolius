@@ -28,10 +28,11 @@ from app.schemas.portfolio import (
 )
 from app.schemas.simulation import SimulationResponse, TradeLeg
 
-# Risk-tolerance -> expected annual return (%) default, used when the
-# profile has no explicit `expected_annual_return`. Keys mirror
-# `schemas/profile.py`'s `RISK_TOLERANCES`, which already normalizes and
-# validates `risk_tolerance` to one of these three strings (or `None`).
+# Risk-tolerance -> expected annual return (%) default, used when
+# `compute_weighted_average_return` has no qualifying holdings to compute
+# from. Keys mirror `schemas/profile.py`'s `RISK_TOLERANCES`, which already
+# normalizes and validates `risk_tolerance` to one of these three strings
+# (or `None`).
 RISK_TOLERANCE_DEFAULT_RETURN = {
     "conservative": Decimal("4"),
     "balanced": Decimal("6"),

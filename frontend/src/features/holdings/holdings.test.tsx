@@ -52,7 +52,6 @@ const mockProfile = {
   goals_note: null,
   goal_target_amount: null,
   contribution_amount: null,
-  expected_annual_return: null,
   created_at: "2026-06-04T00:00:00Z",
   updated_at: "2026-06-04T00:00:00Z",
 };
