@@ -1470,6 +1470,61 @@ h1 {
   color: var(--accent-300);
 }
 
+.info-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.info-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-600);
+  font-size: 11px;
+  line-height: 1;
+  cursor: help;
+}
+
+.info-tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 10;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--ink-900);
+  color: var(--paper-50);
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 120ms ease;
+}
+
+.info-tooltip-trigger:hover + .info-tooltip-bubble,
+.info-tooltip-trigger:focus-visible + .info-tooltip-bubble {
+  opacity: 1;
+}
+
+.mode-terminal .info-tooltip-trigger {
+  border-color: var(--ink-700);
+  color: var(--ink-300);
+}
+
+.mode-terminal .info-tooltip-bubble {
+  background: var(--ink-700);
+  color: var(--fg-terminal);
+}
+
 .allocation-table-wrap {
   min-width: 0;
   overflow-x: auto;
