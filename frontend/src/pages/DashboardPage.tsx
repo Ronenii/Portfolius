@@ -12,7 +12,7 @@ import { AllocationChart } from "../components/charts/AllocationChart";
 import { AllocationDonut } from "../components/charts/AllocationDonut";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import Button from "../components/ui/Button";
-import { TrendLoader } from "../components/ui/TrendLoader";
+import { Skeleton } from "../components/ui/Skeleton";
 import { useAuth } from "../features/auth/AuthContext";
 import { CompositionPopover } from "../features/portfolio/CompositionPopover";
 import {
@@ -314,10 +314,16 @@ export default function DashboardPage() {
 
       <section className="dashboard-summary" aria-label="Portfolio summary">
         {snapshotQuery.isLoading ? (
-          <TrendLoader
-            label="Reading portfolio totals and price coverage"
-            srLabel="Loading snapshot"
-          />
+          <div aria-busy="true" className="kpi-grid" role="status">
+            <span className="sr-only">Loading snapshot</span>
+            {[0, 1, 2, 3].map((tile) => (
+              <article aria-hidden="true" className="kpi-tile" key={tile}>
+                <Skeleton height={11} width="55%" />
+                <Skeleton height={26} width="75%" />
+                <Skeleton height={12} width="65%" />
+              </article>
+            ))}
+          </div>
         ) : null}
 
         {snapshotQuery.error ? (
@@ -450,10 +456,21 @@ export default function DashboardPage() {
         </div>
 
         {breakdownsQuery.isLoading ? (
-          <TrendLoader
-            label="Reading priced exposure by dimension"
-            srLabel="Loading allocations"
-          />
+          <div aria-busy="true" className="allocation-layout" role="status">
+            <span className="sr-only">Loading allocations</span>
+            <div aria-hidden="true" className="allocation-chart">
+              <Skeleton height={220} width="100%" />
+            </div>
+            <div aria-hidden="true" className="skeleton-legend">
+              {[0, 1, 2, 3].map((row) => (
+                <div className="skeleton-legend-row" key={row}>
+                  <Skeleton circle height={10} width={10} />
+                  <Skeleton height={12} width="45%" />
+                  <Skeleton className="skeleton--end" height={12} width={56} />
+                </div>
+              ))}
+            </div>
+          </div>
         ) : null}
 
         {breakdownsQuery.error ? (

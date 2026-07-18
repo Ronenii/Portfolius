@@ -106,3 +106,39 @@ class TransactionResponse(BaseModel):
     @field_serializer("quantity", "price", "fees")
     def serialize_decimal(self, value: Decimal) -> str:
         return str(value)
+
+
+class TransactionImportRow(BaseModel):
+    """A single row of a bulk transaction import.
+
+    Deliberately PERMISSIVE: parse-level types only, no business
+    `@field_validator`s. Business validation (action in {buy, sell},
+    quantity > 0, price/fees >= 0, symbol normalization) happens per-row in
+    the import endpoint by constructing a `TransactionRequest` from this row
+    and catching its `ValidationError`, so one invalid row is reported
+    individually instead of 422-ing the whole batch. Type coercion failures
+    (e.g. a non-numeric quantity) still 422 the entire request -- an accepted
+    boundary, since the frontend validates types before POSTing clean JSON.
+    """
+
+    symbol: str
+    action: str
+    quantity: Decimal
+    price: Decimal
+    fees: Decimal = Decimal("0")
+    trade_date: date
+    notes: str | None = None
+
+
+class TransactionImportRequest(BaseModel):
+    rows: list[TransactionImportRow]
+
+
+class TransactionImportResult(BaseModel):
+    row: int
+    status: Literal["imported", "failed"]
+    reason: str | None = None
+
+
+class TransactionImportResponse(BaseModel):
+    results: list[TransactionImportResult]

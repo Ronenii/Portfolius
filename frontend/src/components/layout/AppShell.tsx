@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  Download,
   LayoutDashboard,
   Landmark,
   LogOut,
@@ -12,6 +13,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import AssistantWidget from "../../features/assistant/AssistantWidget";
 import { useAuth } from "../../features/auth/AuthContext";
+import { usePwaInstall } from "../../features/pwa/usePwaInstall";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -40,6 +42,7 @@ function writeTerminalMode(value: boolean) {
 
 export default function AppShell() {
   const { user, signOut } = useAuth();
+  const { canInstall, promptInstall } = usePwaInstall();
   const [isTerminal, setIsTerminal] = useState(readTerminalMode);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -122,6 +125,16 @@ export default function AppShell() {
               : <><Monitor aria-hidden="true" size={16} strokeWidth={1.5} />Terminal</>
             }
           </button>
+          {canInstall ? (
+            <button
+              className="mode-toggle-btn"
+              type="button"
+              onClick={promptInstall}
+            >
+              <Download aria-hidden="true" size={16} strokeWidth={1.5} />
+              Install
+            </button>
+          ) : null}
           <button
             className="mode-toggle-btn"
             disabled={isSigningOut}

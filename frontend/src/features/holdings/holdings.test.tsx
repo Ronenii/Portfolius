@@ -118,6 +118,18 @@ describe("holdings page", () => {
     vi.mocked(listHoldings).mockResolvedValue([appleHolding]);
   });
 
+  it("renders a shaped loading state while holdings are pending", async () => {
+    vi.mocked(listHoldings).mockReturnValue(new Promise(() => undefined));
+
+    renderHoldingsRoute();
+
+    await screen.findByRole("heading", { name: "Holdings" });
+    const loadingText = await screen.findByText("Loading holdings");
+    const status = loadingText.closest('[role="status"]') as HTMLElement;
+    expect(status).toHaveAttribute("aria-busy", "true");
+    expect(status.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+  });
+
   it("lists fetched holdings", async () => {
     renderHoldingsRoute();
 

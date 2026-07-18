@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.v1.instruments import (
@@ -23,7 +24,13 @@ from app.domain.portfolio_service import resolve_or_create_instrument
 from app.domain.price_refresh import ensure_instrument_has_price
 from app.domain.transactions import InsufficientQuantityError
 from app.integrations.market_data import MarketDataClient
-from app.schemas.transactions import TransactionRequest, TransactionResponse
+from app.schemas.transactions import (
+    TransactionImportRequest,
+    TransactionImportResponse,
+    TransactionImportResult,
+    TransactionRequest,
+    TransactionResponse,
+)
 
 router = APIRouter(tags=["transactions"])
 
@@ -142,6 +149,87 @@ def add_transaction(
         raise insufficient_quantity(exc) from exc
 
     return TransactionResponse.model_validate(transaction)
+
+
+@router.post(
+    "/api/v1/transactions/import",
+    response_model=TransactionImportResponse,
+)
+def import_transactions(
+    payload: TransactionImportRequest,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    lookup_client: Annotated[
+        InstrumentLookupClient,
+        Depends(get_instrument_lookup_client),
+    ],
+    market_data_client: Annotated[MarketDataClient, Depends(get_market_data_client)],
+) -> TransactionImportResponse:
+    # Per-row commit: each row is validated, resolved, and created
+    # independently (reusing the same resolve/create path as `add_transaction`),
+    # so a single bad row is reported and skipped instead of discarding the
+    # valid rows already imported in this batch. `create_transaction` commits
+    # (and recomputes the holding) for each row on success, and rolls back
+    # only that row on `InsufficientQuantityError`. The tradeoff is a holding
+    # recompute per row rather than once per instrument at the end, but import
+    # batches are small (tens to low-hundreds of rows) so this is negligible.
+    results: list[TransactionImportResult] = []
+
+    for index, row in enumerate(payload.rows, start=1):
+        try:
+            transaction_request = TransactionRequest(
+                symbol=row.symbol,
+                action=row.action,
+                quantity=row.quantity,
+                price=row.price,
+                fees=row.fees,
+                trade_date=row.trade_date,
+                notes=row.notes,
+            )
+        except ValidationError as exc:
+            reason = exc.errors()[0]["msg"]
+            results.append(
+                TransactionImportResult(row=index, status="failed", reason=reason)
+            )
+            continue
+
+        try:
+            instrument = resolve_transaction_instrument(
+                transaction_request, db, lookup_client
+            )
+        except HTTPException as exc:
+            results.append(
+                TransactionImportResult(
+                    row=index, status="failed", reason=str(exc.detail)
+                )
+            )
+            continue
+
+        ensure_instrument_has_price(db, instrument, market_data_client)
+        currency = instrument.currency or "USD"
+
+        try:
+            create_transaction(
+                db,
+                current_user.user_id,
+                instrument_id=instrument.id,
+                action=transaction_request.action,
+                quantity=transaction_request.quantity,
+                price=transaction_request.price,
+                fees=transaction_request.fees,
+                currency=currency,
+                trade_date=transaction_request.trade_date,
+                notes=transaction_request.notes,
+            )
+        except InsufficientQuantityError as exc:
+            results.append(
+                TransactionImportResult(row=index, status="failed", reason=str(exc))
+            )
+            continue
+
+        results.append(TransactionImportResult(row=index, status="imported"))
+
+    return TransactionImportResponse(results=results)
 
 
 @router.get(

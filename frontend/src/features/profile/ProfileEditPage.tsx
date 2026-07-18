@@ -3,7 +3,7 @@ import { CheckCircle, HelpCircle, Save, X } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useState } from "react";
 
 import Button from "../../components/ui/Button";
-import { TrendLoader } from "../../components/ui/TrendLoader";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { ApiError } from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { type ProfilePayload, getProfile, saveProfile } from "./profile-api";
@@ -464,9 +464,24 @@ export default function ProfileEditPage() {
 
   if (profileQuery.isLoading) {
     return (
-      <section className="page-section" aria-label="Profile">
-        <p className="eyebrow">Profile</p>
-        <TrendLoader label="Loading your profile" srLabel="Loading profile" />
+      <section className="page-section profile-setup" aria-labelledby="profile-edit-title">
+        <header className="page-header">
+          <div>
+            <p className="eyebrow">Account</p>
+            <h1 id="profile-edit-title">Your profile</h1>
+          </div>
+        </header>
+        <div aria-busy="true" className="profile-form" role="status">
+          <span className="sr-only">Loading profile</span>
+          <div aria-hidden="true" className="form-grid">
+            {[0, 1, 2, 3].map((row) => (
+              <div className="field" key={row}>
+                <Skeleton height={11} width="40%" />
+                <Skeleton height={42} width="100%" />
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
     );
   }

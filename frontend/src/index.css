@@ -2932,6 +2932,36 @@ h1 {
   font-size: 14px;
 }
 
+/* ---- CSV import drop zone ---- */
+.import-dropzone {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  padding: 28px 18px;
+  border: 1.5px dashed var(--ink-200);
+  border-radius: var(--radius-lg);
+  background: var(--paper-100);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.import-dropzone:hover,
+.import-dropzone:focus-within {
+  border-color: var(--accent-500);
+  background: var(--paper-50);
+}
+
+.mode-terminal .import-dropzone {
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+}
+
+.mode-terminal .import-dropzone:hover,
+.mode-terminal .import-dropzone:focus-within {
+  border-color: var(--accent-300);
+  background: var(--ink-950);
+}
+
 .holdings-table-wrap {
   overflow-x: auto;
 }
@@ -3572,4 +3602,99 @@ h1 {
   50% {
     opacity: 1;
   }
+}
+
+/* ---- Skeleton ------------------------------------------------------------ */
+.skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--ink-100);
+  background-image: linear-gradient(
+    100deg,
+    var(--ink-100) 30%,
+    var(--ink-200) 50%,
+    var(--ink-100) 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s var(--ease-standard) infinite;
+}
+
+.skeleton--circle {
+  border-radius: var(--radius-full);
+}
+
+/* Right-aligns a skeleton bar within a block-level container (e.g. a
+   numeric table cell or a legend row) so it previews right-aligned figures. */
+.skeleton--end {
+  margin-left: auto;
+}
+
+/* Loading placeholder for the allocation legend/table area — mirrors
+   .allocation-table-wrap's card look while rows are just shaped bars. */
+.skeleton-legend {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper-50);
+}
+
+.skeleton-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mode-terminal .skeleton,
+.terminal-section .skeleton {
+  background: var(--ink-800);
+  background-image: linear-gradient(
+    100deg,
+    var(--ink-800) 30%,
+    var(--ink-700) 50%,
+    var(--ink-800) 70%
+  );
+}
+
+.mode-terminal .skeleton-legend,
+.terminal-section .skeleton-legend {
+  border-color: var(--ink-800);
+  background: var(--ink-900);
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    background-image: none;
+    background: var(--ink-100);
+    animation: none;
+  }
+
+  .mode-terminal .skeleton,
+  .terminal-section .skeleton {
+    background-image: none;
+    background: var(--ink-800);
+  }
+}
+
+.skeleton--static {
+  background-image: none;
+  background: var(--ink-100);
+  animation: none;
+}
+
+.mode-terminal .skeleton--static,
+.terminal-section .skeleton--static {
+  background-image: none;
+  background: var(--ink-800);
 }

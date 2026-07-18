@@ -202,7 +202,11 @@ describe("allocation composition drill-down", () => {
     etfRow.focus();
     expect(etfRow).toHaveFocus();
     await user.keyboard("{Enter}");
-    expect(await screen.findByText("Loading composition")).toBeInTheDocument();
+
+    const status = await screen.findByText("Loading composition");
+    const container = status.closest('[role="status"]') as HTMLElement;
+    expect(container).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
   });
 
   it("shows an error composition state", async () => {

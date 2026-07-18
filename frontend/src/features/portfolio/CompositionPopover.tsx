@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
-import { TrendLoader } from "../../components/ui/TrendLoader";
+import { Skeleton } from "../../components/ui/Skeleton";
 import {
   getComposition,
   type AllocationRow,
@@ -81,7 +81,22 @@ export function CompositionPopover({
       </div>
 
       {compositionQuery.isLoading ? (
-        <TrendLoader label="Reading child instruments" srLabel="Loading composition" />
+        <div aria-busy="true" className="composition-list" role="status">
+          <span className="sr-only">Loading composition</span>
+          {[0, 1, 2].map((row) => (
+            <div aria-hidden="true" className="composition-row" key={row}>
+              <div>
+                <Skeleton height={14} width="50%" />
+                <Skeleton height={11} width="80%" />
+              </div>
+              <div className="composition-row__values">
+                <Skeleton height={12} width={70} />
+                <Skeleton height={11} width={110} />
+                <Skeleton height={11} width={60} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : null}
 
       {compositionQuery.error ? (

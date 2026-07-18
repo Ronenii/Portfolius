@@ -203,6 +203,18 @@ describe("transactions page", () => {
     vi.mocked(searchInstruments).mockResolvedValue([]);
   });
 
+  it("renders a shaped loading state while transactions are pending", async () => {
+    vi.mocked(listTransactions).mockReturnValue(new Promise(() => undefined));
+
+    renderTransactionsRoute();
+
+    await screen.findByRole("heading", { name: "Transactions" });
+    const loadingText = await screen.findByText("Loading transactions");
+    const status = loadingText.closest('[role="status"]') as HTMLElement;
+    expect(status).toHaveAttribute("aria-busy", "true");
+    expect(status.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+  });
+
   it("lists fetched transactions", async () => {
     renderTransactionsRoute();
 

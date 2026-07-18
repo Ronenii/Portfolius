@@ -27,6 +27,10 @@ This app cuts out the screenshot loop. You enter your holdings once, set your lo
 - **Allocation exploration**: drill into any allocation slice to see the instrument composition inside it, with both "% of slice" and "% of portfolio"; switch each dimension between bar, donut, and table views. The drill-down is keyboard-accessible and the dense table stays the canonical readable view.
 - **What-if simulation**: build a buy/sell basket and see before/after/delta across every breakdown dimension without committing any trades.
 - **AI assistant**: floating chat grounded in your holdings, profile goals, and live simulation results. Uses Groq's `openai/gpt-oss-120b` reasoning model with tool-calling, and renders replies as Markdown (bold figures, lists, and compact before/after tables). Disabled gracefully when `LLM_API_KEY` is not set; when the free-tier per-minute token budget is exhausted mid-conversation it returns a clear "try again in a minute" message rather than failing.
+- **Transactions ledger**: a full buy/sell history (date, quantity, price, fees) is the source of truth; holdings are derived by folding each instrument's transactions with weighted-average cost, and are read-only everywhere else — you edit a position by adding, editing, or deleting a transaction, not the holding.
+- **Goal projection**: a dashboard chart projecting portfolio value forward (conservative/expected/optimistic bands plus a cost-basis line) against your goal target and contribution rate. The expected annual return is auto-computed from your current holdings' historical performance, not manually entered.
+- **Installable PWA**: installable on desktop and mobile with a custom install prompt; the service worker precaches only the app shell and always fetches API/auth data fresh.
+- **CSV import**: bulk-import a transaction history or a simple positions list from a CSV template, with a per-row preview and import report so one bad row doesn't block the rest.
 - **Responsive**: works on desktop and phone.
 
 ## Tech stack

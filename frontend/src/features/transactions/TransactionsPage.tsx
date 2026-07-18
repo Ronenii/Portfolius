@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import Button from "../../components/ui/Button";
-import { TrendLoader } from "../../components/ui/TrendLoader";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { ApiError } from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import InstrumentSearchInput from "../instruments/InstrumentSearchInput";
@@ -253,6 +253,7 @@ export default function TransactionsPage() {
           <p className="eyebrow">Ledger</p>
           <h1 id="transactions-title">Transactions</h1>
         </div>
+        <Link to="/transactions/import">Import CSV</Link>
       </header>
 
       <div className="holdings-workspace">
@@ -270,7 +271,55 @@ export default function TransactionsPage() {
           </div>
 
           {transactionsQuery.isLoading ? (
-            <TrendLoader label="Loading transactions" />
+            <div aria-busy="true" className="holdings-table-wrap" role="status">
+              <span className="sr-only">Loading transactions</span>
+              <table aria-hidden="true" className="holdings-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Action</th>
+                    <th>Symbol</th>
+                    <th className="num-col">Quantity</th>
+                    <th className="num-col">Price</th>
+                    <th className="num-col">Fees</th>
+                    <th>Notes</th>
+                    <th className="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[0, 1, 2, 3].map((row) => (
+                    <tr key={row}>
+                      <td>
+                        <Skeleton height={14} width={72} />
+                      </td>
+                      <td>
+                        <Skeleton height={14} width={40} />
+                      </td>
+                      <td>
+                        <Skeleton height={14} width={56} />
+                      </td>
+                      <td className="num">
+                        <Skeleton className="skeleton--end" height={14} width={50} />
+                      </td>
+                      <td className="num">
+                        <Skeleton className="skeleton--end" height={14} width={60} />
+                      </td>
+                      <td className="num">
+                        <Skeleton className="skeleton--end" height={14} width={44} />
+                      </td>
+                      <td>
+                        <Skeleton height={14} width={110} />
+                      </td>
+                      <td className="actions-col">
+                        <div className="row-actions">
+                          <Skeleton circle height={32} width={32} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
 
           {transactionsQuery.error ? (

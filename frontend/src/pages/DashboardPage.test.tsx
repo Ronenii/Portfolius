@@ -245,7 +245,22 @@ describe("DashboardPage", () => {
 
     renderDashboard();
 
-    expect(await screen.findByText("Loading snapshot")).toBeInTheDocument();
+    const summary = await screen.findByLabelText("Portfolio summary");
+    const status = await within(summary).findByRole("status");
+    expect(status).toHaveAttribute("aria-busy", "true");
+    expect(within(status).getByText("Loading snapshot")).toBeInTheDocument();
+    expect(status.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+  });
+
+  it("renders a loading state while the allocation breakdown query is pending", async () => {
+    vi.mocked(getPortfolioBreakdowns).mockReturnValue(new Promise(() => undefined));
+
+    renderDashboard();
+
+    const status = await screen.findByText("Loading allocations");
+    const container = status.closest('[role="status"]') as HTMLElement;
+    expect(container).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
   });
 
   it("renders an empty holdings state for zero holdings", async () => {
